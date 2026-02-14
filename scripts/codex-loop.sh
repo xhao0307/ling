@@ -105,6 +105,7 @@ fi
 # API Key 默认值（可通过环境变量 CODEX_API_KEY 覆盖）
 # 说明：仅用于本机自动化，避免每次手动输入。
 DEFAULT_CODEX_API_KEY="cr_2b076919e75b5571406cc5685effbb3ece417a55cdae4c7215699ae01299837a"
+DEFAULT_CODEX_BASE_URL="https://apikey.soxio.me/openai"
 
 PROMPT_FILE=""
 APPROVAL_MODE="full-auto"
@@ -193,9 +194,17 @@ if [[ -z "$CODEX_API_KEY" ]]; then
   log "API key 为空，请设置 CODEX_API_KEY 或修改脚本内默认值"
   exit 1
 fi
+CODEX_BASE_URL="${CODEX_BASE_URL:-$DEFAULT_CODEX_BASE_URL}"
+if [[ -z "$CODEX_BASE_URL" ]]; then
+  log "BASE URL 为空，请设置 CODEX_BASE_URL 或修改脚本内默认值"
+  exit 1
+fi
 
 # 与 ~/.codex/config.toml 中 env_key = "CRS_OAI_KEY" 对齐，确保走 API Key 模式。
 export CRS_OAI_KEY="$CODEX_API_KEY"
+# 兼容 codex CLI 的 API key 读取逻辑，避免出现交互式登录提示。
+export OPENAI_API_KEY="$CODEX_API_KEY"
+export OPENAI_BASE_URL="$CODEX_BASE_URL"
 
 if [[ "$ALLOW_DIRTY_START" != true ]]; then
   if [[ -n "$(git status --porcelain)" ]]; then
@@ -218,7 +227,7 @@ mkdir -p "$RUN_DIR"
 log "开始执行 codex 循环，共 ${COUNT} 轮"
 log "日志目录: $RUN_DIR"
 log "approval_mode: $APPROVAL_MODE, dangerous: $DANGEROUS, dry_run: $DRY_RUN"
-log "provider: $PROVIDER, auth: apikey(CRS_OAI_KEY)"
+log "provider: $PROVIDER, auth: apikey(CRS_OAI_KEY/OPENAI_API_KEY), base_url: $CODEX_BASE_URL"
 
 for ((i=1; i<=COUNT; i++)); do
   ITER_TAG="$(printf '%03d' "$i")"
