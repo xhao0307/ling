@@ -21,7 +21,11 @@ import (
 )
 
 func main() {
-	if err := loadEnvFile(".env"); err != nil {
+	if err := loadConfigFile("ling.ini"); err != nil {
+		log.Printf("load ling.ini failed: %v", err)
+	}
+	// Backward compatibility: still accept .env when present.
+	if err := loadConfigFile(".env"); err != nil {
 		log.Printf("load .env failed: %v", err)
 	}
 
@@ -163,7 +167,7 @@ func parseEnvIntValue(raw string, fallback int) int {
 	return value
 }
 
-func loadEnvFile(path string) error {
+func loadConfigFile(path string) error {
 	file, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -176,7 +180,10 @@ func loadEnvFile(path string) error {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
+		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, ";") {
+			continue
+		}
+		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
 			continue
 		}
 		if strings.HasPrefix(line, "export ") {

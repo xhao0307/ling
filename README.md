@@ -15,6 +15,10 @@ Implemented MVP loop:
 go run ./cmd/server
 ```
 
+Config file:
+- Preferred: `ling.ini` in project root (format: `KEY=VALUE`)
+- Backward compatible: `.env`
+
 Specify host and port at startup:
 
 ```bash
