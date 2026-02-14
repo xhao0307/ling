@@ -1,6 +1,6 @@
 const appName = process.env.PM2_APP_NAME || "cityling-backend";
 const host = process.env.CITYLING_HOST || "0.0.0.0";
-const port = process.env.CITYLING_PORT || "8082";
+const port = process.env.CITYLING_PORT || "3026";
 
 module.exports = {
   apps: [
@@ -33,4 +33,3 @@ module.exports = {
     },
   ],
 };
-
