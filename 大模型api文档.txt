@@ -1,0 +1,555 @@
+多模态消息结构 (MessageV2)
+在 V2 接口中，content 不再仅仅是字符串，而是一个内容对象数组。
+
+Content Item 结构
+数组中的每个元素包含 type 和对应的字段：
+
+字段	类型	描述
+type	string	内容类型：text, image_url, video_url
+text	string	文本内容（当 type=text 时必填）
+image_url	object	图片对象（当 type=image_url 时必填）
+video_url	object	视频对象（当 type=video_url 时必填）
+URL 对象结构
+image_url 和 video_url 内部包含：
+
+字段	描述
+url	资源地址。支持 HTTP(s) URL 或 Base64 Data URI
+调用示例
+文本 + 图片 (Image Understanding)
+让模型识别或描述图片内容。
+
+curl -X POST "https://api-chat.charaboard.com/v2/chat/completions" \
+  -H "Authorization: Bearer your-api-key" \
+  -H "Content-Type: application/json" \
+  -H "x-app-id: 4" \
+  -H "x-platform-id: 5" \
+  -d '{
+    "gpt_type": 8102,
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "这张图片的主体什么？"
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "https://cdn-selfie.iher.ai/user/200669482277780332/88787698-3d35-44d3-96dc-17c469fd0fa6-self.jpeg"
+            }
+          }
+        ]
+      }
+    ],
+    "max_tokens": 1000
+  }'
+
+  api_key = "cky_hc7MBYbgRBSn4YWTWtsC"
+
+
+
+
+  文本生成 (V1接口)
+概述
+本文档描述了基于 V1 接口 的文本生成和逻辑推理能力。该接口支持 OpenAI 兼容协议，并集成了 MiniMax 等服务商的高级特性（如 M2.1 的思考链）。
+
+注意：工具调用（Function Call）功能已单独拆分，请参考 工具调用文档。
+
+平台域名：https://api-chat.charaboard.com
+
+接口定义
+接口地址：POST /v1/chat/completions
+认证方式：Bearer Token
+Content-Type：application/json
+
+请求头 (Headers)
+Header	类型	必需	描述	示例
+Authorization	string	是	API Key 认证	Bearer your-api-key
+Content-Type	string	是	固定值	application/json
+x-app-id	integer	是	应用标识 ID	1 (Flipped), 4 (CharaBoard) 等
+x-platform-id	integer	是	平台标识	1 (iOS), 2 (Android), 5 (Web)
+x-quality	string	否	路由策略	cost (成本优先), speed (速度优先)
+x-trace-id	string	否	链路追踪 ID	req_12345
+x-max-time	integer	否	模型回复最大超时时间（秒）	15, 30, 60
+请求体 (Body)
+基础字段
+参数	类型	必需	描述
+gpt_type	int	是	模型类型标识符 (如 8602 代表 MiniMax M2.1)
+messages	array	是	对话历史列表 (见下方说明)
+stream	boolean	否	是否流式返回 (SSE)，默认为 false
+temperature	number	否	随机性 (0-2)，推荐 0.7-1.0
+max_tokens	integer	否	最大生成长度
+top_p	number	否	核采样参数，范围 0-1
+top_k	integer	否	Top-k 采样，范围 1-127
+min_p	number	否	最小概率阈值，范围 0-1
+frequency_penalty	number	否	频率惩罚，范围 -2 到 2
+presence_penalty	number	否	存在惩罚，范围 -2 到 2
+repetition_penalty	number	否	重复惩罚，范围 0-2，推荐值 1.2
+stop	string/array	否	停止词，模型将在生成这些词时停止
+n	integer	否	为每个提示生成多少个完成结果
+seed	integer	否	随机种子，用于确定性采样
+stream_options	object	否	流式选项，例如 {"include_usage": true}
+enable_search	boolean	否	是否联网，开启后模型将能够实时搜索互联网信息
+高级特性字段
+参数	类型	必需	描述
+reasoning	object	否	思考链配置。{"enabled": true, "output_reasoning": true} 可返回模型的思考过程
+注意：tools 和 tool_choice 参数用于工具调用功能，请参考 工具调用文档。
+
+Messages 结构说明
+V1 接口中，content 默认为字符串。
+
+[
+  {"role": "system", "content": "You are a helpful assistant."},
+  {"role": "user", "content": "你好，请介绍一下自己"},
+  {
+    "role": "assistant",
+    "content": "你好！我是一个AI助手...",
+    "reasoning_content": "用户要求我介绍自己...（这是模型的思考过程，如果启用 reasoning）"
+  }
+]
+注意：
+
+reasoning_content：当启用 reasoning.output_reasoning=true 时，响应中会包含此字段；在多轮对话中，如果上一轮响应包含此字段，需要在回传 assistant 消息时保留（系统会自动将其转换为 MiniMax 的 reasoning_details 格式）
+关于工具调用相关的消息结构（tool_calls, tool_call_id），请参考 工具调用文档
+功能详解：思考链 (Reasoning)
+对于支持思维链的模型（如 MiniMax M2.1），可以通过参数获取模型的思考过程。
+
+请求开启：
+
+{
+  "gpt_type": 8602,
+  "messages": [
+    {"role": "user", "content": "北京今天天气怎么样？"}
+  ],
+  "reasoning": {
+    "enabled": true,
+    "output_reasoning": true
+  }
+}
+注意：
+
+enabled: 控制是否启用推理功能
+output_reasoning: 控制是否在响应中返回思考过程（对应 MiniMax 的 reasoning_split）
+如果不传 reasoning 参数，系统默认会设置 reasoning_split=true（仅对 MiniMax M2.1 生效）
+响应字段：
+
+响应中 message 对象下会新增 reasoning_content 字段。
+
+{
+  "id": "chatcmpl-789",
+  "object": "chat.completion",
+  "created": 1703123458,
+  "model": "LLM-8602",
+  "gpt_type": 8602,
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "reasoning_content": "用户询问天气...我需要先调用工具...（这是模型的思考过程）",
+        "content": "我帮您查一下。",
+        "tool_calls": [
+          {
+            "id": "call_123456",
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"city\": \"北京\"}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 30,
+    "completion_tokens": 15,
+    "total_tokens": 45
+  }
+}
+注意：在多轮对话中，如果上一轮响应包含 reasoning_content，需要在回传 assistant 消息时保留该字段（系统会自动将其转换为 MiniMax 的 reasoning_details 格式）。
+
+功能详解：自定义格式返回 (ResponseFormat)
+通过 response_format 参数，可以强制模型返回特定格式的 JSON 响应，支持两种模式：
+
+json_object：简单 JSON 模式，确保返回有效的 JSON 对象
+json_schema：结构化输出模式，通过 JSON Schema 精确控制返回数据的结构和类型
+请求参数
+在请求体中添加 response_format 字段：
+
+参数	类型	必需	描述
+response_format	object	否	响应格式配置
+response_format 对象结构
+字段	类型	必需	描述
+type	string	是	格式类型："text"、"json_object"、"json_schema"。如果不传 response_format，则默认为文本格式
+json_schema	object	条件	当 type 为 "json_schema" 时必填
+json_schema 对象结构
+字段	类型	必需	描述
+name	string	是	Schema 名称，必须符合 a-z, A-Z, 0-9, _, -，最大长度 64
+description	string	否	Schema 描述，帮助模型理解如何生成响应
+schema	object	是	JSON Schema 定义（符合 JSON Schema 规范）
+使用示例
+示例 1: json_object 模式（简单 JSON）
+{
+  "gpt_type": 8204,
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant. You must output a JSON object."
+    },
+    {
+      "role": "user",
+      "content": "my name is bob, I'm 19, live in moon"
+    }
+  ],
+  "response_format": {
+    "type": "json_object"
+  }
+}
+响应示例：
+
+{
+  "choices": [
+    {
+      "message": {
+        "role": "assistant",
+        "content": "{\"name\": \"bob\", \"age\": 19, \"location\": \"moon\"}"
+      }
+    }
+  ]
+}
+示例 2: json_schema 模式（结构化输出）
+{
+  "gpt_type": 8204,
+  "messages": [
+    {"role": "system", "content": "You are a helpful assistant. You must output a JSON object."},
+    {"role": "user", "content": "my name is bob, I'm 19 , live in moon"}
+  ],
+  "max_tokens": 16000,
+  "temperature": 0.8,
+  "top_p": 0.9,
+  "top_k": 50,
+  "min_p": 0.05,
+  "repetition_penalty": 1,
+  "stop": [
+    "Human:",
+    "\n\n"
+  ],
+  "n": 1,
+  "seed": 68,
+  "stream_options": {
+    "include_usage": true
+  },
+  "enable_search": false,
+  "stream": false,
+  "reasoning": {"enabled": true},
+  "response_format": {
+    "type": "json_schema",
+    "json_schema": {
+      "name": "person",
+      "description": "A person object",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The person's name"
+          },
+          "age": {
+            "type": "number",
+            "description": "The person's age"
+          },
+          "city": {
+            "type": "string",
+            "description": "The city where the person lives"
+          }
+        },
+        "required": ["name", "age"]
+      }
+    }
+  }
+}
+响应示例：
+
+{
+  "choices": [
+    {
+      "message": {
+        "role": "assistant",
+        "content": "{\"name\": \"bob\", \"age\": 19, \"city\": \"moon\"}"
+      }
+    }
+  ]
+}
+示例 3: 嵌套对象
+{
+  "gpt_type": 8204,
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant. You must output a JSON object."
+    },
+    {
+      "role": "user",
+      "content": "My name is Alice, I'm 28 years old. I live at 123 Main Street, New York, 10001"
+    }
+  ],
+  "response_format": {
+    "type": "json_schema",
+    "json_schema": {
+      "name": "user_profile",
+      "description": "A user profile with address",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string"},
+          "age": {"type": "number"},
+          "address": {
+            "type": "object",
+            "properties": {
+              "street": {"type": "string"},
+              "city": {"type": "string"},
+              "zip": {"type": "string"}
+            },
+            "required": ["street", "city"]
+          }
+        },
+        "required": ["name", "age"]
+      }
+    }
+  }
+}
+示例 4: 数组类型
+{
+  "gpt_type": 8204,
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant. You must output a JSON array."
+    },
+    {
+      "role": "user",
+      "content": "List three people: Bob is 19, Alice is 28, Charlie is 35"
+    }
+  ],
+  "response_format": {
+    "type": "json_schema",
+    "json_schema": {
+      "name": "person_list",
+      "description": "A list of people",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {"type": "string"},
+            "age": {"type": "number"}
+          },
+          "required": ["name"]
+        }
+      }
+    }
+  }
+}
+Curl 完整示例
+curl -X POST "https://api-chat.charaboard.com/v1/chat/completions" \
+  -H "Authorization: Bearer your-api-key" \
+  -H "Content-Type: application/json" \
+  -H "x-app-id: 4" \
+  -H "x-platform-id: 5" \
+  -d '{
+    "gpt_type": 8204,
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant. You must output a JSON object."
+      },
+      {
+        "role": "user",
+        "content": "my name is bob, I'\''m 19, live in moon"
+      }
+    ],
+    "response_format": {
+      "type": "json_schema",
+      "json_schema": {
+        "name": "person",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "The person'\''s name"
+            },
+            "age": {
+              "type": "number",
+              "description": "The person'\''s age"
+            },
+            "city": {
+              "type": "string",
+              "description": "The city where the person lives"
+            }
+          },
+          "required": ["name", "age", "city"]
+        }
+      }
+    }
+  }'
+注意事项
+响应内容格式：返回的 content 字段是 JSON 字符串，需要客户端自行解析
+验证错误：如果 type 为 json_schema 但缺少 name 或 schema 字段，接口会返回 400 错误
+流式模式：部分模型在流式模式（stream: true）下不支持 response_format，该参数会被自动忽略
+Schema 规范：schema 字段必须符合 JSON Schema 规范，建议在定义对象类型时设置 required 数组以确保返回数据的准确性
+响应字段说明
+choices 字段
+字段	类型	描述
+index	integer	聊天完成选择的索引
+message	object	生成的消息内容
+message.role	string	消息角色：assistant
+message.content	string	模型生成的文本内容
+message.reasoning_content	string	模型的思考过程（仅当 output_reasoning=true 时返回）
+finish_reason	string	结束原因：stop (正常), length (超长)
+注意：关于 tool_calls 和 finish_reason: "tool_calls" 的说明，请参考 工具调用文档。
+
+usage 字段
+字段	类型	描述
+prompt_tokens	integer	提示词中的 token 数量
+completion_tokens	integer	生成内容中的 token 数量
+total_tokens	integer	总 token 数量（提示词+生成内容）
+prompt_tokens_details	object	提示词 token 详情
+prompt_tokens_details.cached_tokens	integer	缓存的 token 数量
+completion_tokens_details	object	生成内容 token 详情
+completion_tokens_details.reasoning_tokens	integer	推理 token 数量
+调用示例
+Curl 基础调用示例
+curl -X POST "https://api-chat.charaboard.com/v1/chat/completions" \
+  -H "Authorization: Bearer your-api-key" \
+  -H "Content-Type: application/json" \
+  -H "x-app-id: 1" \
+  -H "x-platform-id: 1" \
+  -H "x-trace-id: req_12345" \
+  -H "x-max-time: 60" \
+  -d '{
+    "gpt_type": 8602,
+    "messages": [
+      {
+        "role": "user",
+        "content": "Hello, how are you?"
+      }
+    ],
+    "max_tokens": 1000,
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "stream": false
+  }'
+Curl 启用思考链示例
+curl -X POST "https://api-chat.charaboard.com/v1/chat/completions" \
+  -H "Authorization: Bearer your-api-key" \
+  -H "Content-Type: application/json" \
+  -H "x-app-id: 4" \
+  -H "x-platform-id: 5" \
+  -d '{
+    "gpt_type": 8602,
+    "messages": [
+      {
+        "role": "user",
+        "content": "请分析一下这个问题"
+      }
+    ],
+    "reasoning": {
+      "enabled": true,
+      "output_reasoning": true
+    }
+  }'
+注意：工具调用示例请参考 工具调用文档。
+
+OpenAI SDK 使用示例
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="our_api_key",
+    base_url="https://api-chat.charaboard.com/v1"  # 我们的API平台地址
+)
+
+# 使用自定义header和body字段
+response = client.chat.completions.create(
+    model="xxx",  # model字段任意，可为空
+    messages=[
+        {"role": "user", "content": "Hello, how are you?"}
+    ],
+    max_tokens=1000,
+    temperature=0.7,
+    # 自定义header
+    extra_headers={
+        "x-app-id": "1",
+        "x-platform-id": "1",
+        "x-trace-id": "req_12345",
+        "x-max-time": "60",
+    },
+    # 自定义body字段
+    extra_body={
+        "gpt_type": 8602,
+        "max_tokens": 1000,
+        "temperature": 0.7,
+        "top_p": 0.9,
+    }
+)
+
+print(response.choices[0].message.content)
+模型列表
+获取模型列表
+接口地址：GET /v1/models
+
+请求头：
+
+Authorization: Bearer your-api-key
+Content-Type: application/json
+响应格式：
+
+{
+  "models": [
+    {
+      "id": 1,
+      "gpt_type": 32,
+      "name": "model32",
+      "params": ["temperature", "top_p", "max_tokens", "stop", "presence_penalty"],
+      "providers": [
+        {
+          "provider": "openai-official",
+          "costConfig": {
+            "inputTokenCost": 0.0015,
+            "outputTokenCost": 0.002
+          },
+          "enabled": true
+        }
+      ]
+    }
+  ],
+  "total": 1
+}
+获取单个模型信息
+接口地址：GET /v1/models/{gpt_type}
+
+请求头：
+
+Authorization: Bearer your-api-key
+Content-Type: application/json
+响应格式：
+
+{
+  "id": 1,
+  "gpt_type": 8602,
+  "name": "MiniMax-M2.1",
+  "params": ["temperature", "top_p", "max_tokens", "stop", "tools", "tool_choice", "reasoning"],
+  "providers": [
+    {
+      "provider": "minimax",
+      "costConfig": {
+        "inputTokenCost": 0.0015,
+        "outputTokenCost": 0.002
+      },
+      "enabled": true
+    }
+  ]
+}

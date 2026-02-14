@@ -1,0 +1,58 @@
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Local env / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Runtime data
+data/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Go build/test artifacts
+bin/
+dist/
+coverage.out
+*.test
+*.out
+
+# Flutter / Dart generated
+flutter_client/.dart_tool/
+flutter_client/build/
+flutter_client/.flutter-plugins
+flutter_client/.flutter-plugins-dependencies
+flutter_client/.packages
+
+# Android generated
+flutter_client/android/.gradle/
+flutter_client/android/local.properties
+flutter_client/android/**/GeneratedPluginRegistrant.*
+
+# iOS/macOS generated
+flutter_client/ios/Pods/
+flutter_client/ios/.symlinks/
+flutter_client/ios/Flutter/ephemeral/
+flutter_client/ios/Flutter/Generated.xcconfig
+flutter_client/macos/Pods/
+flutter_client/macos/Flutter/ephemeral/
+flutter_client/macos/Flutter/GeneratedPluginRegistrant.swift
+
+# Optional sensitive signing files
+*.jks
+*.keystore
+*.p12
+*.mobileprovision
