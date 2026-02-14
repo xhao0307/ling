@@ -1,0 +1,241 @@
+{
+  "project": "city-ling",
+  "version": 1,
+  "updated_at": "2026-02-14",
+  "notes": "功能清单用于长任务增量开发。仅在端到端验证通过后将 passes 改为 true。",
+  "features": [
+    {
+      "id": "F001",
+      "category": "api",
+      "priority": "P0",
+      "description": "健康检查接口可用",
+      "steps": [
+        "启动服务",
+        "请求 GET /healthz",
+        "响应为 200",
+        "响应体包含 status=ok"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F002",
+      "category": "api",
+      "priority": "P0",
+      "description": "Swagger UI 与 OpenAPI JSON 可访问",
+      "steps": [
+        "请求 GET /docs，页面可打开",
+        "请求 GET /docs/openapi.json，响应为 200",
+        "响应体为有效 OpenAPI JSON"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F003",
+      "category": "api",
+      "priority": "P0",
+      "description": "扫描（detected_label）可创建会话并返回题目",
+      "steps": [
+        "POST /api/v1/scan，传入 child_id、child_age、detected_label",
+        "响应为 200",
+        "响应体包含 session_id",
+        "响应体包含可用于答题的 quiz 字段"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F004",
+      "category": "api",
+      "priority": "P1",
+      "description": "扫描（image_url）可自动识别并返回会话",
+      "steps": [
+        "POST /api/v1/scan，传入 image_url",
+        "响应为 200",
+        "响应体包含 session_id",
+        "响应体包含识别结果或对应故事内容"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F005",
+      "category": "api",
+      "priority": "P1",
+      "description": "扫描（image_base64）接口可用",
+      "steps": [
+        "POST /api/v1/scan/image，传入 image_base64",
+        "响应为 200 或可解释错误码",
+        "响应体结构稳定",
+        "异常输入返回明确错误信息"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F006",
+      "category": "api",
+      "priority": "P0",
+      "description": "答题接口可判定正确性并写入抓取结果",
+      "steps": [
+        "先通过 scan 获取 session_id",
+        "POST /api/v1/answer 提交答案",
+        "响应包含判题结果",
+        "回答正确后可在 pokedex 查询到新增精灵"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F007",
+      "category": "api",
+      "priority": "P0",
+      "description": "图鉴接口可按 child_id 查询",
+      "steps": [
+        "请求 GET /api/v1/pokedex?child_id=xxx",
+        "响应为 200",
+        "响应体为列表或对象结构",
+        "字段结构与文档一致"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F008",
+      "category": "api",
+      "priority": "P1",
+      "description": "日报接口可按日期生成",
+      "steps": [
+        "请求 GET /api/v1/report/daily?child_id=xxx&date=YYYY-MM-DD",
+        "响应为 200",
+        "响应体包含统计信息",
+        "无数据场景返回可解释结果"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F009",
+      "category": "store",
+      "priority": "P1",
+      "description": "存储引擎切换（sqlite/json）可工作",
+      "steps": [
+        "设置 CITYLING_STORE=sqlite 运行并完成一次 scan+answer",
+        "停止服务并切换 CITYLING_STORE=json",
+        "再次运行并完成一次 scan+answer",
+        "两种引擎均无启动错误且数据可读写"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F010",
+      "category": "config",
+      "priority": "P1",
+      "description": "配置加载顺序正确（环境变量优先于 ling.ini）",
+      "steps": [
+        "在 ling.ini 写入默认端口",
+        "通过环境变量覆写端口",
+        "启动服务",
+        "实际监听端口符合环境变量配置"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F011",
+      "category": "quality",
+      "priority": "P0",
+      "description": "基础启动 smoke test 稳定",
+      "steps": [
+        "执行 ./init.sh",
+        "服务成功启动",
+        "healthz 检查通过",
+        "scan 冒烟请求通过"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F012",
+      "category": "quality",
+      "priority": "P1",
+      "description": "关键错误路径返回明确状态码与信息",
+      "steps": [
+        "对 /api/v1/scan 发送缺失字段请求",
+        "响应状态码为 4xx",
+        "响应体包含错误说明",
+        "日志中无 panic"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F013",
+      "category": "docs",
+      "priority": "P2",
+      "description": "README 命令与实际行为一致",
+      "steps": [
+        "按 README 启动命令运行服务",
+        "逐条执行 README 的关键 curl 示例",
+        "确认接口路径与参数可用",
+        "不一致项记录并修正文档"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F014",
+      "category": "e2e",
+      "priority": "P0",
+      "description": "端到端主流程可跑通（scan -> answer -> pokedex）",
+      "steps": [
+        "调用 scan 创建会话",
+        "调用 answer 提交答案",
+        "调用 pokedex 查询结果",
+        "最终可观察到一次完整抓取流程结果"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F015",
+      "category": "mcp",
+      "priority": "P1",
+      "description": "可通过 chrome-devtools-mcp 打开 docs 页面",
+      "steps": [
+        "启动本地服务",
+        "通过 MCP 调用 new_page 打开 /docs",
+        "调用 take_snapshot 或 evaluate_script 获取页面内容",
+        "结果中不出现连接拒绝或 target closed"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F016",
+      "category": "test",
+      "priority": "P1",
+      "description": "核心 service/store 单元测试可通过",
+      "steps": [
+        "执行 go test ./internal/...",
+        "测试全部通过",
+        "无 flaky 失败",
+        "如有新增逻辑补充对应测试"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F017",
+      "category": "frontend",
+      "priority": "P2",
+      "description": "Flutter 客户端可连通后端基础接口",
+      "steps": [
+        "启动后端服务",
+        "flutter_client 配置正确 BASE_URL",
+        "在客户端触发一次扫描请求",
+        "界面能看到成功或明确错误反馈"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F018",
+      "category": "release",
+      "priority": "P2",
+      "description": "进程管理脚本可用于本地开发重启",
+      "steps": [
+        "执行 scripts/pm2-up.sh 或等效流程",
+        "服务可启动并监听预期端口",
+        "可平滑重启",
+        "失败时有可追踪日志"
+      ],
+      "passes": false
+    }
+  ]
+}
