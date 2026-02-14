@@ -102,11 +102,15 @@ if ! is_positive_int "$COUNT"; then
   exit 1
 fi
 
+# API Key 默认值（可通过环境变量 CODEX_API_KEY 覆盖）
+# 说明：仅用于本机自动化，避免每次手动输入。
+DEFAULT_CODEX_API_KEY="cr_2b076919e75b5571406cc5685effbb3ece417a55cdae4c7215699ae01299837a"
+
 PROMPT_FILE=""
 APPROVAL_MODE="full-auto"
 DANGEROUS=false
 MODEL=""
-PROVIDER=""
+PROVIDER="crs"
 LOG_ROOT=".codex-loop-logs"
 CONTINUE_ON_ERROR=false
 ALLOW_DIRTY_START=false
@@ -184,6 +188,15 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   exit 1
 fi
 
+CODEX_API_KEY="${CODEX_API_KEY:-$DEFAULT_CODEX_API_KEY}"
+if [[ -z "$CODEX_API_KEY" ]]; then
+  log "API key 为空，请设置 CODEX_API_KEY 或修改脚本内默认值"
+  exit 1
+fi
+
+# 与 ~/.codex/config.toml 中 env_key = "CRS_OAI_KEY" 对齐，确保走 API Key 模式。
+export CRS_OAI_KEY="$CODEX_API_KEY"
+
 if [[ "$ALLOW_DIRTY_START" != true ]]; then
   if [[ -n "$(git status --porcelain)" ]]; then
     log "检测到未提交改动。为避免自动提交混入无关变更，默认拒绝启动。"
@@ -205,6 +218,7 @@ mkdir -p "$RUN_DIR"
 log "开始执行 codex 循环，共 ${COUNT} 轮"
 log "日志目录: $RUN_DIR"
 log "approval_mode: $APPROVAL_MODE, dangerous: $DANGEROUS, dry_run: $DRY_RUN"
+log "provider: $PROVIDER, auth: apikey(CRS_OAI_KEY)"
 
 for ((i=1; i<=COUNT; i++)); do
   ITER_TAG="$(printf '%03d' "$i")"

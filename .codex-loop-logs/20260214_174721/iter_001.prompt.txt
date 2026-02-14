@@ -1,0 +1,20 @@
+你是 Codex。请在当前仓库执行一次“单功能增量开发”会话，并严格遵循 AGENTS.md。
+
+硬性要求：
+1. 先读取 agent-progress.md 与 feature_list.json。
+2. 只选择 1 个最高优先级且 passes=false 的功能项推进（不可并行多个大项）。
+3. 完成实现 + 验证（至少给出端到端或关键命令验证结果）。
+4. 仅在验证通过后把该功能 passes 改为 true；若失败，明确记录阻塞与复现步骤。
+5. 更新 agent-progress.md，写清本轮改动、验证、风险、下一步。
+6. 进行 git 提交（commit message 需包含 feature id）。
+
+输出结尾请包含：
+- 本轮 feature id
+- 是否验证通过
+- commit hash
+
+[循环执行上下文]
+- iteration: 1/10
+- run_id: 20260214_174721
+- 当前分支: main
+- 目标: 从任务清单中推进一个“可验证、可提交”的增量。
