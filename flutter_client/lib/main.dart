@@ -348,6 +348,54 @@ class _ExplorePageState extends State<ExplorePage> {
       fit: StackFit.expand,
       children: [
         Positioned.fill(child: _buildCameraBackground()),
+        if (_canTapScreenToAdvance)
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () {
+                unawaited(_advanceStoryLine());
+              },
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: IgnorePointer(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 290),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.52),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.24),
+                        ),
+                      ),
+                      child: const Padding(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.touch_app,
+                              size: 16,
+                              color: Colors.white,
+                            ),
+                            SizedBox(width: 6),
+                            Text(
+                              '点击屏幕继续对话',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         Positioned(
           top: safeTop + 10,
           left: 12,
@@ -455,7 +503,7 @@ class _ExplorePageState extends State<ExplorePage> {
                         TextButton.icon(
                           onPressed: _dismissScanCard,
                           icon: const Icon(Icons.close, size: 18),
-                          label: const Text('关闭题目'),
+                          label: const Text('关闭剧情'),
                         ),
                       ],
                     ),
@@ -765,124 +813,170 @@ class _ExplorePageState extends State<ExplorePage> {
               ),
             ),
             const SizedBox(height: 10),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: const Color(0xFF1D1E23).withValues(alpha: 0.84),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.18),
-                ),
-              ),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xEE24345A),
+                        Color(0xEE18233C),
+                        Color(0xEE101828),
+                      ],
+                      stops: [0, 0.62, 1],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.22),
+                    ),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x55000000),
+                        blurRadius: 20,
+                        offset: Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 18, 12, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
+                        Align(
+                          alignment: Alignment.centerRight,
                           child: Text(
-                            displaySpeaker,
+                            storyProgress,
                             style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w800,
+                              color: Color(0xFFE7EBFF),
+                              fontSize: 12,
                             ),
                           ),
                         ),
+                        const SizedBox(height: 6),
                         Text(
-                          storyProgress,
+                          displayText,
                           style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
+                            color: Colors.white,
+                            height: 1.4,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      displayText,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        height: 1.35,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        FilledButton.tonalIcon(
-                          onPressed: _busy
-                              ? null
-                              : () async {
-                                  await _playCurrentStoryVoice();
-                                },
-                          icon: const Icon(Icons.volume_up, size: 18),
-                          label: const Text('重播本句'),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            FilledButton.tonalIcon(
+                              onPressed: _busy
+                                  ? null
+                                  : () async {
+                                      await _playCurrentStoryVoice();
+                                    },
+                              icon: const Icon(Icons.volume_up, size: 18),
+                              label: const Text('重播本句'),
+                            ),
+                            if (_canAdvanceStory)
+                              FilledButton.icon(
+                                onPressed: _busy
+                                    ? null
+                                    : () async {
+                                        await _advanceStoryLine();
+                                      },
+                                icon: const Icon(Icons.skip_next, size: 18),
+                                label: const Text('下一句'),
+                              ),
+                            if (_busy)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 8),
+                                child: SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              ),
+                          ],
                         ),
-                        if (_canAdvanceStory)
-                          FilledButton.icon(
-                            onPressed: _busy
-                                ? null
-                                : () async {
-                                    await _advanceStoryLine();
-                                  },
-                            icon: const Icon(Icons.skip_next, size: 18),
-                            label: const Text('下一句'),
-                          ),
-                        if (_busy)
-                          const Padding(
-                            padding: EdgeInsets.only(top: 8),
-                            child: SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                        const SizedBox(height: 10),
+                        if (_waitingForAnswerInput && !_quizSolved)
+                          TextField(
+                            controller: _companionReplyCtrl,
+                            minLines: 1,
+                            maxLines: 3,
+                            textInputAction: TextInputAction.send,
+                            onSubmitted: (_) async {
+                              await _sendCompanionMessage(scan);
+                            },
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: Colors.white,
+                              labelText: '输入你的回答',
+                              border: const OutlineInputBorder(),
+                              suffixIcon: IconButton(
+                                onPressed: _busy
+                                    ? null
+                                    : () async {
+                                        await _sendCompanionMessage(scan);
+                                      },
+                                icon: const Icon(Icons.send),
+                                tooltip: '发送',
+                              ),
+                            ),
+                          )
+                        else
+                          Text(
+                            _quizSolved
+                                ? '你已经完成本轮问答，可以继续拍照探索新目标。'
+                                : (_canTapScreenToAdvance
+                                    ? '点击屏幕任意位置继续剧情。'
+                                    : '等待剧情加载或角色回应。'),
+                            style: const TextStyle(
+                              color: Color(0xFFD9DFF7),
+                              fontSize: 12,
                             ),
                           ),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    if (_waitingForAnswerInput && !_quizSolved)
-                      TextField(
-                        controller: _companionReplyCtrl,
-                        minLines: 1,
-                        maxLines: 3,
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: (_) async {
-                          await _sendCompanionMessage(scan);
-                        },
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.white,
-                          labelText: '输入你的回答',
-                          border: const OutlineInputBorder(),
-                          suffixIcon: IconButton(
-                            onPressed: _busy
-                                ? null
-                                : () async {
-                                    await _sendCompanionMessage(scan);
-                                  },
-                            icon: const Icon(Icons.send),
-                            tooltip: '发送',
-                          ),
+                  ),
+                ),
+                Positioned(
+                  left: 12,
+                  top: -12,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFBE8B0), Color(0xFFE7C36A)],
+                      ),
+                      borderRadius: BorderRadius.circular(999),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x33000000),
+                          blurRadius: 10,
+                          offset: Offset(0, 4),
                         ),
-                      )
-                    else
-                      Text(
-                        _quizSolved
-                            ? '你已经完成本轮问答，可以继续拍照探索新目标。'
-                            : (_canAdvanceStory
-                                ? '点击“下一句”继续剧情。'
-                                : '等待剧情加载或角色回应。'),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 5,
+                      ),
+                      child: Text(
+                        displaySpeaker,
                         style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
+                          color: Color(0xFF332200),
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
                         ),
                       ),
-                  ],
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
             const SizedBox(height: 4),
             Wrap(
@@ -902,7 +996,7 @@ class _ExplorePageState extends State<ExplorePage> {
                 TextButton.icon(
                   onPressed: _busy ? null : _dismissScanCard,
                   icon: const Icon(Icons.close, size: 18),
-                  label: const Text('关闭题目'),
+                  label: const Text('关闭剧情'),
                 ),
               ],
             ),
@@ -1404,6 +1498,13 @@ class _ExplorePageState extends State<ExplorePage> {
     return !_waitingForAnswerInput &&
         _currentStoryIndex >= 0 &&
         _currentStoryIndex < _storyLines.length - 1;
+  }
+
+  bool get _canTapScreenToAdvance {
+    return _scanResult != null &&
+        !_scanCardCollapsed &&
+        !_busy &&
+        _canAdvanceStory;
   }
 
   void _resetStoryLines(List<_StoryLine> lines) {
