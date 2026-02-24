@@ -129,3 +129,23 @@
 - 下一步建议:
   - 在 Web 页面点击“上传照片测试”，选择图片并确认弹窗内容后完成一次生成流程验证。
 - 对应提交: `4c0cc41`
+
+---
+
+### [2026-02-24 10:56] 封装 Web Chrome 启动脚本（默认远程后端）
+- 会话目标: 一键启动 Flutter Web + Chrome，后续无需手工逐条执行命令。
+- 选择功能: `F018`
+- 实际改动:
+  - 新增 `scripts/web-chrome-up.sh`，支持 `start|stop|status|restart`；
+  - `start/restart` 默认仅构建并启动 Web 静态服务，默认不启动本地后端；
+  - 支持环境变量注入 `CITYLING_BASE_URL`、`CITYLING_WEB_PORT`、`CITYLING_WEB_START_BACKEND`。
+- 验证结果:
+  - `bash -n scripts/web-chrome-up.sh` 通过；
+  - `scripts/web-chrome-up.sh status` 输出 `backend: skipped (使用远程后端)`；
+  - `scripts/web-chrome-up.sh restart` 成功，返回 `Web 已启动: pid=8964, url=http://127.0.0.1:7357`。
+- 风险与遗留:
+  - 该脚本以 `flutter build web + python3 -m http.server` 方式运行，定位是联调/测试，不是生产部署；
+  - `feature_list.json` 中 `F018.passes` 暂未置为 `true`（尚未对 `scripts/pm2-up.sh` 路径完成验收）。
+- 下一步建议:
+  - 使用 `scripts/web-chrome-up.sh restart` 作为日常前端联调入口。
+- 对应提交: （待提交）
