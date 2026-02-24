@@ -708,6 +708,7 @@ class _ExplorePageState extends State<ExplorePage> {
 
   Widget _buildSpiritCard(ScanResult scan) {
     final companionName = _companionScene?.characterName ?? scan.spirit.name;
+    final silhouetteImageUrl = _companionScene?.characterImageUrl ?? '';
     final currentLine = _currentStoryLine;
     final hasStoryLine = currentLine != null;
     final displaySpeaker = hasStoryLine ? currentLine.speaker : companionName;
@@ -944,8 +945,16 @@ class _ExplorePageState extends State<ExplorePage> {
                   ),
                 ),
                 Positioned(
+                  left: 18,
+                  top: -74,
+                  child: _AnimatedNameSilhouette(
+                    imageUrl: silhouetteImageUrl,
+                    fallbackIcon: _iconForObjectType(scan.objectType),
+                  ),
+                ),
+                Positioned(
                   left: 12,
-                  top: -12,
+                  top: -14,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
@@ -1719,6 +1728,154 @@ class _StoryLine {
   final String voiceAudioBase64;
   final String voiceMimeType;
   final bool requiresAnswerAfter;
+}
+
+class _AnimatedNameSilhouette extends StatefulWidget {
+  const _AnimatedNameSilhouette({
+    required this.imageUrl,
+    required this.fallbackIcon,
+  });
+
+  final String imageUrl;
+  final IconData fallbackIcon;
+
+  @override
+  State<_AnimatedNameSilhouette> createState() =>
+      _AnimatedNameSilhouetteState();
+}
+
+class _AnimatedNameSilhouetteState extends State<_AnimatedNameSilhouette>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1800),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final portrait = ClipOval(
+      child: SizedBox(
+        width: 56,
+        height: 56,
+        child: _buildSilhouettePortrait(),
+      ),
+    );
+
+    return AnimatedBuilder(
+      animation: _controller,
+      child: portrait,
+      builder: (context, child) {
+        final t = Curves.easeInOut.transform(_controller.value);
+        final scale = 0.96 + 0.07 * t;
+        final lift = -2 + 4 * t;
+        final glow = 10 + 7 * t;
+        return Transform.translate(
+          offset: Offset(0, lift),
+          child: Transform.scale(
+            scale: scale,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xAA84C8FF)
+                        .withValues(alpha: 0.18 + 0.2 * t),
+                    blurRadius: glow,
+                    spreadRadius: 0.5,
+                  ),
+                ],
+              ),
+              child: child,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSilhouettePortrait() {
+    final imageUrl = widget.imageUrl.trim();
+    if (imageUrl.isEmpty) {
+      return DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF2E3A55), Color(0xFF111A2E)],
+          ),
+        ),
+        child:
+            Icon(widget.fallbackIcon, color: const Color(0xFFDCE8FF), size: 30),
+      );
+    }
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ColorFiltered(
+          colorFilter: const ColorFilter.matrix([
+            0.33,
+            0.33,
+            0.33,
+            0,
+            0,
+            0.33,
+            0.33,
+            0.33,
+            0,
+            0,
+            0.33,
+            0.33,
+            0.33,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+          ]),
+          child: Image.network(
+            imageUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (context, _, __) {
+              return DecoratedBox(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFF2E3A55), Color(0xFF111A2E)],
+                  ),
+                ),
+                child: Icon(
+                  widget.fallbackIcon,
+                  color: const Color(0xFFDCE8FF),
+                  size: 30,
+                ),
+              );
+            },
+          ),
+        ),
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.60),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.16),
+                width: 1.2,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _SpiritOverlay extends StatelessWidget {
