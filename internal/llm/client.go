@@ -25,6 +25,15 @@ type Config struct {
 	VisionGPTType int
 	TextGPTType   int
 	Timeout       time.Duration
+	ImageBaseURL  string
+	ImageAPIKey   string
+	ImageModel    string
+	VoiceBaseURL  string
+	VoiceAPIKey   string
+	VoiceID       string
+	VoiceModelID  string
+	VoiceLangCode string
+	VoiceFormat   string
 }
 
 type Client struct {
@@ -36,6 +45,15 @@ type Client struct {
 	textGPTType   int
 	timeout       time.Duration
 	httpClient    *http.Client
+	imageBaseURL  string
+	imageAPIKey   string
+	imageModel    string
+	voiceBaseURL  string
+	voiceAPIKey   string
+	voiceID       string
+	voiceModelID  string
+	voiceLangCode string
+	voiceFormat   string
 }
 
 type RecognizeResult struct {
@@ -75,6 +93,42 @@ func NewClient(cfg Config) (*Client, error) {
 	if cfg.Timeout <= 0 {
 		cfg.Timeout = 20 * time.Second
 	}
+	imageBaseURL := strings.TrimSpace(cfg.ImageBaseURL)
+	if imageBaseURL == "" {
+		imageBaseURL = "https://api-image.charaboard.com"
+	}
+	imageAPIKey := strings.TrimSpace(cfg.ImageAPIKey)
+	if imageAPIKey == "" {
+		imageAPIKey = strings.TrimSpace(cfg.APIKey)
+	}
+	imageModel := strings.TrimSpace(cfg.ImageModel)
+	if imageModel == "" {
+		imageModel = "seedream-4-0-250828"
+	}
+	voiceBaseURL := strings.TrimSpace(cfg.VoiceBaseURL)
+	if voiceBaseURL == "" {
+		voiceBaseURL = "https://api-voice.charaboard.com"
+	}
+	voiceAPIKey := strings.TrimSpace(cfg.VoiceAPIKey)
+	if voiceAPIKey == "" {
+		voiceAPIKey = strings.TrimSpace(cfg.APIKey)
+	}
+	voiceID := strings.TrimSpace(cfg.VoiceID)
+	if voiceID == "" {
+		voiceID = "Xb7hH8MSUJpSbSDYk0k2"
+	}
+	voiceModelID := strings.TrimSpace(cfg.VoiceModelID)
+	if voiceModelID == "" {
+		voiceModelID = "eleven_multilingual_v2"
+	}
+	voiceLangCode := strings.TrimSpace(cfg.VoiceLangCode)
+	if voiceLangCode == "" {
+		voiceLangCode = "zh"
+	}
+	voiceFormat := strings.TrimSpace(cfg.VoiceFormat)
+	if voiceFormat == "" {
+		voiceFormat = "mp3_44100_128"
+	}
 	appID := strings.TrimSpace(cfg.AppID)
 	if appID == "" {
 		appID = "4"
@@ -93,6 +147,15 @@ func NewClient(cfg Config) (*Client, error) {
 		textGPTType:   cfg.TextGPTType,
 		timeout:       cfg.Timeout,
 		httpClient:    &http.Client{},
+		imageBaseURL:  strings.TrimRight(imageBaseURL, "/"),
+		imageAPIKey:   imageAPIKey,
+		imageModel:    imageModel,
+		voiceBaseURL:  strings.TrimRight(voiceBaseURL, "/"),
+		voiceAPIKey:   voiceAPIKey,
+		voiceID:       voiceID,
+		voiceModelID:  voiceModelID,
+		voiceLangCode: voiceLangCode,
+		voiceFormat:   voiceFormat,
 	}, nil
 }
 

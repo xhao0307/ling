@@ -110,6 +110,33 @@ func (h *Handler) answer(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+func (h *Handler) companionScene(w http.ResponseWriter, r *http.Request) {
+	var req service.CompanionSceneRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("companionScene decode error: %v", err)
+		writeError(w, http.StatusBadRequest, "请求体格式不正确")
+		return
+	}
+
+	resp, err := h.svc.GenerateCompanionScene(req)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrObjectTypeMissing), errors.Is(err, service.ErrInvalidChildAge):
+			log.Printf("companionScene bad request: child_id=%s object_type=%s err=%v", req.ChildID, req.ObjectType, err)
+			writeError(w, http.StatusBadRequest, err.Error())
+		case errors.Is(err, service.ErrLLMUnavailable), errors.Is(err, service.ErrMediaUnavailable):
+			log.Printf("companionScene unavailable: child_id=%s err=%v", req.ChildID, err)
+			writeError(w, http.StatusServiceUnavailable, err.Error())
+		default:
+			log.Printf("companionScene internal error: child_id=%s object_type=%s err=%v", req.ChildID, req.ObjectType, err)
+			writeError(w, http.StatusInternalServerError, err.Error())
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, resp)
+}
+
 func (h *Handler) pokedex(w http.ResponseWriter, r *http.Request) {
 	childID := strings.TrimSpace(r.URL.Query().Get("child_id"))
 	entries, err := h.svc.Pokedex(childID)

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -24,6 +25,9 @@ var (
 	ErrImageRequired     = errors.New("请提供 image_base64 或 image_url")
 	ErrScanInputRequired = errors.New("请提供 detected_label 或 image_base64/image_url")
 	ErrContentGenerate   = errors.New("学习内容生成服务暂不可用，请稍后重试")
+	ErrInvalidChildAge   = errors.New("child_age 必须在 3 到 15 之间")
+	ErrObjectTypeMissing = errors.New("请提供 object_type")
+	ErrMediaUnavailable  = errors.New("角色形象或语音能力暂不可用")
 )
 
 type ScanRequest struct {
@@ -69,6 +73,25 @@ type AnswerResponse struct {
 	Captured bool           `json:"captured"`
 	Message  string         `json:"message"`
 	Capture  *model.Capture `json:"capture,omitempty"`
+}
+
+type CompanionSceneRequest struct {
+	ChildID      string `json:"child_id"`
+	ChildAge     int    `json:"child_age"`
+	ObjectType   string `json:"object_type"`
+	Weather      string `json:"weather,omitempty"`
+	Environment  string `json:"environment,omitempty"`
+	ObjectTraits string `json:"object_traits,omitempty"`
+}
+
+type CompanionSceneResponse struct {
+	CharacterName        string `json:"character_name"`
+	CharacterPersonality string `json:"character_personality"`
+	DialogText           string `json:"dialog_text"`
+	ImagePrompt          string `json:"image_prompt"`
+	CharacterImageURL    string `json:"character_image_url"`
+	VoiceAudioBase64     string `json:"voice_audio_base64"`
+	VoiceMimeType        string `json:"voice_mime_type"`
 }
 
 type cacheEntry struct {
@@ -145,7 +168,7 @@ func (s *Service) Scan(req ScanRequest) (ScanResponse, error) {
 		childID = "guest"
 	}
 	if req.ChildAge < 3 || req.ChildAge > 15 {
-		return ScanResponse{}, errors.New("child_age 必须在 3 到 15 之间")
+		return ScanResponse{}, ErrInvalidChildAge
 	}
 
 	detectedLabel := strings.TrimSpace(req.DetectedLabel)
@@ -245,6 +268,56 @@ func (s *Service) Scan(req ScanRequest) (ScanResponse, error) {
 		Quiz:       entry.QuizQ,
 		Dialogues:  dialogues,
 		CacheHit:   hit,
+	}, nil
+}
+
+func (s *Service) GenerateCompanionScene(req CompanionSceneRequest) (CompanionSceneResponse, error) {
+	if req.ChildAge < 3 || req.ChildAge > 15 {
+		return CompanionSceneResponse{}, ErrInvalidChildAge
+	}
+	objectType := strings.TrimSpace(req.ObjectType)
+	if objectType == "" {
+		return CompanionSceneResponse{}, ErrObjectTypeMissing
+	}
+	if s.llm == nil {
+		return CompanionSceneResponse{}, ErrLLMUnavailable
+	}
+
+	scene, err := s.llm.GenerateCompanionScene(context.Background(), llm.CompanionSceneRequest{
+		ObjectType:   objectType,
+		ChildAge:     req.ChildAge,
+		Weather:      strings.TrimSpace(req.Weather),
+		Environment:  strings.TrimSpace(req.Environment),
+		ObjectTraits: strings.TrimSpace(req.ObjectTraits),
+	})
+	if err != nil {
+		return CompanionSceneResponse{}, err
+	}
+
+	imageURL, err := s.llm.GenerateCharacterImage(context.Background(), scene.ImagePrompt)
+	if err != nil {
+		if errors.Is(err, llm.ErrImageCapabilityUnavailable) {
+			return CompanionSceneResponse{}, ErrMediaUnavailable
+		}
+		return CompanionSceneResponse{}, err
+	}
+
+	audioBytes, mimeType, err := s.llm.SynthesizeSpeech(context.Background(), scene.DialogText)
+	if err != nil {
+		if errors.Is(err, llm.ErrVoiceCapabilityUnavailable) {
+			return CompanionSceneResponse{}, ErrMediaUnavailable
+		}
+		return CompanionSceneResponse{}, err
+	}
+
+	return CompanionSceneResponse{
+		CharacterName:        scene.CharacterName,
+		CharacterPersonality: scene.CharacterPersonality,
+		DialogText:           scene.DialogText,
+		ImagePrompt:          scene.ImagePrompt,
+		CharacterImageURL:    imageURL,
+		VoiceAudioBase64:     base64.StdEncoding.EncodeToString(audioBytes),
+		VoiceMimeType:        mimeType,
 	}, nil
 }
 

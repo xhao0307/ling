@@ -334,3 +334,32 @@
 - 下一步建议:
   - 刷新 Web 后验证三种路径：卡片内关闭、收起后关闭、答错后自动关闭。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-24 14:43] 新增角色剧情图像+语音生成后端接口（F019）
+- 会话目标: 按“有声交互”迭代方向，先完成后端最小闭环：基于识别主体与环境信息生成角色台词、卡通图和语音。
+- 选择功能: `F019`
+- 实际改动:
+  - 新增 `POST /api/v1/companion/scene` 接口（`internal/httpapi/router.go`、`internal/httpapi/handlers.go`）；
+  - `internal/service/service.go` 新增 `GenerateCompanionScene` 编排逻辑，串联：
+    - LLM 生成角色设定+台词+生图 prompt；
+    - 文本生图 API 生成 `character_image_url`；
+    - 文本转语音 API 生成音频并转 `voice_audio_base64`；
+  - `internal/llm/client.go` 扩展配置字段（图片/语音 baseURL、key、model、voice 等）；
+  - 新增 `internal/llm/companion.go` 与 `internal/llm/companion_test.go`，实现并测试生图/TTS 调用；
+  - 更新 `internal/httpapi/swagger.go`、`README.md`、`ling.ini.example` 文档和配置说明；
+  - 更新 `feature_list.json`：新增 `F019`（保持 `passes=false`）。
+- 验证结果:
+  - `go test ./...` 通过；
+  - `./init.sh` smoke 通过（`http://127.0.0.1:39028`）；
+  - 新增回归测试通过：
+    - `internal/httpapi`：`TestCompanionSceneUnavailableReturns503`、`TestCompanionSceneMissingObjectTypeReturns400`、`TestCompanionSceneRouteRegistered`
+    - `internal/llm`：`TestParseCompanionScene`、`TestGenerateCharacterImage`、`TestSynthesizeSpeech`
+- 风险与遗留:
+  - 当前执行环境存在本地端口旧进程干扰，命令行直接 e2e 命中 `/api/v1/companion/scene` 的结果不稳定；
+  - 尚未完成“浏览器端播放返回音频 + 对话框展示”的端到端验证，因此 `F019.passes` 保持 `false`。
+- 下一步建议:
+  - 前端接入新接口，展示 `character_image_url` 和 `dialog_text`，并播放 `voice_audio_base64`；
+  - 在真实网络环境执行一次完整链路（识别 -> 角色图 -> 语音播报 -> 孩子输入）后再评估是否置 `F019.passes=true`。
+- 对应提交: （本次提交）

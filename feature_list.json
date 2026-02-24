@@ -1,7 +1,7 @@
 {
   "project": "city-ling",
   "version": 1,
-  "updated_at": "2026-02-14",
+  "updated_at": "2026-02-24",
   "notes": "功能清单用于长任务增量开发。仅在端到端验证通过后将 passes 改为 true。",
   "features": [
     {
@@ -234,6 +234,19 @@
         "服务可启动并监听预期端口",
         "可平滑重启",
         "失败时有可追踪日志"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F019",
+      "category": "interaction",
+      "priority": "P0",
+      "description": "识别主体后可生成角色卡通形象与首句语音对话",
+      "steps": [
+        "POST /api/v1/companion/scene，传入 child_age、object_type 及环境字段",
+        "响应为 200，返回 character_image_url、dialog_text、voice_audio_base64",
+        "dialog_text 与 image_prompt 语义一致且适合儿童",
+        "前端可播放 voice_audio_base64 对应音频并展示对话"
       ],
       "passes": false
     }

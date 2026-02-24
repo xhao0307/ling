@@ -112,6 +112,56 @@ func TestDailyReport(t *testing.T) {
 	}
 }
 
+func TestGenerateCompanionSceneRequiresLLM(t *testing.T) {
+	t.Parallel()
+	svc, _ := newTestService(t)
+
+	_, err := svc.GenerateCompanionScene(service.CompanionSceneRequest{
+		ChildID:    "kid_4",
+		ChildAge:   8,
+		ObjectType: "路灯",
+	})
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if err != service.ErrLLMUnavailable {
+		t.Fatalf("expected ErrLLMUnavailable, got %v", err)
+	}
+}
+
+func TestGenerateCompanionSceneMissingObjectType(t *testing.T) {
+	t.Parallel()
+	svc, _ := newTestService(t)
+
+	_, err := svc.GenerateCompanionScene(service.CompanionSceneRequest{
+		ChildID:  "kid_5",
+		ChildAge: 8,
+	})
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if err != service.ErrObjectTypeMissing {
+		t.Fatalf("expected ErrObjectTypeMissing, got %v", err)
+	}
+}
+
+func TestGenerateCompanionSceneInvalidAge(t *testing.T) {
+	t.Parallel()
+	svc, _ := newTestService(t)
+
+	_, err := svc.GenerateCompanionScene(service.CompanionSceneRequest{
+		ChildID:    "kid_6",
+		ChildAge:   2,
+		ObjectType: "路灯",
+	})
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if err != service.ErrInvalidChildAge {
+		t.Fatalf("expected ErrInvalidChildAge, got %v", err)
+	}
+}
+
 func newTestService(t *testing.T) (*service.Service, *store.JSONStore) {
 	t.Helper()
 	dataFile := filepath.Join(t.TempDir(), "state.json")

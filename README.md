@@ -38,6 +38,15 @@ Optional environment variables:
 - `CITYLING_LLM_VISION_GPT_TYPE` (default `8102`, V2 multimodal recognition)
 - `CITYLING_LLM_TEXT_GPT_TYPE` (default `8602`, V1 text generation)
 - `CITYLING_LLM_TIMEOUT_SECONDS` (default `20`)
+- `CITYLING_IMAGE_API_BASE_URL` (default `https://api-image.charaboard.com`)
+- `CITYLING_IMAGE_API_KEY` (optional, fallback to `CITYLING_LLM_API_KEY`)
+- `CITYLING_IMAGE_MODEL` (default `seedream-4-0-250828`)
+- `CITYLING_TTS_API_BASE_URL` (default `https://api-voice.charaboard.com`)
+- `CITYLING_TTS_API_KEY` (optional, fallback to `CITYLING_LLM_API_KEY`)
+- `CITYLING_TTS_VOICE_ID` (default `Xb7hH8MSUJpSbSDYk0k2`)
+- `CITYLING_TTS_MODEL_ID` (default `eleven_multilingual_v2`)
+- `CITYLING_TTS_LANGUAGE_CODE` (default `zh`)
+- `CITYLING_TTS_OUTPUT_FORMAT` (default `mp3_44100_128`)
 
 ## API
 
@@ -86,6 +95,21 @@ curl -s -X POST http://localhost:8080/api/v1/scan/image \
     "child_id":"kid_1",
     "child_age":8,
     "image_base64":"<base64>"
+  }'
+```
+
+### Companion scene (角色剧情图像+语音)
+
+```bash
+curl -s -X POST http://localhost:8080/api/v1/companion/scene \
+  -H "Content-Type: application/json" \
+  -d '{
+    "child_id":"kid_1",
+    "child_age":8,
+    "object_type":"路灯",
+    "weather":"雨后",
+    "environment":"小区花园",
+    "object_traits":"细长金属杆，顶部发暖光"
   }'
 ```
 

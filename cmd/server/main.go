@@ -141,6 +141,15 @@ func initLLMClientFromEnv() *llm.Client {
 		VisionGPTType: parseEnvInt("CITYLING_LLM_VISION_GPT_TYPE", 8102),
 		TextGPTType:   parseEnvInt("CITYLING_LLM_TEXT_GPT_TYPE", 8602),
 		Timeout:       time.Duration(parseEnvInt("CITYLING_LLM_TIMEOUT_SECONDS", 20)) * time.Second,
+		ImageBaseURL:  envOrDefault("CITYLING_IMAGE_API_BASE_URL", "https://api-image.charaboard.com"),
+		ImageAPIKey:   os.Getenv("CITYLING_IMAGE_API_KEY"),
+		ImageModel:    envOrDefault("CITYLING_IMAGE_MODEL", "seedream-4-0-250828"),
+		VoiceBaseURL:  envOrDefault("CITYLING_TTS_API_BASE_URL", "https://api-voice.charaboard.com"),
+		VoiceAPIKey:   os.Getenv("CITYLING_TTS_API_KEY"),
+		VoiceID:       envOrDefault("CITYLING_TTS_VOICE_ID", "Xb7hH8MSUJpSbSDYk0k2"),
+		VoiceModelID:  envOrDefault("CITYLING_TTS_MODEL_ID", "eleven_multilingual_v2"),
+		VoiceLangCode: envOrDefault("CITYLING_TTS_LANGUAGE_CODE", "zh"),
+		VoiceFormat:   envOrDefault("CITYLING_TTS_OUTPUT_FORMAT", "mp3_44100_128"),
 	}
 
 	client, err := llm.NewClient(cfg)

@@ -1,9 +1,15 @@
 package httpapi
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"testing"
+
+	"ling/internal/knowledge"
+	"ling/internal/service"
+	"ling/internal/store"
 )
 
 func TestWithCORSPreflight(t *testing.T) {
@@ -48,5 +54,25 @@ func TestWithCORSAddsHeadersForNormalRequest(t *testing.T) {
 	}
 	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "*" {
 		t.Fatalf("expected Access-Control-Allow-Origin '*', got %q", got)
+	}
+}
+
+func TestCompanionSceneRouteRegistered(t *testing.T) {
+	st, err := store.NewJSONStore(filepath.Join(t.TempDir(), "state.json"))
+	if err != nil {
+		t.Fatalf("NewJSONStore() error = %v", err)
+	}
+	svc := service.New(st, knowledge.BaseKnowledge)
+	router := NewRouter(NewHandler(svc))
+
+	body := []byte(`{"child_id":"kid","child_age":8,"object_type":"路灯"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/companion/scene", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code == http.StatusNotFound {
+		t.Fatalf("expected companion scene route to be registered, got 404")
 	}
 }

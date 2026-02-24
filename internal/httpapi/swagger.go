@@ -135,6 +135,33 @@ func openAPISpec(serverURL string) map[string]any {
 					},
 				},
 			},
+			"/api/v1/companion/scene": map[string]any{
+				"post": map[string]any{
+					"summary":     "生成角色剧情首句、卡通图与语音",
+					"operationId": "companionScene",
+					"requestBody": map[string]any{
+						"required": true,
+						"content": map[string]any{
+							"application/json": map[string]any{
+								"schema": map[string]any{"$ref": "#/components/schemas/CompanionSceneRequest"},
+							},
+						},
+					},
+					"responses": map[string]any{
+						"200": map[string]any{
+							"description": "成功",
+							"content": map[string]any{
+								"application/json": map[string]any{
+									"schema": map[string]any{"$ref": "#/components/schemas/CompanionSceneResponse"},
+								},
+							},
+						},
+						"400": map[string]any{"description": "请求错误"},
+						"503": map[string]any{"description": "未配置大模型/生图/TTS能力"},
+						"500": map[string]any{"description": "服务错误"},
+					},
+				},
+			},
 			"/api/v1/answer": map[string]any{
 				"post": map[string]any{
 					"summary":     "提交答案",
@@ -267,6 +294,18 @@ func openAPISpec(serverURL string) map[string]any {
 						"answer":     map[string]any{"type": "string"},
 					},
 				},
+				"CompanionSceneRequest": map[string]any{
+					"type":     "object",
+					"required": []string{"child_age", "object_type"},
+					"properties": map[string]any{
+						"child_id":      map[string]any{"type": "string"},
+						"child_age":     map[string]any{"type": "integer"},
+						"object_type":   map[string]any{"type": "string"},
+						"weather":       map[string]any{"type": "string"},
+						"environment":   map[string]any{"type": "string"},
+						"object_traits": map[string]any{"type": "string"},
+					},
+				},
 				"Spirit": map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -300,6 +339,18 @@ func openAPISpec(serverURL string) map[string]any {
 						"detected_label_en": map[string]any{"type": "string", "description": "英文标准标签(mailbox/tree/manhole/road_sign/traffic_light)"},
 						"raw_label":         map[string]any{"type": "string"},
 						"reason":            map[string]any{"type": "string"},
+					},
+				},
+				"CompanionSceneResponse": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"character_name":        map[string]any{"type": "string"},
+						"character_personality": map[string]any{"type": "string"},
+						"dialog_text":           map[string]any{"type": "string"},
+						"image_prompt":          map[string]any{"type": "string"},
+						"character_image_url":   map[string]any{"type": "string"},
+						"voice_audio_base64":    map[string]any{"type": "string"},
+						"voice_mime_type":       map[string]any{"type": "string"},
 					},
 				},
 				"Capture": map[string]any{
