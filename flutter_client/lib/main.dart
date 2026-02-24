@@ -224,6 +224,10 @@ class _ExplorePageState extends State<ExplorePage> {
   CompanionSceneResult? _companionScene;
   final List<_CompanionChatMessage> _companionMessages =
       <_CompanionChatMessage>[];
+  final List<_StoryLine> _storyLines = <_StoryLine>[];
+  final Set<int> _recordedStoryIndexes = <int>{};
+  int _currentStoryIndex = -1;
+  bool _waitingForAnswerInput = false;
   bool _quizSolved = false;
   final String _lastSceneWeather = '晴天';
   final String _lastSceneEnvironment = '小区道路';
@@ -446,7 +450,7 @@ class _ExplorePageState extends State<ExplorePage> {
                             });
                           },
                           icon: const Icon(Icons.unfold_more, size: 18),
-                          label: const Text('展开题目'),
+                          label: const Text('展开剧情'),
                         ),
                         TextButton.icon(
                           onPressed: _dismissScanCard,
@@ -656,6 +660,15 @@ class _ExplorePageState extends State<ExplorePage> {
 
   Widget _buildSpiritCard(ScanResult scan) {
     final companionName = _companionScene?.characterName ?? scan.spirit.name;
+    final currentLine = _currentStoryLine;
+    final hasStoryLine = currentLine != null;
+    final displaySpeaker = hasStoryLine ? currentLine.speaker : companionName;
+    final displayText = hasStoryLine
+        ? currentLine.text
+        : (_companionScene == null ? '剧情生成中，请稍候...' : '剧情准备中...');
+    final storyProgress = hasStoryLine
+        ? '${_currentStoryIndex + 1}/${_storyLines.length}'
+        : '--/${_storyLines.length}';
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -693,11 +706,6 @@ class _ExplorePageState extends State<ExplorePage> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Text('性格：${scan.spirit.personality}'),
-            const SizedBox(height: 6),
-            Text(scan.spirit.intro),
-            const Divider(height: 18),
             Row(
               children: [
                 Expanded(
@@ -719,98 +727,50 @@ class _ExplorePageState extends State<ExplorePage> {
                   ),
               ],
             ),
+            const SizedBox(height: 8),
             if (_companionScene == null) ...[
-              const SizedBox(height: 8),
               const LinearProgressIndicator(minHeight: 3),
             ],
-            if (_companionScene != null) ...[
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: AspectRatio(
-                  aspectRatio: 4 / 3,
-                  child: Image.network(
-                    _companionScene!.characterImageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, _, __) {
-                      return ColoredBox(
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: AspectRatio(
+                aspectRatio: 16 / 10,
+                child: _companionScene == null
+                    ? ColoredBox(
                         color: Colors.black12,
                         child: Center(
-                          child: Text(
-                            '角色图加载失败\n${_companionScene!.characterImageUrl}',
-                            textAlign: TextAlign.center,
+                          child: Icon(
+                            Icons.auto_awesome,
+                            size: 46,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
-            if (_companionScene != null) ...[
-              const SizedBox(height: 8),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .primaryContainer
-                      .withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${_companionScene!.characterName}（${_companionScene!.characterPersonality}）',
-                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      )
+                    : Image.network(
+                        _companionScene!.characterImageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, _, __) {
+                          return ColoredBox(
+                            color: Colors.black12,
+                            child: Center(
+                              child: Text(
+                                '角色图加载失败\n${_companionScene!.characterImageUrl}',
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                      const SizedBox(height: 6),
-                      Text('我会在对话中给你科普并提问，直接在下面回复就行。'),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          FilledButton.tonalIcon(
-                            onPressed: _busy
-                                ? null
-                                : () async {
-                                    await _playCompanionVoice();
-                                  },
-                            icon: const Icon(Icons.volume_up),
-                            label: const Text('播放语音'),
-                          ),
-                          const SizedBox(width: 8),
-                          TextButton(
-                            onPressed: _busy
-                                ? null
-                                : () {
-                                    unawaited(_voicePlayer.stop());
-                                  },
-                            child: const Text('停止'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                _lastSceneTraits.trim().isEmpty
-                    ? '场景参数：天气 $_lastSceneWeather · 环境 $_lastSceneEnvironment'
-                    : '场景参数：天气 $_lastSceneWeather · 环境 $_lastSceneEnvironment · 形态 $_lastSceneTraits',
-                style: const TextStyle(fontSize: 12),
-              ),
-            ],
+            ),
             const SizedBox(height: 10),
             DecoratedBox(
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.65),
+                color: const Color(0xFF1D1E23).withValues(alpha: 0.84),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: Theme.of(context).colorScheme.outlineVariant,
+                  color: Colors.white.withValues(alpha: 0.18),
                 ),
               ),
               child: Padding(
@@ -819,81 +779,107 @@ class _ExplorePageState extends State<ExplorePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '剧情对话',
-                      style: TextStyle(fontWeight: FontWeight.w700),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            displaySpeaker,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          storyProgress,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 8),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 180),
-                      child: _companionMessages.isEmpty
-                          ? Text(
-                              _companionScene == null
-                                  ? '剧情初始化中，请稍候...'
-                                  : '你和角色的对话会显示在这里。',
-                            )
-                          : ListView.separated(
-                              shrinkWrap: true,
-                              itemCount: _companionMessages.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(height: 6),
-                              itemBuilder: (context, index) {
-                                final msg = _companionMessages[index];
-                                final isChild =
-                                    msg.role == _CompanionRole.child;
-                                return Align(
-                                  alignment: isChild
-                                      ? Alignment.centerRight
-                                      : Alignment.centerLeft,
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      color: isChild
-                                          ? Theme.of(context)
-                                              .colorScheme
-                                              .secondaryContainer
-                                          : Theme.of(context)
-                                              .colorScheme
-                                              .tertiaryContainer
-                                              .withValues(alpha: 0.78),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 8,
-                                      ),
-                                      child: Text(
-                                        '${isChild ? '你' : companionName}：${msg.text}',
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
+                    Text(
+                      displayText,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        height: 1.35,
+                      ),
                     ),
                     const SizedBox(height: 10),
-                    TextField(
-                      controller: _companionReplyCtrl,
-                      minLines: 1,
-                      maxLines: 3,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) async {
-                        await _sendCompanionMessage(scan);
-                      },
-                      decoration: InputDecoration(
-                        labelText: '和$companionName说点什么（可直接回答问题）',
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        FilledButton.tonalIcon(
                           onPressed: _busy
                               ? null
                               : () async {
-                                  await _sendCompanionMessage(scan);
+                                  await _playCurrentStoryVoice();
                                 },
-                          icon: const Icon(Icons.send),
-                          tooltip: '发送',
+                          icon: const Icon(Icons.volume_up, size: 18),
+                          label: const Text('重播本句'),
+                        ),
+                        if (_canAdvanceStory)
+                          FilledButton.icon(
+                            onPressed: _busy
+                                ? null
+                                : () async {
+                                    await _advanceStoryLine();
+                                  },
+                            icon: const Icon(Icons.skip_next, size: 18),
+                            label: const Text('下一句'),
+                          ),
+                        if (_busy)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 8),
+                            child: SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    if (_waitingForAnswerInput && !_quizSolved)
+                      TextField(
+                        controller: _companionReplyCtrl,
+                        minLines: 1,
+                        maxLines: 3,
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) async {
+                          await _sendCompanionMessage(scan);
+                        },
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: Colors.white,
+                          labelText: '输入你的回答',
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            onPressed: _busy
+                                ? null
+                                : () async {
+                                    await _sendCompanionMessage(scan);
+                                  },
+                            icon: const Icon(Icons.send),
+                            tooltip: '发送',
+                          ),
+                        ),
+                      )
+                    else
+                      Text(
+                        _quizSolved
+                            ? '你已经完成本轮问答，可以继续拍照探索新目标。'
+                            : (_canAdvanceStory
+                                ? '点击“下一句”继续剧情。'
+                                : '等待剧情加载或角色回应。'),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -911,7 +897,7 @@ class _ExplorePageState extends State<ExplorePage> {
                           });
                         },
                   icon: const Icon(Icons.expand_less, size: 18),
-                  label: const Text('收起题目'),
+                  label: const Text('收起剧情'),
                 ),
                 TextButton.icon(
                   onPressed: _busy ? null : _dismissScanCard,
@@ -1137,10 +1123,7 @@ class _ExplorePageState extends State<ExplorePage> {
       setState(() {
         _scanResult = result;
         _scanCardCollapsed = false;
-        _companionScene = null;
-        _quizSolved = false;
-        _companionMessages.clear();
-        _companionReplyCtrl.clear();
+        _clearCompanionFlow();
       });
       unawaited(_voicePlayer.stop());
       await _startCompanionStory(result);
@@ -1171,30 +1154,26 @@ class _ExplorePageState extends State<ExplorePage> {
       setState(() {
         _companionScene = result;
         _quizSolved = false;
-        _companionMessages
-          ..clear()
-          ..add(
-            _CompanionChatMessage(
-              role: _CompanionRole.companion,
-              text: result.dialogText,
-            ),
-          )
-          ..add(
-            _CompanionChatMessage(
-              role: _CompanionRole.companion,
-              text: '小知识：${scan.fact}',
-            ),
-          )
-          ..add(
-            _CompanionChatMessage(
-              role: _CompanionRole.companion,
-              text: '挑战问题：${scan.quiz}',
-            ),
-          );
-        _companionReplyCtrl.clear();
+        _resetStoryLines(<_StoryLine>[
+          _StoryLine(
+            speaker: result.characterName,
+            text: result.dialogText,
+            voiceAudioBase64: result.voiceAudioBase64,
+            voiceMimeType: result.voiceMimeType,
+          ),
+          _StoryLine(
+            speaker: result.characterName,
+            text: '小知识：${scan.fact}',
+          ),
+          _StoryLine(
+            speaker: result.characterName,
+            text: '挑战问题：${scan.quiz}',
+            requiresAnswerAfter: true,
+          ),
+        ]);
       });
 
-      await _playCompanionVoice();
+      await _playCurrentStoryVoice();
     } catch (e) {
       if (!mounted) {
         return;
@@ -1202,41 +1181,40 @@ class _ExplorePageState extends State<ExplorePage> {
       setState(() {
         _companionScene = null;
         _quizSolved = false;
-        _companionMessages
-          ..clear()
-          ..add(
-            _CompanionChatMessage(
-              role: _CompanionRole.companion,
-              text: '我们来认识一下${_labelToChinese(scan.objectType)}吧。',
-            ),
-          )
-          ..add(
-            _CompanionChatMessage(
-              role: _CompanionRole.companion,
-              text: '小知识：${scan.fact}',
-            ),
-          )
-          ..add(
-            _CompanionChatMessage(
-              role: _CompanionRole.companion,
-              text: '挑战问题：${scan.quiz}',
-            ),
-          );
+        _resetStoryLines(<_StoryLine>[
+          _StoryLine(
+            speaker: scan.spirit.name,
+            text: '我们来认识一下${_labelToChinese(scan.objectType)}吧。',
+          ),
+          _StoryLine(
+            speaker: scan.spirit.name,
+            text: '小知识：${scan.fact}',
+          ),
+          _StoryLine(
+            speaker: scan.spirit.name,
+            text: '挑战问题：${scan.quiz}',
+            requiresAnswerAfter: true,
+          ),
+        ]);
       });
       _showSnack('剧情自动生成失败，已切换基础对话模式。');
     }
   }
 
-  Future<void> _playCompanionVoice({bool showSnackWhenDone = false}) async {
-    final scene = _companionScene;
-    if (scene == null) {
+  Future<void> _playCurrentStoryVoice() async {
+    final line = _currentStoryLine;
+    if (line == null) {
       _showSnack('剧情还在准备中，请稍候。');
       return;
     }
+    final audio = line.voiceAudioBase64.trim();
+    if (audio.isEmpty) {
+      _showSnack('当前句暂无语音。');
+      return;
+    }
     await _playCompanionVoiceData(
-      audioBase64: scene.voiceAudioBase64,
-      mimeType: scene.voiceMimeType,
-      showSnackWhenDone: showSnackWhenDone,
+      audioBase64: audio,
+      mimeType: line.voiceMimeType,
     );
   }
 
@@ -1265,8 +1243,12 @@ class _ExplorePageState extends State<ExplorePage> {
 
   Future<void> _sendCompanionMessage(ScanResult scan) async {
     final scene = _companionScene;
-    if (scene == null && _companionMessages.isEmpty) {
+    if (_storyLines.isEmpty) {
       _showSnack('剧情还在准备中，请稍候。');
+      return;
+    }
+    if (!_waitingForAnswerInput) {
+      _showSnack(_quizSolved ? '本轮问答已完成。' : '请先点击“下一句”推进到提问。');
       return;
     }
 
@@ -1284,6 +1266,7 @@ class _ExplorePageState extends State<ExplorePage> {
     setState(() {
       _companionMessages.add(optimistic);
       _companionReplyCtrl.clear();
+      _waitingForAnswerInput = false;
       _busy = true;
     });
 
@@ -1332,21 +1315,38 @@ class _ExplorePageState extends State<ExplorePage> {
       if (!mounted) {
         return;
       }
+      final roleName = scene?.characterName ?? scan.spirit.name;
+      final replySegments = _splitStoryText(result.replyText);
+      final lines = replySegments.isNotEmpty
+          ? replySegments
+          : <String>[
+              result.replyText.trim().isEmpty
+                  ? '我听到啦，我们继续。'
+                  : result.replyText.trim(),
+            ];
+
       setState(() {
-        _companionMessages.add(
-          _CompanionChatMessage(
-            role: _CompanionRole.companion,
-            text: result.replyText,
-          ),
-        );
+        final firstNewIndex = _storyLines.length;
+        for (var i = 0; i < lines.length; i++) {
+          final isFirst = i == 0;
+          final isLast = i == lines.length - 1;
+          _storyLines.add(
+            _StoryLine(
+              speaker: roleName,
+              text: lines[i],
+              voiceAudioBase64: isFirst ? result.voiceAudioBase64 : '',
+              voiceMimeType: isFirst ? result.voiceMimeType : 'audio/mpeg',
+              requiresAnswerAfter: !_quizSolved && !answerCorrectNow && isLast,
+            ),
+          );
+        }
+        _currentStoryIndex = firstNewIndex;
+        _syncCurrentStoryToHistory();
       });
       if (answerCorrectNow) {
         _showSnack('回答正确，已成功收集精灵。');
       }
-      await _playCompanionVoiceData(
-        audioBase64: result.voiceAudioBase64,
-        mimeType: result.voiceMimeType,
-      );
+      await _playCurrentStoryVoice();
     } catch (e) {
       if (!mounted) {
         return;
@@ -1365,6 +1365,22 @@ class _ExplorePageState extends State<ExplorePage> {
     }
   }
 
+  Future<void> _advanceStoryLine() async {
+    if (_waitingForAnswerInput && !_quizSolved) {
+      _showSnack('先输入你的回答，再继续剧情。');
+      return;
+    }
+    if (!_canAdvanceStory) {
+      _showSnack('已经是当前剧情最后一句。');
+      return;
+    }
+    setState(() {
+      _currentStoryIndex += 1;
+      _syncCurrentStoryToHistory();
+    });
+    await _playCurrentStoryVoice();
+  }
+
   List<String> _buildCompanionHistory({
     List<String> extraSystemHints = const [],
   }) {
@@ -1375,6 +1391,77 @@ class _ExplorePageState extends State<ExplorePage> {
           : '角色：${msg.text}');
     }
     return lines;
+  }
+
+  _StoryLine? get _currentStoryLine {
+    if (_currentStoryIndex < 0 || _currentStoryIndex >= _storyLines.length) {
+      return null;
+    }
+    return _storyLines[_currentStoryIndex];
+  }
+
+  bool get _canAdvanceStory {
+    return !_waitingForAnswerInput &&
+        _currentStoryIndex >= 0 &&
+        _currentStoryIndex < _storyLines.length - 1;
+  }
+
+  void _resetStoryLines(List<_StoryLine> lines) {
+    _companionMessages.clear();
+    _storyLines
+      ..clear()
+      ..addAll(
+        lines.where((line) => line.text.trim().isNotEmpty),
+      );
+    _recordedStoryIndexes.clear();
+    _currentStoryIndex = _storyLines.isEmpty ? -1 : 0;
+    _waitingForAnswerInput = false;
+    _companionReplyCtrl.clear();
+    _syncCurrentStoryToHistory();
+  }
+
+  void _syncCurrentStoryToHistory() {
+    final line = _currentStoryLine;
+    if (line == null) {
+      _waitingForAnswerInput = false;
+      return;
+    }
+    if (_recordedStoryIndexes.add(_currentStoryIndex)) {
+      _companionMessages.add(
+        _CompanionChatMessage(
+          role: _CompanionRole.companion,
+          text: line.text,
+        ),
+      );
+    }
+    _waitingForAnswerInput = !_quizSolved && line.requiresAnswerAfter;
+  }
+
+  List<String> _splitStoryText(String text) {
+    final normalized = text.replaceAll('\n', ' ').trim();
+    if (normalized.isEmpty) {
+      return const [];
+    }
+    final marked = normalized.replaceAllMapped(
+      RegExp(r'[。！？!?]'),
+      (match) => '${match.group(0)}|',
+    );
+    return marked
+        .split('|')
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
+  void _clearCompanionFlow() {
+    _companionScene = null;
+    _quizSolved = false;
+    _companionMessages.clear();
+    _storyLines.clear();
+    _recordedStoryIndexes.clear();
+    _currentStoryIndex = -1;
+    _waitingForAnswerInput = false;
+    _companionReplyCtrl.clear();
   }
 
   String _normalizeObjectLabel(String label) {
@@ -1462,10 +1549,7 @@ class _ExplorePageState extends State<ExplorePage> {
     setState(() {
       _scanResult = null;
       _scanCardCollapsed = false;
-      _companionScene = null;
-      _companionMessages.clear();
-      _companionReplyCtrl.clear();
-      _quizSolved = false;
+      _clearCompanionFlow();
     });
     unawaited(_voicePlayer.stop());
   }
@@ -1488,10 +1572,7 @@ class _ExplorePageState extends State<ExplorePage> {
       _childAge = age;
       _scanResult = null;
       _scanCardCollapsed = false;
-      _companionScene = null;
-      _companionMessages.clear();
-      _companionReplyCtrl.clear();
-      _quizSolved = false;
+      _clearCompanionFlow();
       _detectedLabel = '';
       _detectedRawLabel = '';
       _detectedReason = '';
@@ -1521,6 +1602,22 @@ class _CompanionChatMessage {
 
   final _CompanionRole role;
   final String text;
+}
+
+class _StoryLine {
+  const _StoryLine({
+    required this.speaker,
+    required this.text,
+    this.voiceAudioBase64 = '',
+    this.voiceMimeType = 'audio/mpeg',
+    this.requiresAnswerAfter = false,
+  });
+
+  final String speaker;
+  final String text;
+  final String voiceAudioBase64;
+  final String voiceMimeType;
+  final bool requiresAnswerAfter;
 }
 
 class _SpiritOverlay extends StatelessWidget {
