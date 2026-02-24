@@ -932,8 +932,12 @@ class _ExplorePageState extends State<ExplorePage> {
 
   String _reasonValueToChinese(dynamic value) {
     if (value is String) {
+      final raw = value.trim();
       final normalized = _normalizeObjectLabel(value);
       final zh = _labelToChinese(normalized);
+      if (zh == normalized) {
+        return raw;
+      }
       return zh;
     }
     return value?.toString() ?? '';
