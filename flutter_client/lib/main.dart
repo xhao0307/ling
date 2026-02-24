@@ -910,8 +910,20 @@ class _ExplorePageState extends State<ExplorePage> {
         childId: _childId,
         answer: _answerCtrl.text.trim(),
       );
+      if (!response.correct) {
+        await _showWrongAnswerDialog(response.message);
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _scanResult = null;
+          _answerCtrl.clear();
+        });
+        return;
+      }
+
       _showSnack(response.message);
-      if (response.captured) {
+      if (response.captured && mounted) {
         widget.onCaptured();
       }
     } catch (e) {
@@ -999,6 +1011,25 @@ class _ExplorePageState extends State<ExplorePage> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  Future<void> _showWrongAnswerDialog(String message) async {
+    final text = message.trim().isEmpty ? '回答错误，请重新识别后再试。' : message.trim();
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('回答错误'),
+          content: Text(text),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('返回识别'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _enterExploreMode() {
