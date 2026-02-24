@@ -14,7 +14,7 @@ import (
 	"ling/internal/store"
 )
 
-func TestScanContentGenerateUnavailableReturns503WithoutInternalDetail(t *testing.T) {
+func TestScanUnknownObjectFallsBackTo200(t *testing.T) {
 	st, err := store.NewJSONStore(filepath.Join(t.TempDir(), "state.json"))
 	if err != nil {
 		t.Fatalf("NewJSONStore() error = %v", err)
@@ -33,19 +33,17 @@ func TestScanContentGenerateUnavailableReturns503WithoutInternalDetail(t *testin
 	rec := httptest.NewRecorder()
 	h.scan(rec, req)
 
-	if rec.Code != http.StatusServiceUnavailable {
-		t.Fatalf("expected status %d, got %d, body=%s", http.StatusServiceUnavailable, rec.Code, rec.Body.String())
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d, body=%s", http.StatusOK, rec.Code, rec.Body.String())
 	}
 
-	var resp map[string]string
+	var resp map[string]any
 	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("decode response error = %v", err)
 	}
-	if got := resp["error"]; got != service.ErrContentGenerate.Error() {
-		t.Fatalf("expected error %q, got %q", service.ErrContentGenerate.Error(), got)
-	}
-	if strings.Contains(rec.Body.String(), "object_type=") || strings.Contains(rec.Body.String(), "llm_error=") {
-		t.Fatalf("response should not leak internal detail, got %s", rec.Body.String())
+	sessionID, _ := resp["session_id"].(string)
+	if got := strings.TrimSpace(sessionID); got == "" {
+		t.Fatalf("expected session_id in response, got %v", resp)
 	}
 }
 

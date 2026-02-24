@@ -238,12 +238,11 @@ func (s *Service) Scan(req ScanRequest) (ScanResponse, error) {
 			}
 			dialogues = generated.Dialogues
 		} else {
-			// LLM 生成失败，使用知识库（如果在知识库中）
+			// LLM 生成失败，先尝试知识库；若仍不可用则使用本地模板兜底，避免 scan 直接失败。
 			fact = s.pick(item.Facts)
 			quiz = s.pickQuiz(item.Quiz)
-			if fact == "" || quiz.Question == "" {
-				// 知识库与 LLM 均不可用时，返回可预期错误码（由 handler 映射为 503）。
-				return ScanResponse{}, fmt.Errorf("%w: object_type=%s llm_error=%v", ErrContentGenerate, objectType, err)
+			if fact == "" || quiz.Question == "" || strings.TrimSpace(quiz.Answer) == "" {
+				fact, quiz = s.defaultLearningContent(objectType)
 			}
 			dialogues = s.generateDialogues(spirit, req.ChildAge, fact, quiz.Question)
 		}
@@ -679,6 +678,19 @@ func (s *Service) generateLearningByLLM(objectType string, age int, spirit model
 		return llm.LearningContent{}, llm.ErrInvalidResponse
 	}
 	return generated, nil
+}
+
+func (s *Service) defaultLearningContent(objectType string) (string, model.QuizItem) {
+	objectName := strings.TrimSpace(objectTypeToChinese(objectType))
+	if objectName == "" {
+		objectName = "这个物体"
+	}
+	fact := fmt.Sprintf("%s是我们生活中常见的事物，认真观察它的外形和用途，就能发现很多小知识。", objectName)
+	quiz := model.QuizItem{
+		Question: "小挑战：我们刚刚认识的物体叫什么名字？",
+		Answer:   objectName,
+	}
+	return fact, quiz
 }
 
 func objectTypeToChinese(objectType string) string {

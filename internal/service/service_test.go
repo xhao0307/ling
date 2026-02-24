@@ -62,17 +62,23 @@ func TestScanAndCaptureFlow(t *testing.T) {
 	}
 }
 
-func TestUnsupportedObject(t *testing.T) {
+func TestUnknownObjectFallsBackToTemplateContent(t *testing.T) {
 	t.Parallel()
 	svc, _ := newTestService(t)
 
-	_, err := svc.Scan(service.ScanRequest{
+	resp, err := svc.Scan(service.ScanRequest{
 		ChildID:       "kid_2",
 		ChildAge:      7,
 		DetectedLabel: "spaceship",
 	})
-	if err == nil {
-		t.Fatalf("expected error for unsupported object")
+	if err != nil {
+		t.Fatalf("Scan() error = %v", err)
+	}
+	if resp.SessionID == "" {
+		t.Fatalf("expected session id")
+	}
+	if resp.Quiz == "" || resp.Fact == "" {
+		t.Fatalf("expected fallback fact and quiz, got %+v", resp)
 	}
 }
 

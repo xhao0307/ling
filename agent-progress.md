@@ -453,3 +453,28 @@
   - 用浏览器自动化补一条关键路径验收并截图留档；
   - 若你要“更像剧情分支”，下一步可以在后端加入“阶段状态机”（科普阶段/提问阶段/答题阶段）控制回复策略。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-24 15:31] 修复 scan 在未知物体+LLM异常时返回 503
+- 会话目标: 解决线上日志 `scan unavailable ... ErrContentGenerate ... object_type=猫` 导致识别后无法继续剧情的问题。
+- 选择功能: `F003`（子任务：scan 稳定性兜底）
+- 实际改动:
+  - `internal/service/service.go`：
+    - 调整 `Scan` 中的内容生成降级逻辑；
+    - 当 LLM 生成失败且知识库无该物体内容时，不再返回 `ErrContentGenerate`；
+    - 新增 `defaultLearningContent(objectType)` 本地模板兜底，始终生成可用 `fact/quiz`。
+  - `internal/service/service_test.go`：
+    - 原“未知物体报错”测试改为“未知物体可返回会话并有兜底科普题目”。
+  - `internal/httpapi/handlers_test.go`：
+    - 原 `scan` 503 测试改为 200 回归测试，确认响应包含 `session_id`。
+- 验证结果:
+  - `go test ./...` 通过；
+  - `./init.sh` smoke 通过（`http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 兜底题目为通用模板，教育质量不如 LLM 生成内容；
+  - 建议后续补充“按常见物体类别的高质量本地模板库”。
+- 下一步建议:
+  - 在线上用“猫/狗/玩具”等知识库外物体回归一次 `scan`，确认不再出现 503；
+  - 若需要，后续可将 `ErrContentGenerate` 仅保留在极端场景并加监控埋点。
+- 对应提交: （本次提交）
