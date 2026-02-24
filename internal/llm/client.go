@@ -220,13 +220,19 @@ func (c *Client) doJSON(ctx context.Context, path string, payload any) ([]byte, 
 }
 
 func (c *Client) buildVisionRequestBody(imageRef string, strict bool) map[string]any {
-	prompt := `识别图中最主要的物体。
-用英文小写下划线格式输出 object_type（例如：cat、dog、car、building）。
-仅输出一行 JSON，不要 markdown，不要解释。
-JSON 格式：
-{"object_type":"物体类型（英文小写下划线）","raw_label":"原始标签","reason":"一句话识别理由"}`
+	prompt := `你在服务中国用户，请全部使用简体中文表达。
+识别图中最主要的物体，仅输出一行 JSON，不要 markdown，不要解释。
+输出格式：
+{"object_type":"类别标识","raw_label":"中文标签","reason":"中文一句话识别依据"}
+
+字段要求：
+1) raw_label: 必须是中文常用叫法（例如：猫、汽车、建筑、路牌）。
+2) reason: 必须是中文且简洁。
+3) object_type:
+   - 若识别为城市设施，优先使用以下标准值之一：mailbox/tree/manhole/road_sign/traffic_light
+   - 其他物体使用中文短词（例如：猫、狗、公交车）。`
 	if strict {
-		prompt += "\n如果无法识别，object_type 设为 \"unknown\"。"
+		prompt += "\n如果无法识别，object_type 设为 \"unknown\"，raw_label 设为“未知物体”。"
 	}
 
 	return map[string]any{
