@@ -260,4 +260,27 @@
   - 取消枚举后，`scan` 在知识库外物体会更依赖 LLM 生成内容质量。
 - 下一步建议:
   - 远端部署后上传 2~3 张非城市设施图片（如猫/狗/玩具）确认返回中文标签与生成流程稳定。
+- 对应提交: `bfde5b2`
+
+---
+
+### [2026-02-24 11:51] 答题判定切换为 LLM 语义判断（含本地兜底）
+- 会话目标: 将“答案正确/错误”从死板字符串匹配升级为大模型语义判定。
+- 选择功能: `F006`
+- 实际改动:
+  - `internal/llm/client.go`：新增 `JudgeAnswer` 能力，请求 LLM 输出 `correct/reason` JSON；
+  - `internal/llm/client.go`：新增 `parseAnswerJudgeResult`，支持布尔/字符串等格式容错解析；
+  - `internal/service/service.go`：`SubmitAnswer` 优先调用 LLM 判题，LLM 异常时回退原有本地判题逻辑；
+  - `internal/llm/client_test.go`：新增判题结果解析测试用例。
+- 验证结果:
+  - `go test ./internal/llm ./internal/service ./internal/httpapi` 通过；
+  - `go test ./...` 通过。
+- 风险与遗留:
+  - 当前只将 LLM 判题结果映射为 `true/false`，未向前端透传判题理由；
+  - 线上判题体验依赖 LLM 可用性与稳定性（已保留本地兜底）。
+- 下一步建议:
+  - 远端部署后做 3 组答题回归：同义词正确、口语化正确、明显错误，观察判题体验是否符合预期。
+- 对应提交: （本次提交）
+- 下一步建议:
+  - 远端部署后上传 2~3 张非城市设施图片（如猫/狗/玩具）确认返回中文标签与生成流程稳定。
 - 对应提交: （本次提交）

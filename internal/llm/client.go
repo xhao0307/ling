@@ -52,6 +52,12 @@ type LearningContent struct {
 	RawContent string
 }
 
+type AnswerJudgeResult struct {
+	Correct    bool
+	Reason     string
+	RawContent string
+}
+
 func NewClient(cfg Config) (*Client, error) {
 	if strings.TrimSpace(cfg.APIKey) == "" {
 		return nil, errors.New("llm api key is required")
@@ -186,6 +192,51 @@ func (c *Client) GenerateLearningContent(ctx context.Context, objectType string,
 	if result.Fact == "" || result.QuizQ == "" || result.QuizA == "" {
 		return LearningContent{}, ErrInvalidResponse
 	}
+	return result, nil
+}
+
+func (c *Client) JudgeAnswer(ctx context.Context, question string, expectedAnswer string, givenAnswer string, childAge int) (AnswerJudgeResult, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+
+	body := map[string]any{
+		"gpt_type": c.textGPTType,
+		"messages": []map[string]any{
+			{
+				"role":    "system",
+				"content": "你是儿童问答判题助手。请结合题目语义判断作答是否正确，允许同义表达、近义词和口语化表达。仅输出 JSON。",
+			},
+			{
+				"role": "user",
+				"content": fmt.Sprintf(
+					"孩子年龄:%d\n题目:%s\n标准答案:%s\n孩子回答:%s\n请输出 JSON 字段: correct(boolean), reason(string，简体中文，20字以内)。",
+					childAge,
+					strings.TrimSpace(question),
+					strings.TrimSpace(expectedAnswer),
+					strings.TrimSpace(givenAnswer),
+				),
+			},
+		},
+		"temperature": 0.2,
+		"max_tokens":  180,
+		"response_format": map[string]any{
+			"type": "json_object",
+		},
+	}
+
+	raw, err := c.doJSON(ctx, "/v1/chat/completions", body)
+	if err != nil {
+		return AnswerJudgeResult{}, err
+	}
+	content, err := extractAssistantContent(raw)
+	if err != nil {
+		return AnswerJudgeResult{}, err
+	}
+	result, err := parseAnswerJudgeResult(content)
+	if err != nil {
+		return AnswerJudgeResult{}, err
+	}
+	result.RawContent = content
 	return result, nil
 }
 
@@ -390,6 +441,68 @@ func parseVisionRecognizeResult(content string) (RecognizeResult, error) {
 	}
 
 	return RecognizeResult{}, fmt.Errorf("parse vision result failed: model output is not valid JSON")
+}
+
+func parseAnswerJudgeResult(content string) (AnswerJudgeResult, error) {
+	trimmed := strings.TrimSpace(content)
+	if trimmed == "" {
+		return AnswerJudgeResult{}, fmt.Errorf("parse answer judge result failed: empty content")
+	}
+
+	payload := extractJSONPayload(trimmed)
+	var parsed map[string]any
+	if err := json.Unmarshal([]byte(payload), &parsed); err == nil {
+		if correct, ok := toBool(parsed["correct"]); ok {
+			reason := strings.TrimSpace(fmt.Sprint(parsed["reason"]))
+			if reason == "<nil>" {
+				reason = ""
+			}
+			return AnswerJudgeResult{
+				Correct: correct,
+				Reason:  reason,
+			}, nil
+		}
+	}
+
+	if correctStr := extractJSONField(payload, "correct"); correctStr != "" {
+		if correct, ok := parseBoolLike(correctStr); ok {
+			return AnswerJudgeResult{
+				Correct: correct,
+				Reason:  strings.TrimSpace(extractJSONField(payload, "reason")),
+			}, nil
+		}
+	}
+
+	return AnswerJudgeResult{}, fmt.Errorf("parse answer judge result failed: model output is not valid JSON")
+}
+
+func toBool(v any) (bool, bool) {
+	switch x := v.(type) {
+	case bool:
+		return x, true
+	case string:
+		return parseBoolLike(x)
+	case float64:
+		if x == 1 {
+			return true, true
+		}
+		if x == 0 {
+			return false, true
+		}
+	}
+	return false, false
+}
+
+func parseBoolLike(v string) (bool, bool) {
+	normalized := strings.ToLower(strings.TrimSpace(v))
+	switch normalized {
+	case "true", "1", "yes", "y", "对", "正确", "是":
+		return true, true
+	case "false", "0", "no", "n", "错", "错误", "否":
+		return false, true
+	default:
+		return false, false
+	}
 }
 
 func extractJSONField(content string, key string) string {

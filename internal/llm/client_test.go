@@ -29,3 +29,31 @@ func TestParseVisionRecognizeResultFromBrokenJSONStillReadsFields(t *testing.T) 
 		t.Fatalf("expected raw_label=交通信号灯, got %q", got.RawLabel)
 	}
 }
+
+func TestParseAnswerJudgeResultWithBoolean(t *testing.T) {
+	content := `{"correct":true,"reason":"语义一致"}`
+	got, err := parseAnswerJudgeResult(content)
+	if err != nil {
+		t.Fatalf("parseAnswerJudgeResult() error = %v", err)
+	}
+	if !got.Correct {
+		t.Fatalf("expected correct=true, got false")
+	}
+	if got.Reason != "语义一致" {
+		t.Fatalf("expected reason=语义一致, got %q", got.Reason)
+	}
+}
+
+func TestParseAnswerJudgeResultWithChineseBoolString(t *testing.T) {
+	content := `{"correct":"对","reason":"核心概念匹配"}`
+	got, err := parseAnswerJudgeResult(content)
+	if err != nil {
+		t.Fatalf("parseAnswerJudgeResult() error = %v", err)
+	}
+	if !got.Correct {
+		t.Fatalf("expected correct=true, got false")
+	}
+	if got.Reason != "核心概念匹配" {
+		t.Fatalf("expected reason=核心概念匹配, got %q", got.Reason)
+	}
+}

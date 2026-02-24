@@ -260,8 +260,14 @@ func (s *Service) SubmitAnswer(req AnswerRequest) (AnswerResponse, error) {
 		return AnswerResponse{}, ErrAlreadyCaptured
 	}
 
-	answer := normalizeAnswer(req.Answer)
+	rawAnswer := strings.TrimSpace(req.Answer)
+	answer := normalizeAnswer(rawAnswer)
 	correct := isAnswerCorrect(answer, session.QuizA)
+	if s.llm != nil {
+		if judged, err := s.judgeAnswerByLLM(session, rawAnswer); err == nil {
+			correct = judged
+		}
+	}
 	if !correct {
 		session.AnswerGiven = answer
 		if err := s.store.UpdateSession(session); err != nil {
@@ -305,6 +311,23 @@ func (s *Service) SubmitAnswer(req AnswerRequest) (AnswerResponse, error) {
 		Message:  "回答正确，已成功收集精灵。",
 		Capture:  &capture,
 	}, nil
+}
+
+func (s *Service) judgeAnswerByLLM(session model.ScanSession, givenAnswer string) (bool, error) {
+	if s.llm == nil {
+		return false, ErrLLMUnavailable
+	}
+	result, err := s.llm.JudgeAnswer(
+		context.Background(),
+		session.QuizQ,
+		session.QuizA,
+		givenAnswer,
+		session.ChildAge,
+	)
+	if err != nil {
+		return false, err
+	}
+	return result.Correct, nil
 }
 
 func (s *Service) Pokedex(childID string) ([]model.PokedexEntry, error) {
