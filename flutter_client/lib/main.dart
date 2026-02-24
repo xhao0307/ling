@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
+import 'voice_player.dart';
+
 const List<(String, String)> kObjectOptions = [
   ('mailbox', '邮箱'),
   ('tree', '树'),
@@ -199,6 +201,7 @@ class _ExplorePageState extends State<ExplorePage> {
   final _ageCtrl = TextEditingController(text: '8');
   final _answerCtrl = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
+  final VoicePlayer _voicePlayer = createVoicePlayer();
 
   bool _profileReady = false;
   String _childId = 'kid_1';
@@ -218,6 +221,10 @@ class _ExplorePageState extends State<ExplorePage> {
   String _cameraError = '';
   ScanResult? _scanResult;
   bool _scanCardCollapsed = false;
+  CompanionSceneResult? _companionScene;
+  String _lastSceneWeather = '晴天';
+  String _lastSceneEnvironment = '小区道路';
+  String _lastSceneTraits = '';
 
   bool get _supportsCameraPreview {
     if (kIsWeb) {
@@ -239,6 +246,7 @@ class _ExplorePageState extends State<ExplorePage> {
     _childIdCtrl.dispose();
     _ageCtrl.dispose();
     _answerCtrl.dispose();
+    _voicePlayer.dispose();
 
     final controller = _cameraController;
     if (controller != null) {
@@ -691,6 +699,106 @@ class _ExplorePageState extends State<ExplorePage> {
               ...scan.dialogues.map((line) => Text('• $line')),
               const SizedBox(height: 8),
             ],
+            const Divider(height: 18),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    '剧情互动',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _busy
+                      ? null
+                      : () async {
+                          await _generateCompanionScene(scan);
+                        },
+                  icon: const Icon(Icons.auto_awesome),
+                  label: Text(_companionScene == null ? '生成角色剧情' : '重新生成'),
+                ),
+              ],
+            ),
+            if (_companionScene != null) ...[
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: AspectRatio(
+                  aspectRatio: 4 / 3,
+                  child: Image.network(
+                    _companionScene!.characterImageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, _, __) {
+                      return ColoredBox(
+                        color: Colors.black12,
+                        child: Center(
+                          child: Text(
+                            '角色图加载失败\n${_companionScene!.characterImageUrl}',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primaryContainer
+                      .withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${_companionScene!.characterName}（${_companionScene!.characterPersonality}）',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(_companionScene!.dialogText),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          FilledButton.tonalIcon(
+                            onPressed: _busy
+                                ? null
+                                : () async {
+                                    await _playCompanionVoice();
+                                  },
+                            icon: const Icon(Icons.volume_up),
+                            label: const Text('播放语音'),
+                          ),
+                          const SizedBox(width: 8),
+                          TextButton(
+                            onPressed: _busy
+                                ? null
+                                : () {
+                                    unawaited(_voicePlayer.stop());
+                                  },
+                            child: const Text('停止'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _lastSceneTraits.trim().isEmpty
+                    ? '场景参数：天气 $_lastSceneWeather · 环境 $_lastSceneEnvironment'
+                    : '场景参数：天气 $_lastSceneWeather · 环境 $_lastSceneEnvironment · 形态 $_lastSceneTraits',
+                style: const TextStyle(fontSize: 12),
+              ),
+            ],
+            const SizedBox(height: 8),
             Text('知识点：${scan.fact}'),
             const SizedBox(height: 8),
             Text('问题：${scan.quiz}'),
@@ -951,8 +1059,10 @@ class _ExplorePageState extends State<ExplorePage> {
       setState(() {
         _scanResult = result;
         _scanCardCollapsed = false;
+        _companionScene = null;
         _answerCtrl.clear();
       });
+      unawaited(_voicePlayer.stop());
     } catch (e) {
       _showSnack('扫描失败：$e');
     } finally {
@@ -960,6 +1070,146 @@ class _ExplorePageState extends State<ExplorePage> {
         setState(() => _busy = false);
       }
     }
+  }
+
+  Future<void> _generateCompanionScene(ScanResult scan) async {
+    final contextInput = await _askCompanionContext();
+    if (!mounted || contextInput == null) {
+      return;
+    }
+
+    setState(() => _busy = true);
+    try {
+      final result = await widget.api.generateCompanionScene(
+        childId: _childId,
+        childAge: _childAge,
+        objectType: scan.objectType,
+        weather: contextInput.weather,
+        environment: contextInput.environment,
+        objectTraits: contextInput.objectTraits,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _companionScene = result;
+        _lastSceneWeather = contextInput.weather;
+        _lastSceneEnvironment = contextInput.environment;
+        _lastSceneTraits = contextInput.objectTraits;
+      });
+
+      await _playCompanionVoice(showSnackWhenDone: true);
+    } catch (e) {
+      _showSnack('生成剧情失败：$e');
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<void> _playCompanionVoice({bool showSnackWhenDone = false}) async {
+    final scene = _companionScene;
+    if (scene == null) {
+      _showSnack('请先生成剧情角色。');
+      return;
+    }
+    final audio = scene.voiceAudioBase64.trim();
+    if (audio.isEmpty) {
+      _showSnack('语音数据为空，请重新生成。');
+      return;
+    }
+    try {
+      await _voicePlayer.playBase64(
+        audioBase64: audio,
+        mimeType:
+            scene.voiceMimeType.isEmpty ? 'audio/mpeg' : scene.voiceMimeType,
+      );
+      if (showSnackWhenDone) {
+        _showSnack('已播放角色语音。');
+      }
+    } catch (e) {
+      _showSnack('语音播放失败：$e');
+    }
+  }
+
+  Future<_CompanionContextInput?> _askCompanionContext() async {
+    final weatherCtrl = TextEditingController(text: _lastSceneWeather);
+    final environmentCtrl = TextEditingController(text: _lastSceneEnvironment);
+    final traitsCtrl = TextEditingController(text: _lastSceneTraits);
+
+    final result = await showDialog<_CompanionContextInput>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('补充互动场景'),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: weatherCtrl,
+                  decoration: const InputDecoration(
+                    labelText: '天气',
+                    hintText: '例如：晴天、雨后',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: environmentCtrl,
+                  decoration: const InputDecoration(
+                    labelText: '环境',
+                    hintText: '例如：公园步道、小区门口',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: traitsCtrl,
+                  decoration: const InputDecoration(
+                    labelText: '物体形态（可选）',
+                    hintText: '例如：细长金属杆，顶部暖光',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final weather = weatherCtrl.text.trim();
+                final environment = environmentCtrl.text.trim();
+                if (weather.isEmpty || environment.isEmpty) {
+                  return;
+                }
+                Navigator.of(context).pop(
+                  _CompanionContextInput(
+                    weather: weather,
+                    environment: environment,
+                    objectTraits: traitsCtrl.text.trim(),
+                  ),
+                );
+              },
+              child: const Text('生成剧情'),
+            ),
+          ],
+        );
+      },
+    );
+
+    weatherCtrl.dispose();
+    environmentCtrl.dispose();
+    traitsCtrl.dispose();
+    return result;
   }
 
   Future<void> _submitAnswer() async {
@@ -1083,8 +1333,10 @@ class _ExplorePageState extends State<ExplorePage> {
     setState(() {
       _scanResult = null;
       _scanCardCollapsed = false;
+      _companionScene = null;
       _answerCtrl.clear();
     });
+    unawaited(_voicePlayer.stop());
   }
 
   Future<void> _showWrongAnswerDialog(String message) async {
@@ -1124,11 +1376,13 @@ class _ExplorePageState extends State<ExplorePage> {
       _childAge = age;
       _scanResult = null;
       _scanCardCollapsed = false;
+      _companionScene = null;
       _detectedLabel = '';
       _detectedRawLabel = '';
       _detectedReason = '';
       _answerCtrl.clear();
     });
+    unawaited(_voicePlayer.stop());
   }
 
   Future<void> _captureAndGenerate() async {
@@ -1138,6 +1392,18 @@ class _ExplorePageState extends State<ExplorePage> {
     }
     await _confirmDetectedObjectAndScan();
   }
+}
+
+class _CompanionContextInput {
+  const _CompanionContextInput({
+    required this.weather,
+    required this.environment,
+    required this.objectTraits,
+  });
+
+  final String weather;
+  final String environment;
+  final String objectTraits;
 }
 
 class _SpiritOverlay extends StatelessWidget {
@@ -1566,6 +1832,31 @@ class ApiClient {
     return DailyReport.fromJson(body);
   }
 
+  Future<CompanionSceneResult> generateCompanionScene({
+    required String childId,
+    required int childAge,
+    required String objectType,
+    required String weather,
+    required String environment,
+    String objectTraits = '',
+  }) async {
+    final base = baseUrl;
+    final response = await http.post(
+      Uri.parse('$base/api/v1/companion/scene'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'child_id': childId,
+        'child_age': childAge,
+        'object_type': objectType,
+        'weather': weather,
+        'environment': environment,
+        'object_traits': objectTraits,
+      }),
+    );
+    final body = _decode(response);
+    return CompanionSceneResult.fromJson(body);
+  }
+
   static Map<String, dynamic> _decode(http.Response response) {
     final payload = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -1726,6 +2017,38 @@ class DailyReport {
       totalCaptured: json['total_captured'] as int? ?? 0,
       generatedText: json['generated_text'] as String? ?? '',
       knowledgePoints: points.map((item) => item.toString()).toList(),
+    );
+  }
+}
+
+class CompanionSceneResult {
+  CompanionSceneResult({
+    required this.characterName,
+    required this.characterPersonality,
+    required this.dialogText,
+    required this.imagePrompt,
+    required this.characterImageUrl,
+    required this.voiceAudioBase64,
+    required this.voiceMimeType,
+  });
+
+  final String characterName;
+  final String characterPersonality;
+  final String dialogText;
+  final String imagePrompt;
+  final String characterImageUrl;
+  final String voiceAudioBase64;
+  final String voiceMimeType;
+
+  factory CompanionSceneResult.fromJson(Map<String, dynamic> json) {
+    return CompanionSceneResult(
+      characterName: json['character_name'] as String? ?? '',
+      characterPersonality: json['character_personality'] as String? ?? '',
+      dialogText: json['dialog_text'] as String? ?? '',
+      imagePrompt: json['image_prompt'] as String? ?? '',
+      characterImageUrl: json['character_image_url'] as String? ?? '',
+      voiceAudioBase64: json['voice_audio_base64'] as String? ?? '',
+      voiceMimeType: json['voice_mime_type'] as String? ?? 'audio/mpeg',
     );
   }
 }

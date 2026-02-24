@@ -363,3 +363,31 @@
   - 前端接入新接口，展示 `character_image_url` 和 `dialog_text`，并播放 `voice_audio_base64`；
   - 在真实网络环境执行一次完整链路（识别 -> 角色图 -> 语音播报 -> 孩子输入）后再评估是否置 `F019.passes=true`。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-24 14:55] F019 前端接入剧情角色卡与语音播放
+- 会话目标: 将 `POST /api/v1/companion/scene` 接入 Flutter 探索页，形成“生成角色图 + 对话文案 + 语音播放”可见交互。
+- 选择功能: `F019`
+- 实际改动:
+  - `flutter_client/lib/main.dart`：
+    - 在题目卡新增“剧情互动”区；
+    - 增加“生成角色剧情/重新生成”操作；
+    - 新增场景输入弹窗（天气、环境、物体形态）；
+    - 渲染角色图片、角色人设和台词气泡；
+    - 增加“播放语音/停止”控制；
+    - 新增 `ApiClient.generateCompanionScene` 及 `CompanionSceneResult` 模型；
+    - 在重扫/关闭题目/重进识别时清空剧情并停止语音。
+  - 新增 `flutter_client/lib/voice_player.dart`、`flutter_client/lib/voice_player_interface.dart`、`flutter_client/lib/voice_player_stub.dart`、`flutter_client/lib/voice_player_web.dart`：
+    - Web 端通过 `AudioElement(data:...)` 播放 base64 音频；
+    - 其他平台返回“暂不支持内置语音播放”的可解释错误。
+- 验证结果:
+  - `/Users/xuxinghao/develop/flutter/bin/flutter analyze` 通过（No issues found）；
+  - 本会话开始阶段已执行 `./init.sh`，基础 smoke 通过（`http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 当前语音内置播放仅在 Web 端实现；
+  - 尚未完成浏览器自动化 e2e（识别 -> 生成剧情 -> 自动/手动播放 -> 孩子输入回答）全链路验收，`F019.passes` 保持 `false`。
+- 下一步建议:
+  - 增加剧情回合对话接口（孩子输入后角色继续回复），把当前“首句播报”扩展为多轮剧情；
+  - 使用 Web 自动化录一轮关键路径验证后，再评估 `F019` 是否可置为通过。
+- 对应提交: （本次提交）
