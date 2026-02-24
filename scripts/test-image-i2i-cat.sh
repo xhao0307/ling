@@ -72,11 +72,16 @@ build_image_ref() {
 }
 
 IMAGE_REF="$(build_image_ref "$IMAGE_INPUT")"
+resp_file="$(mktemp)"
+req_file="$(mktemp)"
+image_ref_file="$(mktemp)"
+trap 'rm -f "$resp_file" "$req_file" "$image_ref_file"' EXIT
+printf '%s' "$IMAGE_REF" >"$image_ref_file"
 
-payload="$(jq -n \
+jq -n \
   --arg model "$IMAGE_MODEL" \
   --arg prompt "$PROMPT" \
-  --arg image "$IMAGE_REF" \
+  --rawfile image "$image_ref_file" \
   '{
     model: $model,
     prompt: $prompt,
@@ -86,13 +91,7 @@ payload="$(jq -n \
     size: "2K",
     stream: false,
     watermark: true
-  }'
-)"
-
-resp_file="$(mktemp)"
-req_file="$(mktemp)"
-trap 'rm -f "$resp_file" "$req_file"' EXIT
-printf '%s\n' "$payload" >"$req_file"
+  }' >"$req_file"
 
 echo "POST ${IMAGE_API_BASE_URL}/v1/byteplus/images/generations"
 echo "model=$IMAGE_MODEL"

@@ -749,3 +749,21 @@
   - 在你的服务器设置 key 后执行：`scripts/test-image-i2i-cat.sh`；
   - 若失败，直接把保存的响应 JSON 和命令输出贴我定位。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-24 18:12] F019 修复图生图测试脚本 jq 参数过长
+- 会话目标: 解决你执行 `scripts/test-image-i2i-cat.sh` 时出现 `jq: Argument list too long`。
+- 选择功能: `F019`
+- 实际改动:
+  - `scripts/test-image-i2i-cat.sh`：
+    - 将 `image` 从 `jq --arg image "$IMAGE_REF"` 改为临时文件 + `jq --rawfile image ...`；
+    - 避免大体积 base64 进入命令行参数，彻底规避系统 argv 长度限制。
+- 验证结果:
+  - `bash -n scripts/test-image-i2i-cat.sh` 通过；
+  - 使用假 key 运行脚本已越过 jq 构造阶段，不再出现 `Argument list too long`。
+- 风险与遗留:
+  - 当前环境 DNS 受限（`Could not resolve host`），未完成真实接口调用。
+- 下一步建议:
+  - 你本机直接重跑原命令验证真实出图链路。
+- 对应提交: （本次提交）
