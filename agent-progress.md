@@ -68,4 +68,4 @@
   - 尚未在模拟器/真机执行 Flutter 端到端请求验证，`F017.passes` 仍保持 `false`。
 - 下一步建议:
   - 在设备上执行 `flutter run --dart-define=CITYLING_BASE_URL=http://121.43.118.53:3026` 并完成一次 `scan` 请求验证。
-- 对应提交: （待提交）
+- 对应提交: `6714b0f`
