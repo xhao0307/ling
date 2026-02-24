@@ -69,3 +69,24 @@
 - 下一步建议:
   - 在设备上执行 `flutter run --dart-define=CITYLING_BASE_URL=http://121.43.118.53:3026` 并完成一次 `scan` 请求验证。
 - 对应提交: `6714b0f`
+
+---
+
+### [2026-02-24 10:11] 修复 Web 端跨域预检失败（scan/image Failed to fetch）
+- 会话目标: 修复 Flutter Web 调用远端 `/api/v1/scan/image` 的 `Failed to fetch`。
+- 选择功能: `F017`
+- 实际改动:
+  - 在 `internal/httpapi/router.go` 新增 `withCORS` 中间件；
+  - 统一返回 CORS 头：`Access-Control-Allow-Origin/Methods/Headers/Max-Age`；
+  - 对 `OPTIONS` 预检请求直接返回 `204`，避免被路由层返回 `405`；
+  - 在 `internal/httpapi/router_test.go` 增加 CORS 预检与普通请求头测试。
+- 验证结果:
+  - 复现远端问题：`curl -i -X OPTIONS http://121.43.118.53:3026/api/v1/scan/image ...` 返回 `405 Method Not Allowed`；
+  - 本地测试通过：`go test ./internal/httpapi ./internal/service ./internal/store` 全部通过。
+- 风险与遗留:
+  - 你当前访问的是远端地址 `121.43.118.53:3026`，需要将本次后端修复部署到远端后，浏览器跨域错误才会消失；
+  - `feature_list.json` 中 `F017.passes` 暂不改为 `true`（尚未完成远端 e2e 验证）。
+- 下一步建议:
+  - 部署本次后端改动到远端后，再执行浏览器端 `scan/image` 路径验证；
+  - 部署后可用 `OPTIONS /api/v1/scan/image` 快速确认是否已返回 `204 + CORS`。
+- 对应提交: （待提交）
