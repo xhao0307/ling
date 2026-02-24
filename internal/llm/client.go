@@ -18,42 +18,44 @@ var (
 )
 
 type Config struct {
-	BaseURL       string
-	APIKey        string
-	AppID         string
-	PlatformID    string
-	VisionGPTType int
-	TextGPTType   int
-	Timeout       time.Duration
-	ImageBaseURL  string
-	ImageAPIKey   string
-	ImageModel    string
-	VoiceBaseURL  string
-	VoiceAPIKey   string
-	VoiceID       string
-	VoiceModelID  string
-	VoiceLangCode string
-	VoiceFormat   string
+	BaseURL             string
+	APIKey              string
+	AppID               string
+	PlatformID          string
+	VisionGPTType       int
+	TextGPTType         int
+	Timeout             time.Duration
+	ImageBaseURL        string
+	ImageAPIKey         string
+	ImageModel          string
+	ImageResponseFormat string
+	VoiceBaseURL        string
+	VoiceAPIKey         string
+	VoiceID             string
+	VoiceModelID        string
+	VoiceLangCode       string
+	VoiceFormat         string
 }
 
 type Client struct {
-	baseURL       string
-	apiKey        string
-	appID         string
-	platformID    string
-	visionGPTType int
-	textGPTType   int
-	timeout       time.Duration
-	httpClient    *http.Client
-	imageBaseURL  string
-	imageAPIKey   string
-	imageModel    string
-	voiceBaseURL  string
-	voiceAPIKey   string
-	voiceID       string
-	voiceModelID  string
-	voiceLangCode string
-	voiceFormat   string
+	baseURL             string
+	apiKey              string
+	appID               string
+	platformID          string
+	visionGPTType       int
+	textGPTType         int
+	timeout             time.Duration
+	httpClient          *http.Client
+	imageBaseURL        string
+	imageAPIKey         string
+	imageModel          string
+	imageResponseFormat string
+	voiceBaseURL        string
+	voiceAPIKey         string
+	voiceID             string
+	voiceModelID        string
+	voiceLangCode       string
+	voiceFormat         string
 }
 
 type RecognizeResult struct {
@@ -105,6 +107,13 @@ func NewClient(cfg Config) (*Client, error) {
 	if imageModel == "" {
 		imageModel = "seedream-4-0-250828"
 	}
+	imageResponseFormat := strings.ToLower(strings.TrimSpace(cfg.ImageResponseFormat))
+	if imageResponseFormat == "" {
+		imageResponseFormat = "b64_json"
+	}
+	if imageResponseFormat != "url" && imageResponseFormat != "b64_json" {
+		imageResponseFormat = "b64_json"
+	}
 	voiceBaseURL := strings.TrimSpace(cfg.VoiceBaseURL)
 	if voiceBaseURL == "" {
 		voiceBaseURL = "https://api-voice.charaboard.com"
@@ -139,23 +148,24 @@ func NewClient(cfg Config) (*Client, error) {
 	}
 
 	return &Client{
-		baseURL:       strings.TrimRight(baseURL, "/"),
-		apiKey:        strings.TrimSpace(cfg.APIKey),
-		appID:         appID,
-		platformID:    platformID,
-		visionGPTType: cfg.VisionGPTType,
-		textGPTType:   cfg.TextGPTType,
-		timeout:       cfg.Timeout,
-		httpClient:    &http.Client{},
-		imageBaseURL:  strings.TrimRight(imageBaseURL, "/"),
-		imageAPIKey:   imageAPIKey,
-		imageModel:    imageModel,
-		voiceBaseURL:  strings.TrimRight(voiceBaseURL, "/"),
-		voiceAPIKey:   voiceAPIKey,
-		voiceID:       voiceID,
-		voiceModelID:  voiceModelID,
-		voiceLangCode: voiceLangCode,
-		voiceFormat:   voiceFormat,
+		baseURL:             strings.TrimRight(baseURL, "/"),
+		apiKey:              strings.TrimSpace(cfg.APIKey),
+		appID:               appID,
+		platformID:          platformID,
+		visionGPTType:       cfg.VisionGPTType,
+		textGPTType:         cfg.TextGPTType,
+		timeout:             cfg.Timeout,
+		httpClient:          &http.Client{},
+		imageBaseURL:        strings.TrimRight(imageBaseURL, "/"),
+		imageAPIKey:         imageAPIKey,
+		imageModel:          imageModel,
+		imageResponseFormat: imageResponseFormat,
+		voiceBaseURL:        strings.TrimRight(voiceBaseURL, "/"),
+		voiceAPIKey:         voiceAPIKey,
+		voiceID:             voiceID,
+		voiceModelID:        voiceModelID,
+		voiceLangCode:       voiceLangCode,
+		voiceFormat:         voiceFormat,
 	}, nil
 }
 

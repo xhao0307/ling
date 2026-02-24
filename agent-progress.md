@@ -767,3 +767,38 @@
 - 下一步建议:
   - 你本机直接重跑原命令验证真实出图链路。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-24 18:21] F019 图生图改为优先 b64_json 回传，规避外链 URL 受限
+- 会话目标: 解决图生图返回外链 URL 在部分终端访问受限的问题，确保项目主流程不依赖外链加载。
+- 选择功能: `F019`
+- 实际改动:
+  - `internal/llm/client.go`：
+    - 新增 `ImageResponseFormat` 配置项；
+    - 默认值改为 `b64_json`，支持 `url/b64_json` 两种模式。
+  - `cmd/server/main.go`：
+    - 新增环境变量 `CITYLING_IMAGE_RESPONSE_FORMAT`（默认 `b64_json`）。
+  - `internal/llm/companion.go`：
+    - 生图请求 `response_format` 改为使用配置值；
+    - 解析生图响应时支持 `data[].b64_json`，返回 data URL；
+    - `DownloadImage` 新增 data URL 解析，支持直接解码内联图片。
+  - `internal/service/service.go`：
+    - 当生图结果是 data URL 时，返回体中清空 `character_image_url`，避免重复传大字段；
+    - 继续通过 `character_image_base64` 提供前端可直接渲染的图片数据。
+  - `scripts/test-image-i2i-cat.sh`：
+    - 支持 `CITYLING_IMAGE_RESPONSE_FORMAT`，默认 `b64_json`；
+    - 输出增加 `response_format`，便于联调对齐后端。
+  - `README.md`：
+    - 增加 `CITYLING_IMAGE_RESPONSE_FORMAT` 配置说明。
+- 验证结果:
+  - `bash -n scripts/test-image-i2i-cat.sh` 通过；
+  - `go test ./internal/llm ./internal/service ./internal/httpapi` 通过；
+  - `go test ./...` 通过；
+  - `./init.sh` smoke 通过（`http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - `b64_json` 响应体更大，网络较差时单次请求时延可能略增。
+  - `feature_list.json` 的 `F019.passes` 仍保持 `false`（待线上完整 e2e 实测）。
+- 下一步建议:
+  - 线上部署后跑 `scripts/test-companion-scene-cat.sh`，确认 `character_image_base64` 稳定返回且前端不再依赖外链。
+- 对应提交: （本次提交）

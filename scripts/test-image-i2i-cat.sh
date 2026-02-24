@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IMAGE_API_BASE_URL="${CITYLING_IMAGE_API_BASE_URL:-https://api-image.charaboard.com}"
 IMAGE_API_KEY="${CITYLING_IMAGE_API_KEY:-${CITYLING_LLM_API_KEY:-}}"
 IMAGE_MODEL="${CITYLING_IMAGE_MODEL:-seedream-4-0-250828}"
+IMAGE_RESPONSE_FORMAT="${CITYLING_IMAGE_RESPONSE_FORMAT:-b64_json}"
 APP_ID="${CITYLING_LLM_APP_ID:-4}"
 PLATFORM_ID="${CITYLING_LLM_PLATFORM_ID:-5}"
 MAX_TIME="${CITYLING_IMAGE_MAX_TIME:-60}"
@@ -81,13 +82,14 @@ printf '%s' "$IMAGE_REF" >"$image_ref_file"
 jq -n \
   --arg model "$IMAGE_MODEL" \
   --arg prompt "$PROMPT" \
+  --arg response_format "$IMAGE_RESPONSE_FORMAT" \
   --rawfile image "$image_ref_file" \
   '{
     model: $model,
     prompt: $prompt,
     image: $image,
     n: 1,
-    response_format: "url",
+    response_format: $response_format,
     size: "2K",
     stream: false,
     watermark: true
@@ -95,6 +97,7 @@ jq -n \
 
 echo "POST ${IMAGE_API_BASE_URL}/v1/byteplus/images/generations"
 echo "model=$IMAGE_MODEL"
+echo "response_format=$IMAGE_RESPONSE_FORMAT"
 echo "image_input=$IMAGE_INPUT"
 echo "x-app-id=$APP_ID x-platform-id=$PLATFORM_ID x-max-time=$MAX_TIME"
 

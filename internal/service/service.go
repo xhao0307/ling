@@ -370,6 +370,10 @@ func (s *Service) GenerateCompanionScene(req CompanionSceneRequest) (CompanionSc
 		imageBase64 = ""
 		imageMIME = ""
 	}
+	if strings.HasPrefix(strings.ToLower(strings.TrimSpace(imageURL)), "data:image/") {
+		// data URL 已在 base64 字段回传，避免重复放大响应体
+		imageURL = ""
+	}
 
 	return CompanionSceneResponse{
 		CharacterName:        scene.CharacterName,

@@ -41,6 +41,7 @@ Optional environment variables:
 - `CITYLING_IMAGE_API_BASE_URL` (default `https://api-image.charaboard.com`)
 - `CITYLING_IMAGE_API_KEY` (optional, fallback to `CITYLING_LLM_API_KEY`)
 - `CITYLING_IMAGE_MODEL` (default `seedream-4-0-250828`)
+- `CITYLING_IMAGE_RESPONSE_FORMAT` (`b64_json` or `url`, default `b64_json`)
 - `CITYLING_TTS_API_BASE_URL` (default `https://api-voice.charaboard.com`)
 - `CITYLING_TTS_API_KEY` (optional, fallback to `CITYLING_LLM_API_KEY`)
 - `CITYLING_TTS_VOICE_ID` (default `Xb7hH8MSUJpSbSDYk0k2`)

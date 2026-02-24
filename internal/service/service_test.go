@@ -330,6 +330,66 @@ func TestGenerateCompanionSceneImageToImageIgnoresEnvironmentFields(t *testing.T
 	}
 }
 
+func TestGenerateCompanionSceneSupportsB64JSONImageResponse(t *testing.T) {
+	t.Parallel()
+	svc, _ := newTestService(t)
+
+	var imagePrompt string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/v1/chat/completions":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"{\"character_name\":\"喵喵星友\",\"personality\":\"温柔\",\"dialog_text\":\"你好呀\",\"image_prompt\":\"猫咪卡通角色\"}"}}]}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/v1/byteplus/images/generations":
+			var payload map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+				t.Fatalf("decode image payload failed: %v", err)
+			}
+			imagePrompt, _ = payload["prompt"].(string)
+			if payload["response_format"] != "b64_json" {
+				t.Fatalf("expected response_format=b64_json, got %v", payload["response_format"])
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"data":[{"b64_json":"aGVsbG8="}]}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/elevenlabs/tts/generate":
+			w.Header().Set("Content-Type", "audio/mpeg")
+			_, _ = w.Write([]byte{7, 8, 9})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	client, err := llm.NewClient(llm.Config{
+		APIKey:       "test-key",
+		BaseURL:      server.URL,
+		ImageBaseURL: server.URL,
+		VoiceBaseURL: server.URL,
+	})
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+	svc.SetLLMClient(client)
+
+	resp, err := svc.GenerateCompanionScene(service.CompanionSceneRequest{
+		ChildID:    "kid_b64",
+		ChildAge:   8,
+		ObjectType: "猫",
+	})
+	if err != nil {
+		t.Fatalf("GenerateCompanionScene() error = %v", err)
+	}
+	if strings.TrimSpace(imagePrompt) == "" {
+		t.Fatalf("expected image prompt")
+	}
+	if resp.CharacterImageURL != "" {
+		t.Fatalf("expected image url to be empty for data-url image source, got %q", resp.CharacterImageURL)
+	}
+	if resp.CharacterImageBase64 != "aGVsbG8=" {
+		t.Fatalf("expected base64 image payload, got %q", resp.CharacterImageBase64)
+	}
+}
+
 func TestChatCompanionRequiresLLM(t *testing.T) {
 	t.Parallel()
 	svc, _ := newTestService(t)

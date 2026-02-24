@@ -78,6 +78,45 @@ func TestGenerateCharacterImage(t *testing.T) {
 	}
 }
 
+func TestGenerateCharacterImageWithB64JSON(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/byteplus/images/generations" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		var req struct {
+			ResponseFormat string `json:"response_format"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request body: %v", err)
+		}
+		if req.ResponseFormat != "b64_json" {
+			t.Fatalf("expected response_format=b64_json, got %q", req.ResponseFormat)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":[{"b64_json":"iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB"}]}`))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(Config{
+		APIKey:       "test-key",
+		BaseURL:      server.URL,
+		ImageBaseURL: server.URL,
+		VoiceBaseURL: server.URL,
+	})
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+	client.httpClient = server.Client()
+
+	got, err := client.GenerateCharacterImage(context.Background(), "卡通猫咪角色", "base64-cat-source")
+	if err != nil {
+		t.Fatalf("GenerateCharacterImage() error = %v", err)
+	}
+	if !strings.HasPrefix(got, "data:image/png;base64,") {
+		t.Fatalf("expected data url image, got %q", got)
+	}
+}
+
 func TestNormalizeSourceImageInput(t *testing.T) {
 	t.Parallel()
 
@@ -191,6 +230,26 @@ func TestDownloadImage(t *testing.T) {
 	}
 	if string(body) != string(expected) {
 		t.Fatalf("unexpected image bytes")
+	}
+}
+
+func TestDownloadImageDataURL(t *testing.T) {
+	client, err := NewClient(Config{
+		APIKey: "test-key",
+	})
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+
+	body, mime, err := client.DownloadImage(context.Background(), "data:image/png;base64,aGVsbG8=")
+	if err != nil {
+		t.Fatalf("DownloadImage() error = %v", err)
+	}
+	if mime != "image/png" {
+		t.Fatalf("expected image/png, got %q", mime)
+	}
+	if string(body) != "hello" {
+		t.Fatalf("unexpected decoded data: %q", string(body))
 	}
 }
 

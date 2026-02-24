@@ -3,6 +3,7 @@ package llm
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -108,7 +109,7 @@ func (c *Client) GenerateCharacterImage(ctx context.Context, imagePrompt string,
 		"model":           c.imageModel,
 		"prompt":          strings.TrimSpace(imagePrompt),
 		"n":               1,
-		"response_format": "url",
+		"response_format": c.imageResponseFormat,
 		"size":            "2K",
 		"stream":          false,
 		"watermark":       true,
@@ -123,8 +124,9 @@ func (c *Client) GenerateCharacterImage(ctx context.Context, imagePrompt string,
 
 	var resp struct {
 		Data []struct {
-			URL   string `json:"url"`
-			Error *struct {
+			URL     string `json:"url"`
+			B64JSON string `json:"b64_json"`
+			Error   *struct {
 				Code    string `json:"code"`
 				Message string `json:"message"`
 			} `json:"error"`
@@ -141,6 +143,9 @@ func (c *Client) GenerateCharacterImage(ctx context.Context, imagePrompt string,
 		return "", fmt.Errorf("image generation failed: code=%s message=%s", strings.TrimSpace(resp.Error.Code), strings.TrimSpace(resp.Error.Message))
 	}
 	for _, item := range resp.Data {
+		if trimmed := strings.TrimSpace(item.B64JSON); trimmed != "" {
+			return "data:image/png;base64," + trimmed, nil
+		}
 		if strings.TrimSpace(item.URL) != "" {
 			return strings.TrimSpace(item.URL), nil
 		}
@@ -260,6 +265,9 @@ func (c *Client) DownloadImage(ctx context.Context, imageURL string) ([]byte, st
 	if trimmedURL == "" {
 		return nil, "", ErrInvalidResponse
 	}
+	if strings.HasPrefix(strings.ToLower(trimmedURL), "data:image/") {
+		return decodeDataImageURL(trimmedURL)
+	}
 
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
@@ -287,6 +295,30 @@ func (c *Client) DownloadImage(ctx context.Context, imageURL string) ([]byte, st
 		contentType = "image/png"
 	}
 	return body, contentType, nil
+}
+
+func decodeDataImageURL(dataURL string) ([]byte, string, error) {
+	comma := strings.Index(dataURL, ",")
+	if comma <= 0 || comma >= len(dataURL)-1 {
+		return nil, "", fmt.Errorf("invalid data url")
+	}
+	header := dataURL[:comma]
+	payload := dataURL[comma+1:]
+	if !strings.HasPrefix(strings.ToLower(header), "data:image/") {
+		return nil, "", fmt.Errorf("unsupported data url")
+	}
+	if !strings.Contains(strings.ToLower(header), ";base64") {
+		return nil, "", fmt.Errorf("data url is not base64 encoded")
+	}
+	mime := strings.TrimSpace(strings.TrimPrefix(strings.Split(header, ";")[0], "data:"))
+	if mime == "" {
+		mime = "image/png"
+	}
+	decoded, err := base64.StdEncoding.DecodeString(strings.TrimSpace(payload))
+	if err != nil {
+		return nil, "", err
+	}
+	return decoded, mime, nil
 }
 
 func (c *Client) doMediaJSON(ctx context.Context, requestURL string, apiKey string, payload any) ([]byte, http.Header, error) {
