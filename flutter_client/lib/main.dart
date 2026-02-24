@@ -569,11 +569,8 @@ class _ExplorePageState extends State<ExplorePage> {
   Widget _buildDetectionBadge() {
     final text = _detectedLabel.isEmpty
         ? '视觉识别：未命中'
-        : _detectedRawLabel.isNotEmpty &&
-                _normalizeObjectLabel(_detectedRawLabel) != _detectedLabel
-            ? '视觉识别：${_labelToChinese(_detectedLabel)}（原始：$_detectedRawLabel）'
-            : '视觉识别：${_labelToChinese(_detectedLabel)}';
-    final reason = _detectedReason.trim();
+        : '视觉识别：${_detectedLabelDisplayZh()}';
+    final reason = _detectedReasonDisplayZh();
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -774,22 +771,37 @@ class _ExplorePageState extends State<ExplorePage> {
       return;
     }
 
+    final recognized = _detectedLabelDisplayZh();
+    final reason = _detectedReasonDisplayZh();
+    final scrollController = ScrollController();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: const Text('确认识别结果'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                  '模型识别为：${_detectedRawLabel.isEmpty ? _detectedLabel : _detectedRawLabel}'),
-              if (_detectedReason.trim().isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text('识别依据：${_detectedReason.trim()}'),
-              ],
-            ],
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 260),
+              child: Scrollbar(
+                controller: scrollController,
+                thumbVisibility: true,
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('模型识别为：$recognized'),
+                      if (reason.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text('识别依据：$reason'),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
           actions: [
             TextButton(
@@ -804,6 +816,7 @@ class _ExplorePageState extends State<ExplorePage> {
         );
       },
     );
+    scrollController.dispose();
 
     if (confirmed != true) {
       return;
@@ -861,6 +874,69 @@ class _ExplorePageState extends State<ExplorePage> {
 
   String _normalizeObjectLabel(String label) {
     return label.toLowerCase().trim().replaceAll(' ', '_');
+  }
+
+  String _detectedLabelDisplayZh() {
+    final normalized = _normalizeObjectLabel(_detectedLabel);
+    final detectedZh = _labelToChinese(normalized);
+    final raw = _detectedRawLabel.trim();
+    if (raw.isEmpty) {
+      return detectedZh;
+    }
+
+    final rawZh = _labelToChinese(_normalizeObjectLabel(raw));
+    if (rawZh == detectedZh) {
+      return detectedZh;
+    }
+    return '$detectedZh（原始标签：$rawZh）';
+  }
+
+  String _detectedReasonDisplayZh() {
+    final trimmed = _detectedReason.trim();
+    if (trimmed.isEmpty) {
+      return '';
+    }
+
+    try {
+      final decoded = jsonDecode(trimmed);
+      if (decoded is Map<String, dynamic>) {
+        final lines = <String>[];
+        decoded.forEach((key, value) {
+          lines.add(
+              '${_reasonKeyToChinese(key)}：${_reasonValueToChinese(value)}');
+        });
+        return lines.join('\n');
+      }
+    } catch (_) {
+      // 原因不是 JSON 时直接显示原文。
+    }
+    return trimmed;
+  }
+
+  String _reasonKeyToChinese(String key) {
+    switch (key) {
+      case 'object_type':
+        return '识别类别';
+      case 'raw_label':
+        return '原始标签';
+      case 'matched_label':
+        return '命中标签';
+      case 'source':
+        return '来源';
+      case 'confidence':
+        return '置信度';
+      default:
+        return key;
+    }
+  }
+
+  String _reasonValueToChinese(dynamic value) {
+    if (value is String) {
+      final normalized = _normalizeObjectLabel(value);
+      final zh = _labelToChinese(normalized);
+      return zh;
+    }
+    return value?.toString() ?? '';
   }
 
   void _showSnack(String text) {
