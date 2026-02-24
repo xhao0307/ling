@@ -725,3 +725,27 @@
   - 线上更新后执行：`CITYLING_BASE_URL=http://121.43.118.53:3026 scripts/test-companion-scene-cat.sh`；
   - 若第 3 步仍失败，请贴返回体与同时间段后端日志（含 `media request failed` 原文）。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-24 18:10] F019 新增图生图 API 直连测试脚本（cat 图）
+- 会话目标: 按需求提供“直接测生图 API”的脚本，不经过业务接口，快速验证 seedream i2i 请求是否可用。
+- 选择功能: `F019`
+- 实际改动:
+  - 新增 `scripts/test-image-i2i-cat.sh`：
+    - 默认读取 `cat.png`，也支持传入 URL 或 data URL；
+    - 自动组装 `POST /v1/byteplus/images/generations` 请求；
+    - 请求头包含 `Authorization`、`x-app-id`、`x-platform-id`、`x-max-time`；
+    - 请求体默认参数：`model/ prompt / image / n=1 / response_format=url / size=2K / stream=false / watermark=true`；
+    - 输出 HTTP 状态、`data[0].url`、`data[0].b64_json` 长度、`usage.generated_images`；
+    - 响应保存到 `test_screenshots/image_i2i_last_response.json` 便于复盘。
+- 验证结果:
+  - `bash -n scripts/test-image-i2i-cat.sh` 通过；
+  - 当前环境未配置 `CITYLING_IMAGE_API_KEY` 或 `CITYLING_LLM_API_KEY`，脚本按预期返回明确错误并退出。
+- 风险与遗留:
+  - 未在本环境完成真实出图调用（缺少 API Key）；
+  - `feature_list.json` 中 `F019.passes` 保持 `false`。
+- 下一步建议:
+  - 在你的服务器设置 key 后执行：`scripts/test-image-i2i-cat.sh`；
+  - 若失败，直接把保存的响应 JSON 和命令输出贴我定位。
+- 对应提交: （本次提交）
