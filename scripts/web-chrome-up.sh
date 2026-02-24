@@ -46,14 +46,15 @@ require_cmd() {
   fi
 }
 
-is_web_running() {
-  if [[ ! -f "$WEB_PID_FILE" ]]; then
-    return 1
+port_listeners() {
+  if ! command -v lsof >/dev/null 2>&1; then
+    return 0
   fi
-  local pid
-  pid="$(cat "$WEB_PID_FILE" 2>/dev/null || true)"
-  [[ -n "$pid" ]] || return 1
-  kill -0 "$pid" 2>/dev/null
+  lsof -tiTCP:"$WEB_PORT" -sTCP:LISTEN 2>/dev/null || true
+}
+
+is_web_running() {
+  [[ -n "$(port_listeners)" ]]
 }
 
 wait_web_ready() {
@@ -78,17 +79,46 @@ open_chrome() {
 }
 
 stop_web() {
+  local stopped_any=0
   if is_web_running; then
-    local pid
-    pid="$(cat "$WEB_PID_FILE")"
-    kill "$pid" 2>/dev/null || true
-    sleep 0.2
-    if kill -0 "$pid" 2>/dev/null; then
-      kill -9 "$pid" 2>/dev/null || true
+    if [[ -f "$WEB_PID_FILE" ]]; then
+      local pid
+      pid="$(cat "$WEB_PID_FILE" 2>/dev/null || true)"
+      if [[ -n "$pid" ]]; then
+        kill "$pid" 2>/dev/null || true
+        sleep 0.2
+        if kill -0 "$pid" 2>/dev/null; then
+          kill -9 "$pid" 2>/dev/null || true
+        fi
+        echo "已停止 Web 服务: pid=$pid"
+        stopped_any=1
+      fi
     fi
-    echo "已停止 Web 服务: pid=$pid"
-  else
+  fi
+
+  local listener_pids
+  listener_pids="$(port_listeners)"
+  if [[ -n "$listener_pids" ]]; then
+    while IFS= read -r pid; do
+      [[ -n "$pid" ]] || continue
+      local cmd
+      cmd="$(ps -p "$pid" -o command= 2>/dev/null || true)"
+      if [[ "$cmd" == *"-m http.server $WEB_PORT"* ]]; then
+        kill "$pid" 2>/dev/null || true
+        sleep 0.1
+        if kill -0 "$pid" 2>/dev/null; then
+          kill -9 "$pid" 2>/dev/null || true
+        fi
+        echo "已清理端口占用进程: pid=$pid"
+        stopped_any=1
+      fi
+    done <<< "$listener_pids"
+  fi
+
+  if [[ "$stopped_any" == "0" ]]; then
     echo "Web 服务未运行"
+  else
+    sleep 0.2
   fi
   rm -f "$WEB_PID_FILE"
 }
@@ -122,7 +152,24 @@ start_web() {
   fi
 
   local pid
-  pid="$(cat "$WEB_PID_FILE")"
+  pid="$(cat "$WEB_PID_FILE" 2>/dev/null || true)"
+  if [[ -z "$pid" ]]; then
+    echo "Web 启动异常：未生成 pid 文件"
+    tail -n 60 "$WEB_LOG_FILE" || true
+    exit 1
+  fi
+  if ! kill -0 "$pid" 2>/dev/null; then
+    echo "Web 启动异常：新进程未存活（pid=${pid:-none}）"
+    tail -n 60 "$WEB_LOG_FILE" || true
+    exit 1
+  fi
+
+  if [[ -z "$(port_listeners)" ]]; then
+    echo "Web 启动异常：端口 ${WEB_PORT} 无监听进程"
+    tail -n 60 "$WEB_LOG_FILE" || true
+    exit 1
+  fi
+
   echo "Web 已启动: pid=$pid, url=$WEB_URL"
   open_chrome
 }
@@ -135,7 +182,7 @@ status_all() {
   fi
   if is_web_running; then
     local pid
-    pid="$(cat "$WEB_PID_FILE")"
+    pid="$(port_listeners | head -n 1)"
     echo "web: running pid=$pid url=$WEB_URL log=$WEB_LOG_FILE"
   else
     echo "web: stopped url=$WEB_URL log=$WEB_LOG_FILE"

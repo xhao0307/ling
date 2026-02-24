@@ -149,3 +149,23 @@
 - 下一步建议:
   - 使用 `scripts/web-chrome-up.sh restart` 作为日常前端联调入口。
 - 对应提交: `d544b7b`
+
+---
+
+### [2026-02-24 11:03] 修复 Web Chrome 启动脚本端口占用与状态判定
+- 会话目标: 提高 `web-chrome-up.sh` 的稳定性，避免 7357 端口残留占用导致启动误判。
+- 选择功能: `F018`
+- 实际改动:
+  - 在 `scripts/web-chrome-up.sh` 增加端口监听探测（`lsof`）；
+  - `stop`/`restart` 增加旧 `http.server` 进程清理逻辑；
+  - 启动后补充“新进程存活 + 端口监听”校验；
+  - `status` 改为按端口监听状态输出，不依赖旧 pid 文件。
+- 验证结果:
+  - `bash -n scripts/web-chrome-up.sh` 通过；
+  - `scripts/web-chrome-up.sh restart` 可清理占用并完成 Web 启动；
+  - 启动后 `curl -I http://127.0.0.1:7357` 返回 `HTTP/1.0 200 OK`。
+- 风险与遗留:
+  - 在当前执行环境中，后台进程可能被回收，必要时可使用前台常驻方式启动。
+- 下一步建议:
+  - 若遇到后台进程回收，可直接在终端执行 `cd flutter_client/build/web && python3 -m http.server 7357` 保持常驻。
+- 对应提交: （待提交）
