@@ -358,6 +358,25 @@ class _ExplorePageState extends State<ExplorePage> {
                           ),
                         ),
                       ),
+                      FilledButton.tonalIcon(
+                        onPressed:
+                            _busy || _detecting ? null : _pickPhotoAndGenerate,
+                        style: FilledButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.white.withValues(alpha: 0.14),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                        ),
+                        icon: const Icon(Icons.file_upload, size: 18),
+                        label: const Text(
+                          '上传',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
                       IconButton(
                         onPressed: _busy || _detecting
                             ? null
@@ -452,12 +471,6 @@ class _ExplorePageState extends State<ExplorePage> {
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                FilledButton.tonalIcon(
-                  onPressed: _busy || _detecting ? null : _pickPhotoAndGenerate,
-                  icon: const Icon(Icons.file_upload),
-                  label: const Text('上传照片测试'),
                 ),
               ],
             ),
