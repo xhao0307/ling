@@ -162,6 +162,41 @@ func TestGenerateCompanionSceneInvalidAge(t *testing.T) {
 	}
 }
 
+func TestChatCompanionRequiresLLM(t *testing.T) {
+	t.Parallel()
+	svc, _ := newTestService(t)
+
+	_, err := svc.ChatCompanion(service.CompanionChatRequest{
+		ChildID:      "kid_7",
+		ChildAge:     8,
+		ObjectType:   "路灯",
+		ChildMessage: "你好",
+	})
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if err != service.ErrLLMUnavailable {
+		t.Fatalf("expected ErrLLMUnavailable, got %v", err)
+	}
+}
+
+func TestChatCompanionMissingMessage(t *testing.T) {
+	t.Parallel()
+	svc, _ := newTestService(t)
+
+	_, err := svc.ChatCompanion(service.CompanionChatRequest{
+		ChildID:    "kid_8",
+		ChildAge:   8,
+		ObjectType: "路灯",
+	})
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if err != service.ErrChildMessageEmpty {
+		t.Fatalf("expected ErrChildMessageEmpty, got %v", err)
+	}
+}
+
 func newTestService(t *testing.T) (*service.Service, *store.JSONStore) {
 	t.Helper()
 	dataFile := filepath.Join(t.TempDir(), "state.json")

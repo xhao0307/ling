@@ -113,6 +113,25 @@ curl -s -X POST http://localhost:8080/api/v1/companion/scene \
   }'
 ```
 
+### Companion chat (多轮剧情对话+语音)
+
+```bash
+curl -s -X POST http://localhost:8080/api/v1/companion/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "child_id":"kid_1",
+    "child_age":8,
+    "object_type":"路灯",
+    "character_name":"云朵灯灯",
+    "character_personality":"温柔好奇",
+    "weather":"雨后",
+    "environment":"小区花园",
+    "object_traits":"细长金属杆，顶部发暖光",
+    "history":["角色：你好呀，我们一起观察路灯吧。","孩子：为什么它会亮？"],
+    "child_message":"我觉得是电让它亮起来的"
+  }'
+```
+
 ### Submit answer
 
 ```bash

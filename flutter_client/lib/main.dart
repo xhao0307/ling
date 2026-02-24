@@ -200,6 +200,7 @@ class _ExplorePageState extends State<ExplorePage> {
   final _childIdCtrl = TextEditingController(text: 'kid_1');
   final _ageCtrl = TextEditingController(text: '8');
   final _answerCtrl = TextEditingController();
+  final _companionReplyCtrl = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
   final VoicePlayer _voicePlayer = createVoicePlayer();
 
@@ -222,6 +223,8 @@ class _ExplorePageState extends State<ExplorePage> {
   ScanResult? _scanResult;
   bool _scanCardCollapsed = false;
   CompanionSceneResult? _companionScene;
+  final List<_CompanionChatMessage> _companionMessages =
+      <_CompanionChatMessage>[];
   String _lastSceneWeather = '晴天';
   String _lastSceneEnvironment = '小区道路';
   String _lastSceneTraits = '';
@@ -246,6 +249,7 @@ class _ExplorePageState extends State<ExplorePage> {
     _childIdCtrl.dispose();
     _ageCtrl.dispose();
     _answerCtrl.dispose();
+    _companionReplyCtrl.dispose();
     _voicePlayer.dispose();
 
     final controller = _cameraController;
@@ -797,6 +801,98 @@ class _ExplorePageState extends State<ExplorePage> {
                     : '场景参数：天气 $_lastSceneWeather · 环境 $_lastSceneEnvironment · 形态 $_lastSceneTraits',
                 style: const TextStyle(fontSize: 12),
               ),
+              const SizedBox(height: 10),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.65),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
+                ),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '剧情对话',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 8),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 180),
+                        child: _companionMessages.isEmpty
+                            ? const Text(
+                                '点击“生成角色剧情”后，这里会显示你和角色的对话。',
+                              )
+                            : ListView.separated(
+                                shrinkWrap: true,
+                                itemCount: _companionMessages.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 6),
+                                itemBuilder: (context, index) {
+                                  final msg = _companionMessages[index];
+                                  final isChild =
+                                      msg.role == _CompanionRole.child;
+                                  return Align(
+                                    alignment: isChild
+                                        ? Alignment.centerRight
+                                        : Alignment.centerLeft,
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        color: isChild
+                                            ? Theme.of(context)
+                                                .colorScheme
+                                                .secondaryContainer
+                                            : Theme.of(context)
+                                                .colorScheme
+                                                .tertiaryContainer
+                                                .withValues(alpha: 0.78),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 8,
+                                        ),
+                                        child: Text(
+                                          '${isChild ? '你' : _companionScene!.characterName}：${msg.text}',
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _companionReplyCtrl,
+                        minLines: 1,
+                        maxLines: 3,
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) async {
+                          await _sendCompanionMessage(scan);
+                        },
+                        decoration: InputDecoration(
+                          labelText: '和${_companionScene!.characterName}说点什么',
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            onPressed: _busy
+                                ? null
+                                : () async {
+                                    await _sendCompanionMessage(scan);
+                                  },
+                            icon: const Icon(Icons.send),
+                            tooltip: '发送',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
             const SizedBox(height: 8),
             Text('知识点：${scan.fact}'),
@@ -1060,6 +1156,8 @@ class _ExplorePageState extends State<ExplorePage> {
         _scanResult = result;
         _scanCardCollapsed = false;
         _companionScene = null;
+        _companionMessages.clear();
+        _companionReplyCtrl.clear();
         _answerCtrl.clear();
       });
       unawaited(_voicePlayer.stop());
@@ -1095,6 +1193,15 @@ class _ExplorePageState extends State<ExplorePage> {
 
       setState(() {
         _companionScene = result;
+        _companionMessages
+          ..clear()
+          ..add(
+            _CompanionChatMessage(
+              role: _CompanionRole.companion,
+              text: result.dialogText,
+            ),
+          );
+        _companionReplyCtrl.clear();
         _lastSceneWeather = contextInput.weather;
         _lastSceneEnvironment = contextInput.environment;
         _lastSceneTraits = contextInput.objectTraits;
@@ -1116,7 +1223,19 @@ class _ExplorePageState extends State<ExplorePage> {
       _showSnack('请先生成剧情角色。');
       return;
     }
-    final audio = scene.voiceAudioBase64.trim();
+    await _playCompanionVoiceData(
+      audioBase64: scene.voiceAudioBase64,
+      mimeType: scene.voiceMimeType,
+      showSnackWhenDone: showSnackWhenDone,
+    );
+  }
+
+  Future<void> _playCompanionVoiceData({
+    required String audioBase64,
+    required String mimeType,
+    bool showSnackWhenDone = false,
+  }) async {
+    final audio = audioBase64.trim();
     if (audio.isEmpty) {
       _showSnack('语音数据为空，请重新生成。');
       return;
@@ -1124,8 +1243,7 @@ class _ExplorePageState extends State<ExplorePage> {
     try {
       await _voicePlayer.playBase64(
         audioBase64: audio,
-        mimeType:
-            scene.voiceMimeType.isEmpty ? 'audio/mpeg' : scene.voiceMimeType,
+        mimeType: mimeType.isEmpty ? 'audio/mpeg' : mimeType,
       );
       if (showSnackWhenDone) {
         _showSnack('已播放角色语音。');
@@ -1210,6 +1328,87 @@ class _ExplorePageState extends State<ExplorePage> {
     environmentCtrl.dispose();
     traitsCtrl.dispose();
     return result;
+  }
+
+  Future<void> _sendCompanionMessage(ScanResult scan) async {
+    final scene = _companionScene;
+    if (scene == null) {
+      _showSnack('请先生成剧情角色。');
+      return;
+    }
+
+    final childMessage = _companionReplyCtrl.text.trim();
+    if (childMessage.isEmpty) {
+      _showSnack('请输入一句话再发送。');
+      return;
+    }
+
+    final optimistic = _CompanionChatMessage(
+      role: _CompanionRole.child,
+      text: childMessage,
+    );
+
+    setState(() {
+      _companionMessages.add(optimistic);
+      _companionReplyCtrl.clear();
+      _busy = true;
+    });
+
+    try {
+      final result = await widget.api.chatCompanion(
+        childId: _childId,
+        childAge: _childAge,
+        objectType: scan.objectType,
+        characterName: scene.characterName,
+        characterPersonality: scene.characterPersonality,
+        weather: _lastSceneWeather,
+        environment: _lastSceneEnvironment,
+        objectTraits: _lastSceneTraits,
+        history: _buildCompanionHistory(),
+        childMessage: childMessage,
+      );
+
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _companionMessages.add(
+          _CompanionChatMessage(
+            role: _CompanionRole.companion,
+            text: result.replyText,
+          ),
+        );
+      });
+      await _playCompanionVoiceData(
+        audioBase64: result.voiceAudioBase64,
+        mimeType: result.voiceMimeType,
+      );
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        if (_companionMessages.isNotEmpty &&
+            identical(_companionMessages.last, optimistic)) {
+          _companionMessages.removeLast();
+        }
+      });
+      _showSnack('角色回复失败：$e');
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  List<String> _buildCompanionHistory() {
+    final lines = <String>[];
+    for (final msg in _companionMessages) {
+      lines.add(msg.role == _CompanionRole.child
+          ? '孩子：${msg.text}'
+          : '角色：${msg.text}');
+    }
+    return lines;
   }
 
   Future<void> _submitAnswer() async {
@@ -1334,6 +1533,8 @@ class _ExplorePageState extends State<ExplorePage> {
       _scanResult = null;
       _scanCardCollapsed = false;
       _companionScene = null;
+      _companionMessages.clear();
+      _companionReplyCtrl.clear();
       _answerCtrl.clear();
     });
     unawaited(_voicePlayer.stop());
@@ -1377,6 +1578,8 @@ class _ExplorePageState extends State<ExplorePage> {
       _scanResult = null;
       _scanCardCollapsed = false;
       _companionScene = null;
+      _companionMessages.clear();
+      _companionReplyCtrl.clear();
       _detectedLabel = '';
       _detectedRawLabel = '';
       _detectedReason = '';
@@ -1404,6 +1607,21 @@ class _CompanionContextInput {
   final String weather;
   final String environment;
   final String objectTraits;
+}
+
+enum _CompanionRole {
+  child,
+  companion,
+}
+
+class _CompanionChatMessage {
+  const _CompanionChatMessage({
+    required this.role,
+    required this.text,
+  });
+
+  final _CompanionRole role;
+  final String text;
 }
 
 class _SpiritOverlay extends StatelessWidget {
@@ -1857,6 +2075,39 @@ class ApiClient {
     return CompanionSceneResult.fromJson(body);
   }
 
+  Future<CompanionChatResult> chatCompanion({
+    required String childId,
+    required int childAge,
+    required String objectType,
+    required String characterName,
+    required String characterPersonality,
+    required String weather,
+    required String environment,
+    required String objectTraits,
+    required List<String> history,
+    required String childMessage,
+  }) async {
+    final base = baseUrl;
+    final response = await http.post(
+      Uri.parse('$base/api/v1/companion/chat'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'child_id': childId,
+        'child_age': childAge,
+        'object_type': objectType,
+        'character_name': characterName,
+        'character_personality': characterPersonality,
+        'weather': weather,
+        'environment': environment,
+        'object_traits': objectTraits,
+        'history': history,
+        'child_message': childMessage,
+      }),
+    );
+    final body = _decode(response);
+    return CompanionChatResult.fromJson(body);
+  }
+
   static Map<String, dynamic> _decode(http.Response response) {
     final payload = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -2047,6 +2298,26 @@ class CompanionSceneResult {
       dialogText: json['dialog_text'] as String? ?? '',
       imagePrompt: json['image_prompt'] as String? ?? '',
       characterImageUrl: json['character_image_url'] as String? ?? '',
+      voiceAudioBase64: json['voice_audio_base64'] as String? ?? '',
+      voiceMimeType: json['voice_mime_type'] as String? ?? 'audio/mpeg',
+    );
+  }
+}
+
+class CompanionChatResult {
+  CompanionChatResult({
+    required this.replyText,
+    required this.voiceAudioBase64,
+    required this.voiceMimeType,
+  });
+
+  final String replyText;
+  final String voiceAudioBase64;
+  final String voiceMimeType;
+
+  factory CompanionChatResult.fromJson(Map<String, dynamic> json) {
+    return CompanionChatResult(
+      replyText: json['reply_text'] as String? ?? '',
       voiceAudioBase64: json['voice_audio_base64'] as String? ?? '',
       voiceMimeType: json['voice_mime_type'] as String? ?? 'audio/mpeg',
     );

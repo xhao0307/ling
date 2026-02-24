@@ -391,3 +391,37 @@
   - 增加剧情回合对话接口（孩子输入后角色继续回复），把当前“首句播报”扩展为多轮剧情；
   - 使用 Web 自动化录一轮关键路径验证后，再评估 `F019` 是否可置为通过。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-24 15:08] F019 新增多轮剧情对话接口并接入前端输入
+- 会话目标: 在现有“角色首句”基础上增加“孩子输入 -> 角色回复+语音”的多轮互动能力。
+- 选择功能: `F019`
+- 实际改动:
+  - 后端新增 `POST /api/v1/companion/chat`：
+    - `internal/llm/companion.go` 新增 `GenerateCompanionReply` 和 `parseCompanionReply`；
+    - `internal/service/service.go` 新增 `CompanionChatRequest/Response` 与 `ChatCompanion`；
+    - `internal/httpapi/handlers.go`、`internal/httpapi/router.go` 增加新 handler 与路由；
+    - `internal/httpapi/swagger.go` 增加接口与 schema；
+    - `README.md` 增加 curl 示例。
+  - 前端 `flutter_client/lib/main.dart`：
+    - 剧情卡新增“剧情对话”气泡列表；
+    - 新增输入框和发送按钮，调用 `/api/v1/companion/chat`；
+    - 新增 `CompanionChatResult` 与 `ApiClient.chatCompanion`；
+    - 发送后自动追加角色回复并播放返回语音；
+    - 在重扫/关闭题目/重进识别时清理剧情历史与输入框。
+  - 测试补充：
+    - `internal/llm/companion_test.go`：新增回复解析与生成测试；
+    - `internal/service/service_test.go`：新增 chat 参数校验测试；
+    - `internal/httpapi/handlers_test.go`、`internal/httpapi/router_test.go`：新增 chat 错误码与路由注册测试。
+- 验证结果:
+  - `go test ./...` 通过；
+  - `/Users/xuxinghao/develop/flutter/bin/flutter analyze` 通过；
+  - `./init.sh` smoke 通过（`http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 当前执行环境中存在端口进程干扰，命令行直连 `/api/v1/companion/chat` 的 e2e 结果不稳定；
+  - 尚未完成浏览器自动化全链路验收，`feature_list.json` 的 `F019.passes` 保持 `false`。
+- 下一步建议:
+  - 增加“剧情对话后触发答题判定”的联动逻辑（把当前 quiz 判题与剧情对话串起来）；
+  - 使用 Web 自动化完成一次“生成角色 -> 连续两轮对话 -> 提交答案”的关键路径验证后再评估置 `passes=true`。
+- 对应提交: （本次提交）

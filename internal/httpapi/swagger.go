@@ -162,6 +162,33 @@ func openAPISpec(serverURL string) map[string]any {
 					},
 				},
 			},
+			"/api/v1/companion/chat": map[string]any{
+				"post": map[string]any{
+					"summary":     "角色剧情多轮对话（文本+语音）",
+					"operationId": "companionChat",
+					"requestBody": map[string]any{
+						"required": true,
+						"content": map[string]any{
+							"application/json": map[string]any{
+								"schema": map[string]any{"$ref": "#/components/schemas/CompanionChatRequest"},
+							},
+						},
+					},
+					"responses": map[string]any{
+						"200": map[string]any{
+							"description": "成功",
+							"content": map[string]any{
+								"application/json": map[string]any{
+									"schema": map[string]any{"$ref": "#/components/schemas/CompanionChatResponse"},
+								},
+							},
+						},
+						"400": map[string]any{"description": "请求错误"},
+						"503": map[string]any{"description": "未配置大模型/TTS能力"},
+						"500": map[string]any{"description": "服务错误"},
+					},
+				},
+			},
 			"/api/v1/answer": map[string]any{
 				"post": map[string]any{
 					"summary":     "提交答案",
@@ -306,6 +333,25 @@ func openAPISpec(serverURL string) map[string]any {
 						"object_traits": map[string]any{"type": "string"},
 					},
 				},
+				"CompanionChatRequest": map[string]any{
+					"type":     "object",
+					"required": []string{"child_age", "object_type", "child_message"},
+					"properties": map[string]any{
+						"child_id":              map[string]any{"type": "string"},
+						"child_age":             map[string]any{"type": "integer"},
+						"object_type":           map[string]any{"type": "string"},
+						"character_name":        map[string]any{"type": "string"},
+						"character_personality": map[string]any{"type": "string"},
+						"weather":               map[string]any{"type": "string"},
+						"environment":           map[string]any{"type": "string"},
+						"object_traits":         map[string]any{"type": "string"},
+						"history": map[string]any{
+							"type":  "array",
+							"items": map[string]any{"type": "string"},
+						},
+						"child_message": map[string]any{"type": "string"},
+					},
+				},
 				"Spirit": map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -351,6 +397,14 @@ func openAPISpec(serverURL string) map[string]any {
 						"character_image_url":   map[string]any{"type": "string"},
 						"voice_audio_base64":    map[string]any{"type": "string"},
 						"voice_mime_type":       map[string]any{"type": "string"},
+					},
+				},
+				"CompanionChatResponse": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"reply_text":         map[string]any{"type": "string"},
+						"voice_audio_base64": map[string]any{"type": "string"},
+						"voice_mime_type":    map[string]any{"type": "string"},
 					},
 				},
 				"Capture": map[string]any{

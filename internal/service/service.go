@@ -27,6 +27,7 @@ var (
 	ErrContentGenerate   = errors.New("学习内容生成服务暂不可用，请稍后重试")
 	ErrInvalidChildAge   = errors.New("child_age 必须在 3 到 15 之间")
 	ErrObjectTypeMissing = errors.New("请提供 object_type")
+	ErrChildMessageEmpty = errors.New("请提供 child_message")
 	ErrMediaUnavailable  = errors.New("角色形象或语音能力暂不可用")
 )
 
@@ -92,6 +93,25 @@ type CompanionSceneResponse struct {
 	CharacterImageURL    string `json:"character_image_url"`
 	VoiceAudioBase64     string `json:"voice_audio_base64"`
 	VoiceMimeType        string `json:"voice_mime_type"`
+}
+
+type CompanionChatRequest struct {
+	ChildID              string   `json:"child_id"`
+	ChildAge             int      `json:"child_age"`
+	ObjectType           string   `json:"object_type"`
+	CharacterName        string   `json:"character_name"`
+	CharacterPersonality string   `json:"character_personality,omitempty"`
+	Weather              string   `json:"weather,omitempty"`
+	Environment          string   `json:"environment,omitempty"`
+	ObjectTraits         string   `json:"object_traits,omitempty"`
+	History              []string `json:"history,omitempty"`
+	ChildMessage         string   `json:"child_message"`
+}
+
+type CompanionChatResponse struct {
+	ReplyText        string `json:"reply_text"`
+	VoiceAudioBase64 string `json:"voice_audio_base64"`
+	VoiceMimeType    string `json:"voice_mime_type"`
 }
 
 type cacheEntry struct {
@@ -318,6 +338,52 @@ func (s *Service) GenerateCompanionScene(req CompanionSceneRequest) (CompanionSc
 		CharacterImageURL:    imageURL,
 		VoiceAudioBase64:     base64.StdEncoding.EncodeToString(audioBytes),
 		VoiceMimeType:        mimeType,
+	}, nil
+}
+
+func (s *Service) ChatCompanion(req CompanionChatRequest) (CompanionChatResponse, error) {
+	if req.ChildAge < 3 || req.ChildAge > 15 {
+		return CompanionChatResponse{}, ErrInvalidChildAge
+	}
+	objectType := strings.TrimSpace(req.ObjectType)
+	if objectType == "" {
+		return CompanionChatResponse{}, ErrObjectTypeMissing
+	}
+	childMessage := strings.TrimSpace(req.ChildMessage)
+	if childMessage == "" {
+		return CompanionChatResponse{}, ErrChildMessageEmpty
+	}
+	if s.llm == nil {
+		return CompanionChatResponse{}, ErrLLMUnavailable
+	}
+
+	reply, err := s.llm.GenerateCompanionReply(context.Background(), llm.CompanionReplyRequest{
+		ObjectType:           objectType,
+		ChildAge:             req.ChildAge,
+		CharacterName:        strings.TrimSpace(req.CharacterName),
+		CharacterPersonality: strings.TrimSpace(req.CharacterPersonality),
+		Weather:              strings.TrimSpace(req.Weather),
+		Environment:          strings.TrimSpace(req.Environment),
+		ObjectTraits:         strings.TrimSpace(req.ObjectTraits),
+		History:              req.History,
+		ChildMessage:         childMessage,
+	})
+	if err != nil {
+		return CompanionChatResponse{}, err
+	}
+
+	audioBytes, mimeType, err := s.llm.SynthesizeSpeech(context.Background(), reply.ReplyText)
+	if err != nil {
+		if errors.Is(err, llm.ErrVoiceCapabilityUnavailable) {
+			return CompanionChatResponse{}, ErrMediaUnavailable
+		}
+		return CompanionChatResponse{}, err
+	}
+
+	return CompanionChatResponse{
+		ReplyText:        reply.ReplyText,
+		VoiceAudioBase64: base64.StdEncoding.EncodeToString(audioBytes),
+		VoiceMimeType:    mimeType,
 	}, nil
 }
 

@@ -33,6 +33,23 @@ type CompanionScene struct {
 	RawContent           string
 }
 
+type CompanionReplyRequest struct {
+	ObjectType           string
+	ChildAge             int
+	CharacterName        string
+	CharacterPersonality string
+	Weather              string
+	Environment          string
+	ObjectTraits         string
+	History              []string
+	ChildMessage         string
+}
+
+type CompanionReply struct {
+	ReplyText  string
+	RawContent string
+}
+
 func (c *Client) GenerateCompanionScene(ctx context.Context, req CompanionSceneRequest) (CompanionScene, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
@@ -129,6 +146,63 @@ func (c *Client) GenerateCharacterImage(ctx context.Context, imagePrompt string)
 		}
 	}
 	return "", ErrInvalidResponse
+}
+
+func (c *Client) GenerateCompanionReply(ctx context.Context, req CompanionReplyRequest) (CompanionReply, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+
+	var historyBlock string
+	if len(req.History) == 0 {
+		historyBlock = "(无历史对话)"
+	} else {
+		historyBlock = strings.Join(req.History, "\n")
+	}
+
+	body := map[string]any{
+		"gpt_type": c.textGPTType,
+		"messages": []map[string]any{
+			{
+				"role":    "system",
+				"content": "你是儿童剧情互动角色。请继续角色对话，语气友好、简洁。仅输出 JSON，禁止 markdown。",
+			},
+			{
+				"role": "user",
+				"content": fmt.Sprintf(
+					"孩子年龄:%d\n物体:%s\n角色名:%s\n角色性格:%s\n天气:%s\n环境:%s\n物体形态:%s\n历史对话:\n%s\n孩子最新输入:%s\n请输出 JSON 字段: reply_text。要求：1) 只回复角色台词；2) 1-2 句，最多45字；3) 鼓励孩子观察和思考；4) 简体中文。",
+					req.ChildAge,
+					strings.TrimSpace(req.ObjectType),
+					defaultText(req.CharacterName, "城市小精灵"),
+					defaultText(req.CharacterPersonality, "友好"),
+					defaultText(req.Weather, "晴朗"),
+					defaultText(req.Environment, "户外"),
+					defaultText(req.ObjectTraits, "可爱"),
+					historyBlock,
+					strings.TrimSpace(req.ChildMessage),
+				),
+			},
+		},
+		"temperature": 0.7,
+		"max_tokens":  240,
+		"response_format": map[string]any{
+			"type": "json_object",
+		},
+	}
+
+	raw, err := c.doJSON(ctx, "/v1/chat/completions", body)
+	if err != nil {
+		return CompanionReply{}, err
+	}
+	content, err := extractAssistantContent(raw)
+	if err != nil {
+		return CompanionReply{}, err
+	}
+	reply, err := parseCompanionReply(content)
+	if err != nil {
+		return CompanionReply{}, err
+	}
+	reply.RawContent = content
+	return reply, nil
 }
 
 func (c *Client) SynthesizeSpeech(ctx context.Context, text string) ([]byte, string, error) {
@@ -234,6 +308,23 @@ func parseCompanionScene(content string) (CompanionScene, error) {
 		return CompanionScene{}, ErrInvalidResponse
 	}
 	return scene, nil
+}
+
+func parseCompanionReply(content string) (CompanionReply, error) {
+	payload := extractJSONPayload(strings.TrimSpace(content))
+	var parsed struct {
+		ReplyText string `json:"reply_text"`
+	}
+	if err := json.Unmarshal([]byte(payload), &parsed); err != nil {
+		return CompanionReply{}, fmt.Errorf("parse companion reply failed: %w", err)
+	}
+	reply := CompanionReply{
+		ReplyText: strings.TrimSpace(parsed.ReplyText),
+	}
+	if reply.ReplyText == "" {
+		return CompanionReply{}, ErrInvalidResponse
+	}
+	return reply, nil
 }
 
 func defaultText(v string, fallback string) string {

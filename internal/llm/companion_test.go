@@ -91,3 +91,52 @@ func TestSynthesizeSpeech(t *testing.T) {
 		t.Fatalf("unexpected audio bytes")
 	}
 }
+
+func TestParseCompanionReply(t *testing.T) {
+	content := `{"reply_text":"你观察得真仔细，我们再看看它的颜色变化吧。"}`
+	reply, err := parseCompanionReply(content)
+	if err != nil {
+		t.Fatalf("parseCompanionReply() error = %v", err)
+	}
+	if reply.ReplyText == "" {
+		t.Fatalf("expected non-empty reply text")
+	}
+}
+
+func TestGenerateCompanionReply(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/chat/completions" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"{\"reply_text\":\"我们一起数数它有几个灯吧！\"}"}}]}`))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(Config{
+		APIKey:  "test-key",
+		BaseURL: server.URL,
+	})
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+	client.httpClient = server.Client()
+
+	reply, err := client.GenerateCompanionReply(context.Background(), CompanionReplyRequest{
+		ObjectType:           "路灯",
+		ChildAge:             8,
+		CharacterName:        "云朵灯灯",
+		CharacterPersonality: "温柔好奇",
+		Weather:              "晴天",
+		Environment:          "小区道路",
+		ObjectTraits:         "暖光",
+		History:              []string{"角色：你好呀", "孩子：你好"},
+		ChildMessage:         "为什么它会亮？",
+	})
+	if err != nil {
+		t.Fatalf("GenerateCompanionReply() error = %v", err)
+	}
+	if reply.ReplyText == "" {
+		t.Fatalf("expected non-empty reply text")
+	}
+}
