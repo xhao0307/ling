@@ -206,3 +206,22 @@
 - 下一步建议:
   - 远端发布后执行一次前端上传识别链路回归，确认 4xx/5xx 提示与预期一致。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-24 11:32] 修复 scan/image 对半截 JSON 的解析失败
+- 会话目标: 解决线上 `scanImage internal error ... model output is not valid JSON` 导致的 500。
+- 选择功能: `F005`
+- 实际改动:
+  - `internal/llm/client.go`：在 `parseVisionRecognizeResult` 增加字段级容错提取逻辑；
+  - 新增 `extractJSONField`：当模型输出被代码块包裹或 JSON 截断时，仍可提取 `object_type/raw_label/reason`；
+  - `internal/llm/client_test.go`：补充“截断 JSON”“缺右花括号 JSON”两类回归测试。
+- 验证结果:
+  - `go test ./internal/llm ./internal/httpapi ./internal/service` 通过；
+  - `go test ./...` 通过。
+- 风险与遗留:
+  - 若上游模型仅返回自然语言且不含 `object_type` 字段，仍可能进入解析失败分支；
+  - `feature_list.json` 的 `F005.passes` 暂不改为 `true`（待远端 e2e 验证）。
+- 下一步建议:
+  - 远端更新后再做一次上传图片识别，确认 `POST /api/v1/scan/image` 不再返回 500。
+- 对应提交: （本次提交）

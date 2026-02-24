@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -348,6 +349,31 @@ func parseVisionRecognizeResult(content string) (RecognizeResult, error) {
 		}
 	}
 
+	// 容错: 当返回被 markdown 包裹或 JSON 被截断时，尽量提取已输出字段。
+	payload := extractJSONPayload(trimmed)
+	objectType := normalizeObjectType(extractJSONField(payload, "object_type"))
+	if objectType == "" {
+		objectType = normalizeObjectType(extractJSONField(trimmed, "object_type"))
+	}
+	if objectType != "" {
+		rawLabel := strings.TrimSpace(extractJSONField(payload, "raw_label"))
+		if rawLabel == "" {
+			rawLabel = strings.TrimSpace(extractJSONField(trimmed, "raw_label"))
+		}
+		if rawLabel == "" {
+			rawLabel = objectType
+		}
+		reason := strings.TrimSpace(extractJSONField(payload, "reason"))
+		if reason == "" {
+			reason = strings.TrimSpace(extractJSONField(trimmed, "reason"))
+		}
+		return RecognizeResult{
+			ObjectType: objectType,
+			RawLabel:   rawLabel,
+			Reason:     reason,
+		}, nil
+	}
+
 	// 尝试从文本中推断（保留向后兼容）
 	if objectType := inferObjectTypeFromText(trimmed); objectType != "" {
 		return RecognizeResult{
@@ -358,6 +384,22 @@ func parseVisionRecognizeResult(content string) (RecognizeResult, error) {
 	}
 
 	return RecognizeResult{}, fmt.Errorf("parse vision result failed: model output is not valid JSON")
+}
+
+func extractJSONField(content string, key string) string {
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return ""
+	}
+	quotedPattern := fmt.Sprintf(`(?is)"%s"\s*:\s*"([^"]*)"`, regexp.QuoteMeta(key))
+	if m := regexp.MustCompile(quotedPattern).FindStringSubmatch(content); len(m) == 2 {
+		return strings.TrimSpace(m[1])
+	}
+	unquotedPattern := fmt.Sprintf(`(?is)"%s"\s*:\s*([A-Za-z0-9_\-]+)`, regexp.QuoteMeta(key))
+	if m := regexp.MustCompile(unquotedPattern).FindStringSubmatch(content); len(m) == 2 {
+		return strings.TrimSpace(m[1])
+	}
+	return ""
 }
 
 func inferObjectTypeFromText(content string) string {
