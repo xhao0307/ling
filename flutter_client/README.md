@@ -28,7 +28,7 @@ This will generate platform folders and keep the existing `lib/main.dart`.
 ```bash
 cd flutter_client
 flutter pub get
-flutter run --dart-define=CITYLING_BASE_URL=http://10.0.2.2:8080
+flutter run --dart-define=CITYLING_BASE_URL=http://121.43.118.53:3026
 ```
 
 `CITYLING_BASE_URL` tips:

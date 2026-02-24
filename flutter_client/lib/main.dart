@@ -76,7 +76,7 @@ class _CityLingHomePageState extends State<CityLingHomePage> {
           decoration: const InputDecoration(
             labelText: 'CITYLING_BASE_URL',
             border: OutlineInputBorder(),
-            hintText: '例如：http://192.168.1.10:8080',
+            hintText: '例如：http://121.43.118.53:3026',
           ),
         ),
         actions: [
@@ -1217,7 +1217,7 @@ class _DailyReportPageState extends State<DailyReportPage> {
 class ApiClient {
   static const String _defaultBaseUrl = String.fromEnvironment(
     'CITYLING_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8080',
+    defaultValue: 'http://121.43.118.53:3026',
   );
   String? _baseUrlOverride;
 

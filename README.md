@@ -134,5 +134,5 @@ Quick start after installing Flutter:
 cd flutter_client
 flutter create .
 flutter pub get
-flutter run --dart-define=CITYLING_BASE_URL=http://10.0.2.2:8080
+flutter run --dart-define=CITYLING_BASE_URL=http://121.43.118.53:3026
 ```
