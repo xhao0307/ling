@@ -96,7 +96,7 @@ func (c *Client) GenerateCompanionScene(ctx context.Context, req CompanionSceneR
 	return scene, nil
 }
 
-func (c *Client) GenerateCharacterImage(ctx context.Context, imagePrompt string) (string, error) {
+func (c *Client) GenerateCharacterImage(ctx context.Context, imagePrompt string, sourceImage string) (string, error) {
 	if strings.TrimSpace(c.imageAPIKey) == "" {
 		return "", ErrImageCapabilityUnavailable
 	}
@@ -112,6 +112,9 @@ func (c *Client) GenerateCharacterImage(ctx context.Context, imagePrompt string)
 		"size":            "2K",
 		"stream":          false,
 		"watermark":       true,
+	}
+	if trimmedSourceImage := strings.TrimSpace(sourceImage); trimmedSourceImage != "" {
+		body["image"] = trimmedSourceImage
 	}
 	respBody, _, err := c.doMediaJSON(ctx, c.imageBaseURL+"/v1/byteplus/images/generations", c.imageAPIKey, body)
 	if err != nil {

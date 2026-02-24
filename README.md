@@ -109,7 +109,8 @@ curl -s -X POST http://localhost:8080/api/v1/companion/scene \
     "object_type":"路灯",
     "weather":"雨后",
     "environment":"小区花园",
-    "object_traits":"细长金属杆，顶部发暖光"
+    "object_traits":"细长金属杆，顶部发暖光",
+    "source_image_base64":"<可选，识别原图base64，用于图生图>"
   }'
 ```
 

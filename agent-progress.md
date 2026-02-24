@@ -554,3 +554,33 @@
   - 用真实剧情图在手机与 Web 各验收一轮，必要时微调剪影尺寸与发光强度；
   - 若要更强“动画版”效果，可继续加粒子流光或入场渐显动画。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-24 16:32] F019 打通识别原图参与图生图（cat 原图驱动角色剪影）
+- 会话目标: 修复“上传 cat 图后名字牌仍是默认图标”的问题，让剧情角色图真正由识别原图驱动（i2i）。
+- 选择功能: `F019`
+- 实际改动:
+  - 后端：
+    - `internal/service/service.go`：`CompanionSceneRequest` 新增 `source_image_base64`；
+    - `internal/service/service.go`：生成角色图时将 `source_image_base64` 透传给生图层，并在 prompt 中追加“结合参考图主体特征”的约束；
+    - `internal/llm/companion.go`：`GenerateCharacterImage` 新增 `sourceImage` 参数，非空时写入生图请求的 `image` 字段（图生图）；
+    - `internal/httpapi/swagger.go`：补充 `CompanionSceneRequest.source_image_base64` 文档字段；
+    - `README.md`：更新 `/api/v1/companion/scene` 示例，标注可选 `source_image_base64`。
+  - 前端：
+    - `flutter_client/lib/main.dart`：识别阶段缓存当前上传/拍照图的 base64；
+    - 调用 `generateCompanionScene` 时附带 `source_image_base64`，让角色图与剪影基于当前识别原图生成；
+    - 新识别开始与退出剧情时清空缓存，避免旧图串用。
+  - 测试：
+    - `internal/llm/companion_test.go`：新增断言，验证 `GenerateCharacterImage` 会把 `image` 字段发到生图接口。
+- 验证结果:
+  - `go test ./...` 通过；
+  - `/Users/xuxinghao/develop/flutter/bin/flutter analyze` 通过（No issues found）；
+  - `./init.sh` smoke 通过（`http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 若后端运行环境的生图服务不可用或未授权，仍会退回基础剧情模式，名字牌展示回退图标；
+  - 本地 CLI 环境受网络/端口沙箱影响，未直接完成真实线上 i2i 出图截图验收，`F019.passes` 继续保持 `false`。
+- 下一步建议:
+  - 将本次后端版本部署到你当前使用的线上地址后，再用 `cat.png` 做一轮实测；
+  - 若仍回退，优先查 `/api/v1/companion/scene` 返回码与日志中的 image API 错误码。
+- 对应提交: （本次提交）

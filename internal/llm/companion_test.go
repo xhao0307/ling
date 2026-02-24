@@ -2,6 +2,7 @@ package llm
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -23,6 +24,7 @@ func TestParseCompanionScene(t *testing.T) {
 }
 
 func TestGenerateCharacterImage(t *testing.T) {
+	var receivedImage string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/byteplus/images/generations" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
@@ -30,6 +32,13 @@ func TestGenerateCharacterImage(t *testing.T) {
 		if !strings.HasPrefix(r.Header.Get("Authorization"), "Bearer ") {
 			t.Fatalf("missing bearer auth")
 		}
+		var req struct {
+			Image string `json:"image"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request body: %v", err)
+		}
+		receivedImage = strings.TrimSpace(req.Image)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"data":[{"url":"https://img.example.com/companion.png"}]}`))
 	}))
@@ -46,12 +55,15 @@ func TestGenerateCharacterImage(t *testing.T) {
 	}
 	client.httpClient = server.Client()
 
-	got, err := client.GenerateCharacterImage(context.Background(), "卡通路灯角色")
+	got, err := client.GenerateCharacterImage(context.Background(), "卡通路灯角色", "base64-cat-source")
 	if err != nil {
 		t.Fatalf("GenerateCharacterImage() error = %v", err)
 	}
 	if got != "https://img.example.com/companion.png" {
 		t.Fatalf("unexpected image url: %s", got)
+	}
+	if receivedImage != "base64-cat-source" {
+		t.Fatalf("expected source image to be forwarded, got %q", receivedImage)
 	}
 }
 

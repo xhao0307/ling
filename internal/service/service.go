@@ -77,12 +77,13 @@ type AnswerResponse struct {
 }
 
 type CompanionSceneRequest struct {
-	ChildID      string `json:"child_id"`
-	ChildAge     int    `json:"child_age"`
-	ObjectType   string `json:"object_type"`
-	Weather      string `json:"weather,omitempty"`
-	Environment  string `json:"environment,omitempty"`
-	ObjectTraits string `json:"object_traits,omitempty"`
+	ChildID           string `json:"child_id"`
+	ChildAge          int    `json:"child_age"`
+	ObjectType        string `json:"object_type"`
+	Weather           string `json:"weather,omitempty"`
+	Environment       string `json:"environment,omitempty"`
+	ObjectTraits      string `json:"object_traits,omitempty"`
+	SourceImageBase64 string `json:"source_image_base64,omitempty"`
 }
 
 type CompanionSceneResponse struct {
@@ -313,7 +314,16 @@ func (s *Service) GenerateCompanionScene(req CompanionSceneRequest) (CompanionSc
 		return CompanionSceneResponse{}, err
 	}
 
-	imageURL, err := s.llm.GenerateCharacterImage(context.Background(), scene.ImagePrompt)
+	imagePrompt := scene.ImagePrompt
+	if strings.TrimSpace(req.SourceImageBase64) != "" {
+		imagePrompt = imagePrompt + "；请结合参考图主体特征，生成同主题的儿童向二次元拟人角色。"
+	}
+
+	imageURL, err := s.llm.GenerateCharacterImage(
+		context.Background(),
+		imagePrompt,
+		strings.TrimSpace(req.SourceImageBase64),
+	)
 	if err != nil {
 		if errors.Is(err, llm.ErrImageCapabilityUnavailable) {
 			return CompanionSceneResponse{}, ErrMediaUnavailable
@@ -333,7 +343,7 @@ func (s *Service) GenerateCompanionScene(req CompanionSceneRequest) (CompanionSc
 		CharacterName:        scene.CharacterName,
 		CharacterPersonality: scene.CharacterPersonality,
 		DialogText:           scene.DialogText,
-		ImagePrompt:          scene.ImagePrompt,
+		ImagePrompt:          imagePrompt,
 		CharacterImageURL:    imageURL,
 		VoiceAudioBase64:     base64.StdEncoding.EncodeToString(audioBytes),
 		VoiceMimeType:        mimeType,

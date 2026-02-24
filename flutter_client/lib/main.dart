@@ -212,6 +212,7 @@ class _ExplorePageState extends State<ExplorePage> {
   String _detectedLabel = '';
   String _detectedRawLabel = '';
   String _detectedReason = '';
+  String _lastDetectedImageBase64 = '';
 
   bool _cameraInitializing = false;
   bool _cameraReady = false;
@@ -1091,7 +1092,10 @@ class _ExplorePageState extends State<ExplorePage> {
       return;
     }
 
-    setState(() => _detecting = true);
+    setState(() {
+      _detecting = true;
+      _lastDetectedImageBase64 = '';
+    });
     try {
       if (controller.value.isTakingPicture) {
         return;
@@ -1120,7 +1124,10 @@ class _ExplorePageState extends State<ExplorePage> {
         return;
       }
       final imageBytes = await picked.readAsBytes();
-      setState(() => _detecting = true);
+      setState(() {
+        _detecting = true;
+        _lastDetectedImageBase64 = '';
+      });
       await _detectFromImageBytes(imageBytes);
       if (!mounted || _detectedLabel.isEmpty) {
         return;
@@ -1151,6 +1158,7 @@ class _ExplorePageState extends State<ExplorePage> {
       _detectedLabel = _normalizeObjectLabel(match.detectedLabel);
       _detectedRawLabel = match.rawLabel;
       _detectedReason = match.reason;
+      _lastDetectedImageBase64 = imageBase64;
     });
 
     _showSnack('识别到 ${_labelToChinese(match.detectedLabel)}，请确认主体。');
@@ -1248,6 +1256,7 @@ class _ExplorePageState extends State<ExplorePage> {
         weather: _lastSceneWeather,
         environment: _lastSceneEnvironment,
         objectTraits: _lastSceneTraits,
+        sourceImageBase64: _lastDetectedImageBase64,
       );
 
       if (!mounted) {
@@ -1660,6 +1669,7 @@ class _ExplorePageState extends State<ExplorePage> {
       _scanResult = null;
       _scanCardCollapsed = false;
       _clearCompanionFlow();
+      _lastDetectedImageBase64 = '';
     });
     unawaited(_voicePlayer.stop());
   }
@@ -1686,6 +1696,7 @@ class _ExplorePageState extends State<ExplorePage> {
       _detectedLabel = '';
       _detectedRawLabel = '';
       _detectedReason = '';
+      _lastDetectedImageBase64 = '';
     });
     unawaited(_voicePlayer.stop());
   }
@@ -2311,6 +2322,7 @@ class ApiClient {
     required String weather,
     required String environment,
     String objectTraits = '',
+    String sourceImageBase64 = '',
   }) async {
     final base = baseUrl;
     final response = await http.post(
@@ -2323,6 +2335,7 @@ class ApiClient {
         'weather': weather,
         'environment': environment,
         'object_traits': objectTraits,
+        'source_image_base64': sourceImageBase64,
       }),
     );
     final body = _decode(response);
