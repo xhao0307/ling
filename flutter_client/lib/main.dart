@@ -797,21 +797,7 @@ class _ExplorePageState extends State<ExplorePage> {
                           ),
                         ),
                       )
-                    : Image.network(
-                        _companionScene!.characterImageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, _, __) {
-                          return ColoredBox(
-                            color: Colors.black12,
-                            child: Center(
-                              child: Text(
-                                '角色图加载失败\n${_companionScene!.characterImageUrl}',
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                    : _buildCompanionImage(_companionScene!),
               ),
             ),
             const SizedBox(height: 10),
@@ -949,6 +935,7 @@ class _ExplorePageState extends State<ExplorePage> {
                   left: 18,
                   top: -74,
                   child: _AnimatedNameSilhouette(
+                    imageBytes: _companionScene?.characterImageBytes,
                     imageUrl: silhouetteImageUrl,
                     fallbackIcon: _iconForObjectType(scan.objectType),
                   ),
@@ -1708,6 +1695,45 @@ class _ExplorePageState extends State<ExplorePage> {
     }
     await _confirmDetectedObjectAndScan();
   }
+
+  Widget _buildCompanionImage(CompanionSceneResult scene) {
+    final bytes = scene.characterImageBytes;
+    if (bytes != null && bytes.isNotEmpty) {
+      return Image.memory(
+        bytes,
+        fit: BoxFit.cover,
+        errorBuilder: (context, _, __) {
+          return _buildCompanionImageNetworkFallback(scene.characterImageUrl);
+        },
+      );
+    }
+    return _buildCompanionImageNetworkFallback(scene.characterImageUrl);
+  }
+
+  Widget _buildCompanionImageNetworkFallback(String imageUrl) {
+    final trimmed = imageUrl.trim();
+    if (trimmed.isEmpty) {
+      return const ColoredBox(
+        color: Colors.black12,
+        child: Center(child: Icon(Icons.image_not_supported)),
+      );
+    }
+    return Image.network(
+      trimmed,
+      fit: BoxFit.cover,
+      errorBuilder: (context, _, __) {
+        return ColoredBox(
+          color: Colors.black12,
+          child: Center(
+            child: Text(
+              '角色图加载失败\n$trimmed',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 enum _CompanionRole {
@@ -1743,10 +1769,12 @@ class _StoryLine {
 
 class _AnimatedNameSilhouette extends StatefulWidget {
   const _AnimatedNameSilhouette({
+    this.imageBytes,
     required this.imageUrl,
     required this.fallbackIcon,
   });
 
+  final Uint8List? imageBytes;
   final String imageUrl;
   final IconData fallbackIcon;
 
@@ -1811,19 +1839,57 @@ class _AnimatedNameSilhouetteState extends State<_AnimatedNameSilhouette>
   }
 
   Widget _buildSilhouettePortrait() {
+    if (widget.imageBytes != null && widget.imageBytes!.isNotEmpty) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          ColorFiltered(
+            colorFilter: const ColorFilter.matrix([
+              0.33,
+              0.33,
+              0.33,
+              0,
+              0,
+              0.33,
+              0.33,
+              0.33,
+              0,
+              0,
+              0.33,
+              0.33,
+              0.33,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+            ]),
+            child: Image.memory(
+              widget.imageBytes!,
+              fit: BoxFit.cover,
+              errorBuilder: (context, _, __) => _fallbackSilhouetteIcon(),
+            ),
+          ),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.60),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.16),
+                  width: 1.2,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     final imageUrl = widget.imageUrl.trim();
     if (imageUrl.isEmpty) {
-      return DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF2E3A55), Color(0xFF111A2E)],
-          ),
-        ),
-        child:
-            Icon(widget.fallbackIcon, color: const Color(0xFFDCE8FF), size: 30),
-      );
+      return _fallbackSilhouetteIcon();
     }
 
     return Stack(
@@ -1856,20 +1922,7 @@ class _AnimatedNameSilhouetteState extends State<_AnimatedNameSilhouette>
             imageUrl,
             fit: BoxFit.cover,
             errorBuilder: (context, _, __) {
-              return DecoratedBox(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0xFF2E3A55), Color(0xFF111A2E)],
-                  ),
-                ),
-                child: Icon(
-                  widget.fallbackIcon,
-                  color: const Color(0xFFDCE8FF),
-                  size: 30,
-                ),
-              );
+              return _fallbackSilhouetteIcon();
             },
           ),
         ),
@@ -1885,6 +1938,20 @@ class _AnimatedNameSilhouetteState extends State<_AnimatedNameSilhouette>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _fallbackSilhouetteIcon() {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF2E3A55), Color(0xFF111A2E)],
+        ),
+      ),
+      child:
+          Icon(widget.fallbackIcon, color: const Color(0xFFDCE8FF), size: 30),
     );
   }
 }
@@ -2546,6 +2613,9 @@ class CompanionSceneResult {
     required this.dialogText,
     required this.imagePrompt,
     required this.characterImageUrl,
+    required this.characterImageBase64,
+    required this.characterImageMimeType,
+    required this.characterImageBytes,
     required this.voiceAudioBase64,
     required this.voiceMimeType,
   });
@@ -2555,16 +2625,33 @@ class CompanionSceneResult {
   final String dialogText;
   final String imagePrompt;
   final String characterImageUrl;
+  final String characterImageBase64;
+  final String characterImageMimeType;
+  final Uint8List? characterImageBytes;
   final String voiceAudioBase64;
   final String voiceMimeType;
 
   factory CompanionSceneResult.fromJson(Map<String, dynamic> json) {
+    final imageBase64 =
+        (json['character_image_base64'] as String? ?? '').trim();
+    Uint8List? imageBytes;
+    if (imageBase64.isNotEmpty) {
+      try {
+        imageBytes = base64Decode(imageBase64);
+      } catch (_) {
+        imageBytes = null;
+      }
+    }
     return CompanionSceneResult(
       characterName: json['character_name'] as String? ?? '',
       characterPersonality: json['character_personality'] as String? ?? '',
       dialogText: json['dialog_text'] as String? ?? '',
       imagePrompt: json['image_prompt'] as String? ?? '',
       characterImageUrl: json['character_image_url'] as String? ?? '',
+      characterImageBase64: imageBase64,
+      characterImageMimeType:
+          json['character_image_mime_type'] as String? ?? 'image/png',
+      characterImageBytes: imageBytes,
       voiceAudioBase64: json['voice_audio_base64'] as String? ?? '',
       voiceMimeType: json['voice_mime_type'] as String? ?? 'audio/mpeg',
     );

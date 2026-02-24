@@ -240,6 +240,40 @@ func (c *Client) SynthesizeSpeech(ctx context.Context, text string) ([]byte, str
 	return audio, contentType, nil
 }
 
+func (c *Client) DownloadImage(ctx context.Context, imageURL string) ([]byte, string, error) {
+	trimmedURL := strings.TrimSpace(imageURL)
+	if trimmedURL == "" {
+		return nil, "", ErrInvalidResponse
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, trimmedURL, nil)
+	if err != nil {
+		return nil, "", err
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, "", err
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, "", fmt.Errorf("download image failed, status=%d", resp.StatusCode)
+	}
+	contentType := strings.TrimSpace(resp.Header.Get("Content-Type"))
+	if contentType == "" {
+		contentType = "image/png"
+	}
+	return body, contentType, nil
+}
+
 func (c *Client) doMediaJSON(ctx context.Context, requestURL string, apiKey string, payload any) ([]byte, http.Header, error) {
 	respBody, headers, status, err := c.doMediaRequest(ctx, requestURL, apiKey, payload)
 	if err != nil {

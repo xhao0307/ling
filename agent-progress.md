@@ -584,3 +584,34 @@
   - 将本次后端版本部署到你当前使用的线上地址后，再用 `cat.png` 做一轮实测；
   - 若仍回退，优先查 `/api/v1/companion/scene` 返回码与日志中的 image API 错误码。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-24 16:42] F019 增加角色图 base64 回传兜底（修复前端外链图不显示）
+- 会话目标: 解决你日志里 `/api/v1/companion/scene` 已 200 但前端仍显示默认图标的问题。
+- 选择功能: `F019`
+- 实际改动:
+  - 后端：
+    - `internal/llm/companion.go`：新增 `DownloadImage`，在服务端拉取生成图二进制；
+    - `internal/service/service.go`：`CompanionSceneResponse` 新增
+      - `character_image_base64`
+      - `character_image_mime_type`
+    - `GenerateCompanionScene` 在返回 URL 的同时回传图片 base64，前端可不依赖外链 URL；
+    - `internal/httpapi/swagger.go`：补充上述新字段的 OpenAPI 描述。
+  - 前端：
+    - `flutter_client/lib/main.dart`：`CompanionSceneResult` 新增图片 base64/mime/bytes 解析；
+    - 主角色图与名字牌剪影优先使用后端回传的 `character_image_base64` 渲染；
+    - 当 base64 不可用时再回退到 `character_image_url` 网络加载。
+  - 测试：
+    - `internal/llm/companion_test.go`：新增 `TestDownloadImage`。
+- 验证结果:
+  - `go test ./...` 通过；
+  - `/Users/xuxinghao/develop/flutter/bin/flutter analyze` 通过（No issues found）；
+  - `./init.sh` smoke 通过（`http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - `companion/scene` 响应体体积会变大（包含图片 base64），网络慢时加载可能更久；
+  - 仍需线上部署后做一次 cat 图实测确认（本地无法直接复现你的线上网络链路），`F019.passes` 保持 `false`。
+- 下一步建议:
+  - 线上部署后优先看 `/api/v1/companion/scene` 返回 JSON 中是否含 `character_image_base64`；
+  - 若有该字段但页面仍异常，再抓前端 console/network，我继续跟进。
+- 对应提交: （本次提交）

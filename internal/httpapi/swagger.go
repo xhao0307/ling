@@ -396,8 +396,13 @@ func openAPISpec(serverURL string) map[string]any {
 						"dialog_text":           map[string]any{"type": "string"},
 						"image_prompt":          map[string]any{"type": "string"},
 						"character_image_url":   map[string]any{"type": "string"},
-						"voice_audio_base64":    map[string]any{"type": "string"},
-						"voice_mime_type":       map[string]any{"type": "string"},
+						"character_image_base64": map[string]any{
+							"type":        "string",
+							"description": "可选。角色图的base64数据，前端可优先使用以避免外链加载失败",
+						},
+						"character_image_mime_type": map[string]any{"type": "string"},
+						"voice_audio_base64":        map[string]any{"type": "string"},
+						"voice_mime_type":           map[string]any{"type": "string"},
 					},
 				},
 				"CompanionChatResponse": map[string]any{

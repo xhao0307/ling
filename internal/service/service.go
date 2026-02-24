@@ -92,6 +92,8 @@ type CompanionSceneResponse struct {
 	DialogText           string `json:"dialog_text"`
 	ImagePrompt          string `json:"image_prompt"`
 	CharacterImageURL    string `json:"character_image_url"`
+	CharacterImageBase64 string `json:"character_image_base64,omitempty"`
+	CharacterImageMIME   string `json:"character_image_mime_type,omitempty"`
 	VoiceAudioBase64     string `json:"voice_audio_base64"`
 	VoiceMimeType        string `json:"voice_mime_type"`
 }
@@ -339,12 +341,20 @@ func (s *Service) GenerateCompanionScene(req CompanionSceneRequest) (CompanionSc
 		return CompanionSceneResponse{}, err
 	}
 
+	imageBytes, imageMIME, err := s.llm.DownloadImage(context.Background(), imageURL)
+	if err != nil {
+		imageBytes = nil
+		imageMIME = ""
+	}
+
 	return CompanionSceneResponse{
 		CharacterName:        scene.CharacterName,
 		CharacterPersonality: scene.CharacterPersonality,
 		DialogText:           scene.DialogText,
 		ImagePrompt:          imagePrompt,
 		CharacterImageURL:    imageURL,
+		CharacterImageBase64: base64.StdEncoding.EncodeToString(imageBytes),
+		CharacterImageMIME:   imageMIME,
 		VoiceAudioBase64:     base64.StdEncoding.EncodeToString(audioBytes),
 		VoiceMimeType:        mimeType,
 	}, nil

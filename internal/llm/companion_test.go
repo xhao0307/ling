@@ -104,6 +104,38 @@ func TestSynthesizeSpeech(t *testing.T) {
 	}
 }
 
+func TestDownloadImage(t *testing.T) {
+	expected := []byte{9, 8, 7, 6}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/img.png" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "image/png")
+		_, _ = w.Write(expected)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(Config{
+		APIKey:  "test-key",
+		BaseURL: server.URL,
+	})
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+	client.httpClient = server.Client()
+
+	body, mime, err := client.DownloadImage(context.Background(), server.URL+"/img.png")
+	if err != nil {
+		t.Fatalf("DownloadImage() error = %v", err)
+	}
+	if mime != "image/png" {
+		t.Fatalf("expected image/png, got %q", mime)
+	}
+	if string(body) != string(expected) {
+		t.Fatalf("unexpected image bytes")
+	}
+}
+
 func TestParseCompanionReply(t *testing.T) {
 	content := `{"reply_text":"你观察得真仔细，我们再看看它的颜色变化吧。"}`
 	reply, err := parseCompanionReply(content)
