@@ -331,7 +331,7 @@ func parseCompanionScene(content string) (CompanionScene, error) {
 		DialogText    string `json:"dialog_text"`
 		ImagePrompt   string `json:"image_prompt"`
 	}
-	if err := json.Unmarshal([]byte(payload), &parsed); err != nil {
+	if err := unmarshalFirstJSONObject(payload, &parsed); err != nil {
 		return CompanionScene{}, fmt.Errorf("parse companion scene failed: %w", err)
 	}
 
@@ -352,7 +352,7 @@ func parseCompanionReply(content string) (CompanionReply, error) {
 	var parsed struct {
 		ReplyText string `json:"reply_text"`
 	}
-	if err := json.Unmarshal([]byte(payload), &parsed); err != nil {
+	if err := unmarshalFirstJSONObject(payload, &parsed); err != nil {
 		return CompanionReply{}, fmt.Errorf("parse companion reply failed: %w", err)
 	}
 	reply := CompanionReply{
@@ -362,6 +362,14 @@ func parseCompanionReply(content string) (CompanionReply, error) {
 		return CompanionReply{}, ErrInvalidResponse
 	}
 	return reply, nil
+}
+
+func unmarshalFirstJSONObject(payload string, target any) error {
+	decoder := json.NewDecoder(strings.NewReader(strings.TrimSpace(payload)))
+	if err := decoder.Decode(target); err != nil {
+		return err
+	}
+	return nil
 }
 
 func defaultText(v string, fallback string) string {

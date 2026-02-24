@@ -23,6 +23,17 @@ func TestParseCompanionScene(t *testing.T) {
 	}
 }
 
+func TestParseCompanionSceneWithTrailingJSON(t *testing.T) {
+	content := `{"character_name":"小圆","personality":"活泼","dialog_text":"一起观察吧","image_prompt":"卡通风格"}{"extra":"ignored"}`
+	scene, err := parseCompanionScene(content)
+	if err != nil {
+		t.Fatalf("parseCompanionScene() error = %v", err)
+	}
+	if scene.CharacterName != "小圆" {
+		t.Fatalf("expected character_name=小圆, got %q", scene.CharacterName)
+	}
+}
+
 func TestGenerateCharacterImage(t *testing.T) {
 	var receivedImage string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -144,6 +155,17 @@ func TestParseCompanionReply(t *testing.T) {
 	}
 	if reply.ReplyText == "" {
 		t.Fatalf("expected non-empty reply text")
+	}
+}
+
+func TestParseCompanionReplyWithTrailingJSON(t *testing.T) {
+	content := `{"reply_text":"我们继续探索。"}{"extra":"ignored"}`
+	reply, err := parseCompanionReply(content)
+	if err != nil {
+		t.Fatalf("parseCompanionReply() error = %v", err)
+	}
+	if reply.ReplyText != "我们继续探索。" {
+		t.Fatalf("unexpected reply text: %q", reply.ReplyText)
 	}
 }
 

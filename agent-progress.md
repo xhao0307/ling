@@ -669,3 +669,27 @@
   - 线上更新后重跑：`CITYLING_BASE_URL=http://121.43.118.53:3026 scripts/test-companion-scene-cat.sh`；
   - 如果仍失败，请把第 3 步返回体贴我，我继续按错误码精确处理。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-24 17:12] F019 修复 companion scene JSON 解析过严导致 500
+- 会话目标: 解决你最新报错 `parse companion scene failed: invalid character '}' after top-level value`。
+- 选择功能: `F019`
+- 实际改动:
+  - `internal/llm/companion.go`：
+    - `parseCompanionScene` 与 `parseCompanionReply` 从“严格整串 JSON 反序列化”改为“解析第一段 JSON 对象”；
+    - 新增 `unmarshalFirstJSONObject` 容错函数，兼容模型返回 `{"..."}{"extra":...}` 这类尾随片段。
+  - `internal/llm/companion_test.go`：
+    - 新增 `TestParseCompanionSceneWithTrailingJSON`；
+    - 新增 `TestParseCompanionReplyWithTrailingJSON`。
+- 验证结果:
+  - `go test ./internal/llm ./internal/service ./internal/httpapi` 通过；
+  - `go test ./...` 通过；
+  - `./init.sh` smoke 通过（`http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 该修复是“解析容错”，不能替代上游模型稳定性治理；
+  - `F019.passes` 仍保持 `false`（缺线上完整 e2e 验证证据）。
+- 下一步建议:
+  - 部署后重跑：`CITYLING_BASE_URL=http://121.43.118.53:3026 scripts/test-companion-scene-cat.sh`；
+  - 若仍失败，优先贴第 3 步完整返回体与对应后端日志时间点。
+- 对应提交: （本次提交）
