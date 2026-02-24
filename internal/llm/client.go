@@ -229,8 +229,8 @@ func (c *Client) buildVisionRequestBody(imageRef string, strict bool) map[string
 1) raw_label: 必须是中文常用叫法（例如：猫、汽车、建筑、路牌）。
 2) reason: 必须是中文且简洁。
 3) object_type:
-   - 若识别为城市设施，优先使用以下标准值之一：mailbox/tree/manhole/road_sign/traffic_light
-   - 其他物体使用中文短词（例如：猫、狗、公交车）。`
+   - 不限制固定枚举，不要输出英文枚举；
+   - 统一使用中文短词（例如：猫、狗、公交车、红绿灯、井盖）。`
 	if strict {
 		prompt += "\n如果无法识别，object_type 设为 \"unknown\"，raw_label 设为“未知物体”。"
 	}
