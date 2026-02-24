@@ -424,15 +424,25 @@ class _ExplorePageState extends State<ExplorePage> {
             bottom: 120,
             child: _scanCardCollapsed
                 ? Align(
-                    alignment: Alignment.centerRight,
-                    child: FilledButton.tonalIcon(
-                      onPressed: () {
-                        setState(() {
-                          _scanCardCollapsed = false;
-                        });
-                      },
-                      icon: const Icon(Icons.unfold_more, size: 18),
-                      label: const Text('展开题目'),
+                    alignment: Alignment.center,
+                    child: Wrap(
+                      spacing: 8,
+                      children: [
+                        FilledButton.tonalIcon(
+                          onPressed: () {
+                            setState(() {
+                              _scanCardCollapsed = false;
+                            });
+                          },
+                          icon: const Icon(Icons.unfold_more, size: 18),
+                          label: const Text('展开题目'),
+                        ),
+                        TextButton.icon(
+                          onPressed: _dismissScanCard,
+                          icon: const Icon(Icons.close, size: 18),
+                          label: const Text('关闭题目'),
+                        ),
+                      ],
                     ),
                   )
                 : _buildSpiritCard(_scanResult!),
@@ -702,6 +712,28 @@ class _ExplorePageState extends State<ExplorePage> {
               icon: const Icon(Icons.catching_pokemon),
               label: Text(_busy ? '提交中...' : '提交并收集'),
             ),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 8,
+              children: [
+                TextButton.icon(
+                  onPressed: _busy
+                      ? null
+                      : () {
+                          setState(() {
+                            _scanCardCollapsed = true;
+                          });
+                        },
+                  icon: const Icon(Icons.expand_less, size: 18),
+                  label: const Text('收起题目'),
+                ),
+                TextButton.icon(
+                  onPressed: _busy ? null : _dismissScanCard,
+                  icon: const Icon(Icons.close, size: 18),
+                  label: const Text('关闭题目'),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -949,11 +981,7 @@ class _ExplorePageState extends State<ExplorePage> {
         if (!mounted) {
           return;
         }
-        setState(() {
-          _scanResult = null;
-          _scanCardCollapsed = false;
-          _answerCtrl.clear();
-        });
+        _dismissScanCard();
         return;
       }
 
@@ -1046,6 +1074,17 @@ class _ExplorePageState extends State<ExplorePage> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  void _dismissScanCard() {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _scanResult = null;
+      _scanCardCollapsed = false;
+      _answerCtrl.clear();
+    });
   }
 
   Future<void> _showWrongAnswerDialog(String message) async {
