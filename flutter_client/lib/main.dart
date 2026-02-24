@@ -217,6 +217,7 @@ class _ExplorePageState extends State<ExplorePage> {
 
   String _cameraError = '';
   ScanResult? _scanResult;
+  bool _scanCardCollapsed = false;
 
   bool get _supportsCameraPreview {
     if (kIsWeb) {
@@ -421,7 +422,20 @@ class _ExplorePageState extends State<ExplorePage> {
             left: 12,
             right: 12,
             bottom: 120,
-            child: _buildSpiritCard(_scanResult!),
+            child: _scanCardCollapsed
+                ? Align(
+                    alignment: Alignment.centerRight,
+                    child: FilledButton.tonalIcon(
+                      onPressed: () {
+                        setState(() {
+                          _scanCardCollapsed = false;
+                        });
+                      },
+                      icon: const Icon(Icons.unfold_more, size: 18),
+                      label: const Text('展开题目'),
+                    ),
+                  )
+                : _buildSpiritCard(_scanResult!),
           ),
         Positioned(
           bottom: 28,
@@ -633,9 +647,28 @@ class _ExplorePageState extends State<ExplorePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '${scan.spirit.name}（${_labelToChinese(scan.objectType)}）',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${scan.spirit.name}（${_labelToChinese(scan.objectType)}）',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: '收起',
+                  onPressed: () {
+                    setState(() {
+                      _scanCardCollapsed = true;
+                    });
+                  },
+                  icon: const Icon(Icons.expand_more),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             Text('性格：${scan.spirit.personality}'),
@@ -885,6 +918,7 @@ class _ExplorePageState extends State<ExplorePage> {
       );
       setState(() {
         _scanResult = result;
+        _scanCardCollapsed = false;
         _answerCtrl.clear();
       });
     } catch (e) {
@@ -917,6 +951,7 @@ class _ExplorePageState extends State<ExplorePage> {
         }
         setState(() {
           _scanResult = null;
+          _scanCardCollapsed = false;
           _answerCtrl.clear();
         });
         return;
@@ -1049,6 +1084,7 @@ class _ExplorePageState extends State<ExplorePage> {
       _childId = childID;
       _childAge = age;
       _scanResult = null;
+      _scanCardCollapsed = false;
       _detectedLabel = '';
       _detectedRawLabel = '';
       _detectedReason = '';
