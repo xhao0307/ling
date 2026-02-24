@@ -615,3 +615,32 @@
   - 线上部署后优先看 `/api/v1/companion/scene` 返回 JSON 中是否含 `character_image_base64`；
   - 若有该字段但页面仍异常，再抓前端 console/network，我继续跟进。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-24 17:00] F019 新增 cat 图片接口联调脚本（scan/image -> scan -> companion/scene）
+- 会话目标: 按需求提供可复用脚本，用 `cat.png` 一键验证剧情接口链路是否正常。
+- 选择功能: `F019`
+- 实际改动:
+  - 新增 `scripts/test-companion-scene-cat.sh`：
+    - 自动读取 `cat.png`（可传自定义图片路径）并 base64 编码；
+    - 按顺序调用：
+      - `POST /api/v1/scan/image`
+      - `POST /api/v1/scan`
+      - `POST /api/v1/companion/scene`（携带 `source_image_base64`）
+    - 输出关键字段摘要：`character_name/dialog_text/image_url/image_base64长度/voice_base64长度`；
+    - 对空字段和非 200 状态做 FAIL 退出码；
+    - 支持 `CITYLING_BASE_URL` 覆盖目标后端地址。
+- 验证结果:
+  - `bash -n scripts/test-companion-scene-cat.sh` 通过；
+  - 本地联调（同命令内 `./init.sh && scripts/test-companion-scene-cat.sh`）：
+    - `scan/image=200`，`scan=200`
+    - `companion/scene=404 page not found`（说明命中旧服务实例或目标服务版本不一致）；
+  - 远端联调（`CITYLING_BASE_URL=http://121.43.118.53:3026`）在当前执行沙箱中无法直连（连接失败）。
+- 风险与遗留:
+  - 当前终端沙箱无法稳定保活本地后台服务，且对外网连通受限，因此未在本环境得到完整 200/200/200 结果；
+  - `F019.passes` 保持 `false`（缺少真实部署环境的最终 e2e 证明）。
+- 下一步建议:
+  - 在你的线上机直接执行 `CITYLING_BASE_URL=http://127.0.0.1:3026 scripts/test-companion-scene-cat.sh`（或对应地址）；
+  - 若第 3 步仍 404，优先确认部署版本是否包含 `/api/v1/companion/scene` 路由。
+- 对应提交: （本次提交）
