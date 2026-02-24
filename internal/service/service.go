@@ -313,7 +313,13 @@ func (s *Service) GenerateCompanionScene(req CompanionSceneRequest) (CompanionSc
 		ObjectTraits: strings.TrimSpace(req.ObjectTraits),
 	})
 	if err != nil {
-		return CompanionSceneResponse{}, err
+		scene = s.defaultCompanionScene(
+			objectType,
+			req.ChildAge,
+			strings.TrimSpace(req.Weather),
+			strings.TrimSpace(req.Environment),
+			strings.TrimSpace(req.ObjectTraits),
+		)
 	}
 
 	imagePrompt := scene.ImagePrompt
@@ -342,8 +348,12 @@ func (s *Service) GenerateCompanionScene(req CompanionSceneRequest) (CompanionSc
 	}
 
 	imageBytes, imageMIME, err := s.llm.DownloadImage(context.Background(), imageURL)
-	if err != nil {
-		imageBytes = nil
+	var imageBase64 string
+	if err == nil && imageBytes != nil && len(imageBytes) > 0 {
+		imageBase64 = base64.StdEncoding.EncodeToString(imageBytes)
+	} else {
+		// 下载失败时，不返回 base64，让前端使用 URL 加载
+		imageBase64 = ""
 		imageMIME = ""
 	}
 
@@ -353,7 +363,7 @@ func (s *Service) GenerateCompanionScene(req CompanionSceneRequest) (CompanionSc
 		DialogText:           scene.DialogText,
 		ImagePrompt:          imagePrompt,
 		CharacterImageURL:    imageURL,
-		CharacterImageBase64: base64.StdEncoding.EncodeToString(imageBytes),
+		CharacterImageBase64: imageBase64,
 		CharacterImageMIME:   imageMIME,
 		VoiceAudioBase64:     base64.StdEncoding.EncodeToString(audioBytes),
 		VoiceMimeType:        mimeType,
@@ -698,6 +708,58 @@ func (s *Service) generateLearningByLLM(objectType string, age int, spirit model
 		return llm.LearningContent{}, llm.ErrInvalidResponse
 	}
 	return generated, nil
+}
+
+func (s *Service) defaultCompanionScene(objectType string, age int, weather string, environment string, traits string) llm.CompanionScene {
+	objectName := strings.TrimSpace(objectTypeToChinese(objectType))
+	if objectName == "" {
+		objectName = strings.TrimSpace(objectType)
+	}
+	if objectName == "" {
+		objectName = "这个小伙伴"
+	}
+
+	bucket := ageBucket(age)
+	characterName := "小圆"
+	personality := "活泼友好"
+	switch bucket {
+	case 1:
+		characterName = "小圆"
+		personality = "温柔可爱"
+	case 2:
+		characterName = "小冒险家"
+		personality = "活泼好奇"
+	default:
+		characterName = "观察官"
+		personality = "爱思考有创意"
+	}
+
+	if strings.TrimSpace(weather) == "" {
+		weather = "晴天"
+	}
+	if strings.TrimSpace(environment) == "" {
+		environment = "户外"
+	}
+	if strings.TrimSpace(traits) == "" {
+		traits = "圆润可爱"
+	}
+
+	dialogText := fmt.Sprintf("你好呀，我是%s！今天我们一起认识%s吧。", characterName, objectName)
+	imagePrompt := fmt.Sprintf(
+		"儿童向二次元卡通插画，拟人化%s角色，性格%s，场景为%s的%s，物体特征%s，柔和光线，主角清晰，适合儿童",
+		objectName,
+		personality,
+		weather,
+		environment,
+		traits,
+	)
+
+	return llm.CompanionScene{
+		CharacterName:        characterName,
+		CharacterPersonality: personality,
+		DialogText:           dialogText,
+		ImagePrompt:          imagePrompt,
+	}
 }
 
 func (s *Service) defaultLearningContent(objectType string) (string, model.QuizItem) {

@@ -1,11 +1,17 @@
 package service_test
 
 import (
+	"encoding/base64"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"ling/internal/knowledge"
+	"ling/internal/llm"
 	"ling/internal/service"
 	"ling/internal/store"
 )
@@ -165,6 +171,81 @@ func TestGenerateCompanionSceneInvalidAge(t *testing.T) {
 	}
 	if err != service.ErrInvalidChildAge {
 		t.Fatalf("expected ErrInvalidChildAge, got %v", err)
+	}
+}
+
+func TestGenerateCompanionSceneFallsBackWhenSceneLLMFailed(t *testing.T) {
+	t.Parallel()
+	svc, _ := newTestService(t)
+
+	var mockImageURL string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/v1/chat/completions":
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"errorCode":500,"errMsg":"model invocation failed"}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/v1/byteplus/images/generations":
+			var payload map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+				t.Fatalf("decode image payload failed: %v", err)
+			}
+			prompt, _ := payload["prompt"].(string)
+			if !strings.Contains(prompt, "拟人化") {
+				t.Fatalf("expected fallback prompt to include 拟人化, got %q", prompt)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"data":[{"url":"` + mockImageURL + `"}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/mock-image.png":
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write([]byte{1, 2, 3, 4})
+		case r.Method == http.MethodPost && r.URL.Path == "/elevenlabs/tts/generate":
+			w.Header().Set("Content-Type", "audio/mpeg")
+			_, _ = w.Write([]byte{5, 6, 7, 8})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	}))
+	defer server.Close()
+	mockImageURL = server.URL + "/mock-image.png"
+
+	client, err := llm.NewClient(llm.Config{
+		APIKey:       "test-key",
+		BaseURL:      server.URL,
+		ImageBaseURL: server.URL,
+		VoiceBaseURL: server.URL,
+	})
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+	svc.SetLLMClient(client)
+
+	resp, err := svc.GenerateCompanionScene(service.CompanionSceneRequest{
+		ChildID:    "kid_fallback",
+		ChildAge:   8,
+		ObjectType: "猫",
+		Weather:    "晴天",
+	})
+	if err != nil {
+		t.Fatalf("GenerateCompanionScene() error = %v", err)
+	}
+	if strings.TrimSpace(resp.DialogText) == "" {
+		t.Fatalf("expected dialog text from fallback scene")
+	}
+	if strings.TrimSpace(resp.CharacterImageURL) == "" {
+		t.Fatalf("expected image url")
+	}
+	if len(resp.CharacterImageBase64) == 0 {
+		t.Fatalf("expected image base64")
+	}
+	if len(resp.VoiceAudioBase64) == 0 {
+		t.Fatalf("expected voice base64")
+	}
+	if _, err := base64.StdEncoding.DecodeString(resp.CharacterImageBase64); err != nil {
+		t.Fatalf("invalid image base64: %v", err)
+	}
+	if _, err := base64.StdEncoding.DecodeString(resp.VoiceAudioBase64); err != nil {
+		t.Fatalf("invalid voice base64: %v", err)
 	}
 }
 

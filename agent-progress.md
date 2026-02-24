@@ -644,3 +644,28 @@
   - 在你的线上机直接执行 `CITYLING_BASE_URL=http://127.0.0.1:3026 scripts/test-companion-scene-cat.sh`（或对应地址）；
   - 若第 3 步仍 404，优先确认部署版本是否包含 `/api/v1/companion/scene` 路由。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-24 17:07] F019 修复 companion/scene 在 LLM 空响应时 500
+- 会话目标: 解决你执行 `test-companion-scene-cat.sh` 时第 3 步报错 `MiniMax API returned empty choices` 导致 `companion/scene` 返回 500 的问题。
+- 选择功能: `F019`
+- 实际改动:
+  - `internal/service/service.go`：
+    - `GenerateCompanionScene` 在 `GenerateCompanionScene`（LLM 文本场景生成）失败时，不再直接返回错误；
+    - 新增 `defaultCompanionScene(...)` 本地模板兜底，生成角色名/性格/台词/生图 prompt；
+    - 继续执行后续生图与 TTS，避免因为上游文本模型瞬时失败而整条链路 500。
+  - `internal/service/service_test.go`：
+    - 新增 `TestGenerateCompanionSceneFallsBackWhenSceneLLMFailed`；
+    - 模拟 chat/completions 500，验证接口仍能返回有效 `dialog/image/voice` 字段。
+- 验证结果:
+  - `go test ./internal/service ./internal/httpapi ./internal/llm` 通过；
+  - `go test ./...` 通过；
+  - `./init.sh` smoke 通过（`http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 当前终端沙箱存在“旧本地服务实例抢占 39028”的现象，本地 `test-companion-scene-cat.sh` 第 3 步仍可能命中旧实例返回 404；
+  - 需要你在线上部署新版本后，再用同一脚本确认第 3 步不再因 `empty choices` 报 500，`F019.passes` 继续保持 `false`。
+- 下一步建议:
+  - 线上更新后重跑：`CITYLING_BASE_URL=http://121.43.118.53:3026 scripts/test-companion-scene-cat.sh`；
+  - 如果仍失败，请把第 3 步返回体贴我，我继续按错误码精确处理。
+- 对应提交: （本次提交）
