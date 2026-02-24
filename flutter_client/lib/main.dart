@@ -220,7 +220,7 @@ class _ExplorePageState extends State<ExplorePage> {
 
   bool get _supportsCameraPreview {
     if (kIsWeb) {
-      return false;
+      return true;
     }
     return defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS ||

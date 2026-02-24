@@ -38,8 +38,12 @@ func (h *Handler) scan(w http.ResponseWriter, r *http.Request) {
 			log.Printf("scan bad request: child_id=%s label=%s err=%v", req.ChildID, req.DetectedLabel, err)
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
-		case errors.Is(err, service.ErrLLMUnavailable):
+		case errors.Is(err, service.ErrLLMUnavailable), errors.Is(err, service.ErrContentGenerate):
 			log.Printf("scan unavailable: child_id=%s err=%v", req.ChildID, err)
+			if errors.Is(err, service.ErrContentGenerate) {
+				writeError(w, http.StatusServiceUnavailable, service.ErrContentGenerate.Error())
+				return
+			}
 			writeError(w, http.StatusServiceUnavailable, err.Error())
 			return
 		default:

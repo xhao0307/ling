@@ -23,6 +23,7 @@ var (
 	ErrLLMUnavailable    = errors.New("未配置大模型能力")
 	ErrImageRequired     = errors.New("请提供 image_base64 或 image_url")
 	ErrScanInputRequired = errors.New("请提供 detected_label 或 image_base64/image_url")
+	ErrContentGenerate   = errors.New("学习内容生成服务暂不可用，请稍后重试")
 )
 
 type ScanRequest struct {
@@ -159,13 +160,15 @@ func (s *Service) Scan(req ScanRequest) (ScanResponse, error) {
 		}
 		detectedLabel = recognized.ObjectType
 	}
-	if detectedLabel == "" {
+	if detectedLabel == "" || detectedLabel == "unknown" {
 		return ScanResponse{}, ErrScanInputRequired
 	}
 
+	// 尝试从知识库解析，如果不在知识库中，直接使用 detectedLabel 作为 objectType
 	objectType, ok := s.resolveObjectType(detectedLabel)
 	if !ok {
-		return ScanResponse{}, ErrUnsupportedObject
+		// 不在知识库中，使用原始标签作为 objectType（允许任意物体）
+		objectType = normalizeLabel(detectedLabel)
 	}
 
 	cacheKey := objectType + "|" + strconv.Itoa(ageBucket(req.ChildAge))
@@ -177,16 +180,29 @@ func (s *Service) Scan(req ScanRequest) (ScanResponse, error) {
 			return ScanResponse{}, err
 		}
 
-		fact := s.pick(item.Facts)
-		quiz := s.pickQuiz(item.Quiz)
-		dialogues := s.generateDialogues(spirit, req.ChildAge, fact, quiz.Question)
-		if generated, err := s.generateLearningByLLM(objectType, req.ChildAge, spirit); err == nil {
+		// 优先使用 LLM 生成内容，如果不在知识库中或 LLM 失败，再使用知识库
+		var fact string
+		var quiz model.QuizItem
+		var dialogues []string
+
+		generated, err := s.generateLearningByLLM(objectType, req.ChildAge, spirit)
+		if err == nil {
+			// LLM 生成成功，使用 LLM 内容
 			fact = generated.Fact
-			quiz.Question = generated.QuizQ
-			quiz.Answer = generated.QuizA
-			if len(generated.Dialogues) > 0 {
-				dialogues = generated.Dialogues
+			quiz = model.QuizItem{
+				Question: generated.QuizQ,
+				Answer:   generated.QuizA,
 			}
+			dialogues = generated.Dialogues
+		} else {
+			// LLM 生成失败，使用知识库（如果在知识库中）
+			fact = s.pick(item.Facts)
+			quiz = s.pickQuiz(item.Quiz)
+			if fact == "" || quiz.Question == "" {
+				// 知识库与 LLM 均不可用时，返回可预期错误码（由 handler 映射为 503）。
+				return ScanResponse{}, fmt.Errorf("%w: object_type=%s llm_error=%v", ErrContentGenerate, objectType, err)
+			}
+			dialogues = s.generateDialogues(spirit, req.ChildAge, fact, quiz.Question)
 		}
 
 		entry = cacheEntry{

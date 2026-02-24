@@ -32,10 +32,9 @@ flutter run --dart-define=CITYLING_BASE_URL=http://121.43.118.53:3026
 ```
 
 `CITYLING_BASE_URL` tips:
-- Android emulator: `http://10.0.2.2:8080`
-- iOS simulator: `http://127.0.0.1:8080`
-- Real device: use your LAN IP, e.g. `http://192.168.1.10:8080`
+- 远端默认后端: `http://121.43.118.53:3026`
+- 若切换到本地开发服务，请按运行环境改为本机/局域网地址（例如 Android 模拟器常用 `http://10.0.2.2:8080`）
 
 Platform notes:
 - Camera and on-device recognition are enabled on Android/iOS.
-- On macOS/web, the app falls back to manual object label selection.
+- On macOS desktop and web (Chrome), the app can request camera permission and capture frames.

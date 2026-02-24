@@ -219,13 +219,13 @@ func (c *Client) doJSON(ctx context.Context, path string, payload any) ([]byte, 
 }
 
 func (c *Client) buildVisionRequestBody(imageRef string, strict bool) map[string]any {
-	prompt := `识别图中最主要的城市物体。
-只允许从这5个枚举中选择 object_type：mailbox/tree/manhole/road_sign/traffic_light。
+	prompt := `识别图中最主要的物体。
+用英文小写下划线格式输出 object_type（例如：cat、dog、car、building）。
 仅输出一行 JSON，不要 markdown，不要解释。
 JSON 格式：
-{"object_type":"mailbox|tree|manhole|road_sign|traffic_light","raw_label":"原始标签","reason":"一句话理由"}`
+{"object_type":"物体类型（英文小写下划线）","raw_label":"原始标签","reason":"一句话识别理由"}`
 	if strict {
-		prompt += "\n如果无法识别，也必须输出上述 JSON，object_type 选最接近的一个。"
+		prompt += "\n如果无法识别，object_type 设为 \"unknown\"。"
 	}
 
 	return map[string]any{
@@ -322,7 +322,8 @@ func parseVisionRecognizeResult(content string) (RecognizeResult, error) {
 	}
 	if err := json.Unmarshal([]byte(extractJSONPayload(trimmed)), &parsed); err == nil {
 		objectType := normalizeObjectType(parsed.ObjectType)
-		if _, ok := supportedObjectTypes()[objectType]; ok {
+		// 接受任意 object_type，不再限制在支持列表中
+		if objectType != "" && objectType != "unknown" {
 			rawLabel := strings.TrimSpace(parsed.RawLabel)
 			if rawLabel == "" {
 				rawLabel = objectType
@@ -333,8 +334,21 @@ func parseVisionRecognizeResult(content string) (RecognizeResult, error) {
 				Reason:     strings.TrimSpace(parsed.Reason),
 			}, nil
 		}
+		// 如果是 unknown，也返回结果，让上层处理
+		if objectType == "unknown" {
+			rawLabel := strings.TrimSpace(parsed.RawLabel)
+			if rawLabel == "" {
+				rawLabel = "unknown"
+			}
+			return RecognizeResult{
+				ObjectType: "unknown",
+				RawLabel:   rawLabel,
+				Reason:     strings.TrimSpace(parsed.Reason),
+			}, nil
+		}
 	}
 
+	// 尝试从文本中推断（保留向后兼容）
 	if objectType := inferObjectTypeFromText(trimmed); objectType != "" {
 		return RecognizeResult{
 			ObjectType: objectType,

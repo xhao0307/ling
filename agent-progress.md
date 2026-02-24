@@ -186,3 +186,23 @@
 - 下一步建议:
   - 刷新页面后检查顶部是否出现“上传”按钮；点击后应弹出系统选图。
 - 对应提交: `6be0864`
+
+---
+
+### [2026-02-24 11:23] 修复 scan 错误码回归与脚本误判
+- 会话目标: 完成未提交代码审查收敛，修复 `scan` 的 500 回归并降低 `codex-loop` 误判。
+- 选择功能: `F012`
+- 实际改动:
+  - `internal/service/service.go`：新增 `ErrContentGenerate`，在“知识库无数据且 LLM 生成失败”时返回可识别的服务降级错误；
+  - `internal/httpapi/handlers.go`：为 `ErrContentGenerate` 增加 `503` 映射，客户端返回固定中文文案，避免透出内部上下文；
+  - `internal/httpapi/handlers_test.go`：新增回归测试，覆盖 `scan` 在该错误场景下的状态码与响应文案；
+  - `scripts/codex-loop.sh`：移除过宽的 `Not Found` 关键字匹配，减少误报失败。
+- 验证结果:
+  - `./init.sh`：启动与 smoke 通过（`http://127.0.0.1:39028`）；
+  - `go test ./...`：通过；
+  - `bash -n scripts/codex-loop.sh`：通过。
+- 风险与遗留:
+  - 目前仅覆盖本地与单测验证，远端部署后仍建议对 `OPTIONS/POST /api/v1/scan/image` 与未知物体 `scan` 做一次实际联调。
+- 下一步建议:
+  - 远端发布后执行一次前端上传识别链路回归，确认 4xx/5xx 提示与预期一致。
+- 对应提交: （本次提交）

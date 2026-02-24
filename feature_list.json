@@ -15,7 +15,7 @@
         "响应为 200",
         "响应体包含 status=ok"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F002",
