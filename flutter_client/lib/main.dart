@@ -5,6 +5,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 
 const List<(String, String)> kObjectOptions = [
   ('mailbox', '邮箱'),
@@ -197,6 +198,7 @@ class _ExplorePageState extends State<ExplorePage> {
   final _childIdCtrl = TextEditingController(text: 'kid_1');
   final _ageCtrl = TextEditingController(text: '8');
   final _answerCtrl = TextEditingController();
+  final ImagePicker _imagePicker = ImagePicker();
 
   bool _profileReady = false;
   String _childId = 'kid_1';
@@ -450,6 +452,12 @@ class _ExplorePageState extends State<ExplorePage> {
                       ),
                     ),
                   ),
+                ),
+                const SizedBox(height: 10),
+                FilledButton.tonalIcon(
+                  onPressed: _busy || _detecting ? null : _pickPhotoAndGenerate,
+                  icon: const Icon(Icons.file_upload),
+                  label: const Text('上传照片测试'),
                 ),
               ],
             ),
@@ -738,24 +746,7 @@ class _ExplorePageState extends State<ExplorePage> {
 
       final frame = await controller.takePicture();
       final imageBytes = await frame.readAsBytes();
-      final imageBase64 = base64Encode(imageBytes);
-      final match = await widget.api.scanImage(
-        childId: _childId,
-        childAge: _childAge,
-        imageBase64: imageBase64,
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _detectedLabel = _normalizeObjectLabel(match.detectedLabel);
-        _detectedRawLabel = match.rawLabel;
-        _detectedReason = match.reason;
-      });
-
-      _showSnack('识别到 ${_labelToChinese(match.detectedLabel)}，请确认主体。');
+      await _detectFromImageBytes(imageBytes);
     } catch (e) {
       _showSnack('视觉识别失败：$e');
     } finally {
@@ -763,6 +754,53 @@ class _ExplorePageState extends State<ExplorePage> {
         setState(() => _detecting = false);
       }
     }
+  }
+
+  Future<void> _pickPhotoAndGenerate() async {
+    if (_busy || _detecting) {
+      return;
+    }
+
+    try {
+      final picked = await _imagePicker.pickImage(source: ImageSource.gallery);
+      if (picked == null) {
+        return;
+      }
+      final imageBytes = await picked.readAsBytes();
+      setState(() => _detecting = true);
+      await _detectFromImageBytes(imageBytes);
+      if (!mounted || _detectedLabel.isEmpty) {
+        return;
+      }
+      await _confirmDetectedObjectAndScan();
+    } catch (e) {
+      _showSnack('上传图片识别失败：$e');
+    } finally {
+      if (mounted) {
+        setState(() => _detecting = false);
+      }
+    }
+  }
+
+  Future<void> _detectFromImageBytes(Uint8List imageBytes) async {
+    final imageBase64 = base64Encode(imageBytes);
+    final match = await widget.api.scanImage(
+      childId: _childId,
+      childAge: _childAge,
+      imageBase64: imageBase64,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _detectedLabel = _normalizeObjectLabel(match.detectedLabel);
+      _detectedRawLabel = match.rawLabel;
+      _detectedReason = match.reason;
+    });
+
+    _showSnack('识别到 ${_labelToChinese(match.detectedLabel)}，请确认主体。');
   }
 
   Future<void> _confirmDetectedObjectAndScan() async {
