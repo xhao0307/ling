@@ -693,3 +693,35 @@
   - 部署后重跑：`CITYLING_BASE_URL=http://121.43.118.53:3026 scripts/test-companion-scene-cat.sh`；
   - 若仍失败，优先贴第 3 步完整返回体与对应后端日志时间点。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-24 17:43] F019 修复图生图 `image` 参数格式与 i2i 环境字段注入
+- 会话目标: 解决你线上 `companion/scene` 报错 `image invalid url specified`，并按要求在图生图模式下不再使用天气/环境参数驱动生图。
+- 选择功能: `F019`
+- 实际改动:
+  - `internal/llm/companion.go`：
+    - `GenerateCharacterImage` 发送 `image` 前新增 `normalizeSourceImageInput`；
+    - 对 raw base64 自动转为 `data:image/jpeg;base64,...`，URL 和 `data:image/...` 维持原样。
+  - `internal/service/service.go`：
+    - 当 `source_image_base64` 非空时，清空 `weather/environment/object_traits`；
+    - 图生图时强制覆盖为参考图导向 prompt（不再沿用 LLM 返回的环境化 `image_prompt`）。
+  - `internal/llm/companion_test.go`：
+    - 更新 `TestGenerateCharacterImage` 断言为 data URL；
+    - 新增 `TestNormalizeSourceImageInput`（raw base64 / URL / data URL / trim / empty）。
+  - `internal/service/service_test.go`：
+    - 新增 `TestGenerateCompanionSceneImageToImageIgnoresEnvironmentFields`，验证：
+      - i2i 模式不传入用户环境字段；
+      - 生图 prompt 使用图生图模板；
+      - `image` 参数为规范化 data URL。
+- 验证结果:
+  - `go test ./internal/llm ./internal/service ./internal/httpapi` 通过；
+  - `go test ./...` 通过；
+  - `./init.sh` smoke 通过（`http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 当前验证为本地单测与 smoke，仍需你线上部署后跑 `cat.png` 链路确认上游图像服务接受 data URL。
+  - `feature_list.json` 中 `F019.passes` 暂保持 `false`（缺线上 e2e 成功证据）。
+- 下一步建议:
+  - 线上更新后执行：`CITYLING_BASE_URL=http://121.43.118.53:3026 scripts/test-companion-scene-cat.sh`；
+  - 若第 3 步仍失败，请贴返回体与同时间段后端日志（含 `media request failed` 原文）。
+- 对应提交: （本次提交）

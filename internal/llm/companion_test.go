@@ -73,8 +73,55 @@ func TestGenerateCharacterImage(t *testing.T) {
 	if got != "https://img.example.com/companion.png" {
 		t.Fatalf("unexpected image url: %s", got)
 	}
-	if receivedImage != "base64-cat-source" {
+	if receivedImage != "data:image/jpeg;base64,base64-cat-source" {
 		t.Fatalf("expected source image to be forwarded, got %q", receivedImage)
+	}
+}
+
+func TestNormalizeSourceImageInput(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		input  string
+		output string
+	}{
+		{
+			name:   "raw base64",
+			input:  "YWJjMTIz",
+			output: "data:image/jpeg;base64,YWJjMTIz",
+		},
+		{
+			name:   "http url",
+			input:  "http://example.com/cat.png",
+			output: "http://example.com/cat.png",
+		},
+		{
+			name:   "data url",
+			input:  "data:image/png;base64,abcd",
+			output: "data:image/png;base64,abcd",
+		},
+		{
+			name:   "trim spaces",
+			input:  "  dGVzdA==  ",
+			output: "data:image/jpeg;base64,dGVzdA==",
+		},
+		{
+			name:   "empty",
+			input:  "   ",
+			output: "",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := normalizeSourceImageInput(tt.input)
+			if got != tt.output {
+				t.Fatalf("normalizeSourceImageInput() got %q, want %q", got, tt.output)
+			}
+		})
 	}
 }
 

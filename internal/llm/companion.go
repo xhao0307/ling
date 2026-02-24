@@ -114,7 +114,7 @@ func (c *Client) GenerateCharacterImage(ctx context.Context, imagePrompt string,
 		"watermark":       true,
 	}
 	if trimmedSourceImage := strings.TrimSpace(sourceImage); trimmedSourceImage != "" {
-		body["image"] = trimmedSourceImage
+		body["image"] = normalizeSourceImageInput(trimmedSourceImage)
 	}
 	respBody, _, err := c.doMediaJSON(ctx, c.imageBaseURL+"/v1/byteplus/images/generations", c.imageAPIKey, body)
 	if err != nil {
@@ -149,6 +149,21 @@ func (c *Client) GenerateCharacterImage(ctx context.Context, imagePrompt string,
 		}
 	}
 	return "", ErrInvalidResponse
+}
+
+func normalizeSourceImageInput(sourceImage string) string {
+	trimmed := strings.TrimSpace(sourceImage)
+	if trimmed == "" {
+		return ""
+	}
+	lower := strings.ToLower(trimmed)
+	if strings.HasPrefix(lower, "http://") ||
+		strings.HasPrefix(lower, "https://") ||
+		strings.HasPrefix(lower, "data:image/") {
+		return trimmed
+	}
+	// image 参数在部分上游实现中按 URL 校验，这里统一转成 data URL 兼容 base64 入参。
+	return "data:image/jpeg;base64," + trimmed
 }
 
 func (c *Client) GenerateCompanionReply(ctx context.Context, req CompanionReplyRequest) (CompanionReply, error) {

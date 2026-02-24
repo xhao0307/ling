@@ -3,6 +3,7 @@ package service_test
 import (
 	"encoding/base64"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -246,6 +247,86 @@ func TestGenerateCompanionSceneFallsBackWhenSceneLLMFailed(t *testing.T) {
 	}
 	if _, err := base64.StdEncoding.DecodeString(resp.VoiceAudioBase64); err != nil {
 		t.Fatalf("invalid voice base64: %v", err)
+	}
+}
+
+func TestGenerateCompanionSceneImageToImageIgnoresEnvironmentFields(t *testing.T) {
+	t.Parallel()
+	svc, _ := newTestService(t)
+
+	var mockImageURL string
+	var chatRequestBody string
+	var imagePrompt string
+	var imageInput string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/v1/chat/completions":
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				t.Fatalf("read chat body failed: %v", err)
+			}
+			chatRequestBody = string(body)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"{\"character_name\":\"喵喵星友\",\"personality\":\"温柔好奇\",\"dialog_text\":\"你好呀，我们一起观察吧！\",\"image_prompt\":\"旧的天气环境提示\"}"}}]}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/v1/byteplus/images/generations":
+			var payload map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+				t.Fatalf("decode image payload failed: %v", err)
+			}
+			imagePrompt, _ = payload["prompt"].(string)
+			imageInput, _ = payload["image"].(string)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"data":[{"url":"` + mockImageURL + `"}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/mock-image.png":
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write([]byte{1, 2, 3})
+		case r.Method == http.MethodPost && r.URL.Path == "/elevenlabs/tts/generate":
+			w.Header().Set("Content-Type", "audio/mpeg")
+			_, _ = w.Write([]byte{4, 5, 6})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	}))
+	defer server.Close()
+	mockImageURL = server.URL + "/mock-image.png"
+
+	client, err := llm.NewClient(llm.Config{
+		APIKey:       "test-key",
+		BaseURL:      server.URL,
+		ImageBaseURL: server.URL,
+		VoiceBaseURL: server.URL,
+	})
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+	svc.SetLLMClient(client)
+
+	resp, err := svc.GenerateCompanionScene(service.CompanionSceneRequest{
+		ChildID:           "kid_i2i",
+		ChildAge:          8,
+		ObjectType:        "猫",
+		Weather:           "暴雨夜晚",
+		Environment:       "火山口",
+		ObjectTraits:      "金属刺甲",
+		SourceImageBase64: "Y2F0LWJhc2U2NA==",
+	})
+	if err != nil {
+		t.Fatalf("GenerateCompanionScene() error = %v", err)
+	}
+	if strings.TrimSpace(resp.DialogText) == "" {
+		t.Fatalf("expected dialog text")
+	}
+	if strings.Contains(chatRequestBody, "暴雨夜晚") || strings.Contains(chatRequestBody, "火山口") || strings.Contains(chatRequestBody, "金属刺甲") {
+		t.Fatalf("expected scene request to ignore env fields in image-to-image mode, got %s", chatRequestBody)
+	}
+	if !strings.Contains(imagePrompt, "基于参考图进行图生图") {
+		t.Fatalf("expected i2i prompt, got %q", imagePrompt)
+	}
+	if strings.Contains(imagePrompt, "旧的天气环境提示") {
+		t.Fatalf("expected llm image prompt to be overridden in i2i mode, got %q", imagePrompt)
+	}
+	if imageInput != "data:image/jpeg;base64,Y2F0LWJhc2U2NA==" {
+		t.Fatalf("expected normalized data url image input, got %q", imageInput)
 	}
 }
 

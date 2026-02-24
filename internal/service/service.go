@@ -305,32 +305,46 @@ func (s *Service) GenerateCompanionScene(req CompanionSceneRequest) (CompanionSc
 		return CompanionSceneResponse{}, ErrLLMUnavailable
 	}
 
+	sourceImageBase64 := strings.TrimSpace(req.SourceImageBase64)
+	weather := strings.TrimSpace(req.Weather)
+	environment := strings.TrimSpace(req.Environment)
+	objectTraits := strings.TrimSpace(req.ObjectTraits)
+	if sourceImageBase64 != "" {
+		// 图生图模式由参考图主导，不再强制注入环境参数。
+		weather = ""
+		environment = ""
+		objectTraits = ""
+	}
+
 	scene, err := s.llm.GenerateCompanionScene(context.Background(), llm.CompanionSceneRequest{
 		ObjectType:   objectType,
 		ChildAge:     req.ChildAge,
-		Weather:      strings.TrimSpace(req.Weather),
-		Environment:  strings.TrimSpace(req.Environment),
-		ObjectTraits: strings.TrimSpace(req.ObjectTraits),
+		Weather:      weather,
+		Environment:  environment,
+		ObjectTraits: objectTraits,
 	})
 	if err != nil {
 		scene = s.defaultCompanionScene(
 			objectType,
 			req.ChildAge,
-			strings.TrimSpace(req.Weather),
-			strings.TrimSpace(req.Environment),
-			strings.TrimSpace(req.ObjectTraits),
+			weather,
+			environment,
+			objectTraits,
 		)
 	}
 
 	imagePrompt := scene.ImagePrompt
-	if strings.TrimSpace(req.SourceImageBase64) != "" {
-		imagePrompt = imagePrompt + "；请结合参考图主体特征，生成同主题的儿童向二次元拟人角色。"
+	if sourceImageBase64 != "" {
+		imagePrompt = fmt.Sprintf(
+			"基于参考图进行图生图，将图中主体“%s”转为儿童向二次元拟人角色，保留主体外形与配色特征，单人清晰构图，明亮柔和插画风。",
+			strings.TrimSpace(objectTypeToChinese(objectType)),
+		)
 	}
 
 	imageURL, err := s.llm.GenerateCharacterImage(
 		context.Background(),
 		imagePrompt,
-		strings.TrimSpace(req.SourceImageBase64),
+		sourceImageBase64,
 	)
 	if err != nil {
 		if errors.Is(err, llm.ErrImageCapabilityUnavailable) {
