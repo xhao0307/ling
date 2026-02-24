@@ -148,4 +148,4 @@
   - `feature_list.json` 中 `F018.passes` 暂未置为 `true`（尚未对 `scripts/pm2-up.sh` 路径完成验收）。
 - 下一步建议:
   - 使用 `scripts/web-chrome-up.sh restart` 作为日常前端联调入口。
-- 对应提交: （待提交）
+- 对应提交: `d544b7b`
