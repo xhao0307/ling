@@ -19,6 +19,7 @@ module.exports = {
         CITYLING_DATA_FILE:
           process.env.CITYLING_DATA_FILE || "data/cityling.db",
         DASHSCOPE_API_KEY: process.env.DASHSCOPE_API_KEY || "",
+        CITYLING_LLM_API_KEY: process.env.CITYLING_LLM_API_KEY || "",
         CITYLING_LLM_BASE_URL:
           process.env.CITYLING_LLM_BASE_URL || "https://dashscope.aliyuncs.com",
         CITYLING_LLM_MODEL:

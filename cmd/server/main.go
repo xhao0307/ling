@@ -141,6 +141,7 @@ func initLLMClientFromEnv() *llm.Client {
 	if apiKey == "" {
 		return nil
 	}
+	legacyVoiceKey := strings.TrimSpace(os.Getenv("CITYLING_LLM_API_KEY"))
 
 	cfg := llm.Config{
 		BaseURL:             envOrDefault("CITYLING_LLM_BASE_URL", "https://dashscope.aliyuncs.com"),
@@ -154,7 +155,7 @@ func initLLMClientFromEnv() *llm.Client {
 		ImageModel:          firstNonEmpty(envOrDefault("CITYLING_DASHSCOPE_MODEL", ""), envOrDefault("CITYLING_IMAGE_MODEL", "wan2.6-image")),
 		ImageResponseFormat: envOrDefault("CITYLING_IMAGE_RESPONSE_FORMAT", "url"),
 		VoiceBaseURL:        envOrDefault("CITYLING_TTS_API_BASE_URL", "https://api-voice.charaboard.com"),
-		VoiceAPIKey:         os.Getenv("CITYLING_TTS_API_KEY"),
+		VoiceAPIKey:         firstNonEmpty(os.Getenv("CITYLING_TTS_API_KEY"), legacyVoiceKey),
 		VoiceID:             envOrDefault("CITYLING_TTS_VOICE_ID", "Xb7hH8MSUJpSbSDYk0k2"),
 		VoiceModelID:        envOrDefault("CITYLING_TTS_MODEL_ID", "eleven_multilingual_v2"),
 		VoiceLangCode:       envOrDefault("CITYLING_TTS_LANGUAGE_CODE", "zh"),

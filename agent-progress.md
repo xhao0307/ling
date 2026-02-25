@@ -1405,3 +1405,28 @@
 - 下一步建议:
   - 线上发布前执行 `printenv DASHSCOPE_API_KEY` 自检，避免空 key 导致 LLM 功能关闭。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-25 18:13] F019 调整 key 策略：DashScope 与 TTS 分离
+- 会话目标: 文本/视觉模型保持 DashScope，TTS 恢复使用原 `CITYLING_LLM_API_KEY`。
+- 选择功能: `F019`
+- 实际改动:
+  - `cmd/server/main.go`：
+    - 文本/视觉 LLM 仍仅读取 `DASHSCOPE_API_KEY`；
+    - `VoiceAPIKey` 改为 `CITYLING_TTS_API_KEY` 优先，回退 `CITYLING_LLM_API_KEY`。
+  - `README.md`：
+    - 明确 `DASHSCOPE_API_KEY` 仅用于文本/视觉；
+    - 明确 TTS 默认 key 为 `CITYLING_LLM_API_KEY`。
+  - `ling.ini.example`：
+    - 补充 `CITYLING_LLM_API_KEY`（TTS 使用）；
+    - 更新注释为 TTS 不再回退 DashScope key。
+  - `ecosystem.config.cjs`：
+    - 增加 `CITYLING_LLM_API_KEY` 环境注入，保留老 TTS 链路可用。
+- 验证结果:
+  - `go test ./...` 通过。
+- 风险与遗留:
+  - 若只配置 `DASHSCOPE_API_KEY` 而未配置 `CITYLING_LLM_API_KEY`/`CITYLING_TTS_API_KEY`，TTS 仍会不可用。
+- 下一步建议:
+  - 部署时同时检查两组 key：`DASHSCOPE_API_KEY`（文本/视觉）与 `CITYLING_LLM_API_KEY`（TTS）。
+- 对应提交: （本次提交）
