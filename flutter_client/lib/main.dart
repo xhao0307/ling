@@ -123,10 +123,17 @@ class AuthStore {
   AuthSession? _session;
 
   Future<void> init() async {
-    final prefs = await SharedPreferences.getInstance();
-    _prefs = prefs;
-    _loadAccounts();
-    _loadSession();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _prefs = prefs;
+      _loadAccounts();
+      _loadSession();
+    } catch (_) {
+      // 降级为仅内存会话，避免初始化失败导致页面卡在 loading。
+      _prefs = null;
+      _accounts.clear();
+      _session = null;
+    }
   }
 
   Future<AuthSession?> restoreSession() async {
@@ -258,11 +265,13 @@ class AuthEntryPage extends StatefulWidget {
   const AuthEntryPage({
     required this.authStore,
     required this.onAuthed,
+    this.bootstrapHint = '',
     super.key,
   });
 
   final AuthStore authStore;
   final ValueChanged<AuthSession> onAuthed;
+  final String bootstrapHint;
 
   @override
   State<AuthEntryPage> createState() => _AuthEntryPageState();
@@ -276,6 +285,12 @@ class _AuthEntryPageState extends State<AuthEntryPage> {
   _AuthMode _mode = _AuthMode.login;
   bool _submitting = false;
   String _error = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _error = widget.bootstrapHint;
+  }
 
   @override
   void dispose() {
@@ -569,6 +584,7 @@ class _CityLingHomePageState extends State<CityLingHomePage> {
   final ValueNotifier<int> _captureVersion = ValueNotifier<int>(0);
   int _tabIndex = 0;
   bool _bootReady = false;
+  String _bootError = '';
   AuthSession? _session;
 
   @override
@@ -578,16 +594,28 @@ class _CityLingHomePageState extends State<CityLingHomePage> {
   }
 
   Future<void> _boot() async {
-    await _api.init();
-    await _authStore.init();
-    final restored = await _authStore.restoreSession();
-    if (!mounted) {
-      return;
+    try {
+      await _api.init();
+      await _authStore.init().timeout(const Duration(seconds: 8));
+      final restored = await _authStore.restoreSession();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _session = restored;
+        _bootReady = true;
+        _bootError = '';
+      });
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _session = null;
+        _bootReady = true;
+        _bootError = '初始化异常，已进入离线登录模式：$e';
+      });
     }
-    setState(() {
-      _session = restored;
-      _bootReady = true;
-    });
   }
 
   Future<void> _openBackendSettings() async {
@@ -689,6 +717,7 @@ class _CityLingHomePageState extends State<CityLingHomePage> {
     if (session == null) {
       return AuthEntryPage(
         authStore: _authStore,
+        bootstrapHint: _bootError,
         onAuthed: (nextSession) {
           if (!mounted) {
             return;
@@ -696,6 +725,7 @@ class _CityLingHomePageState extends State<CityLingHomePage> {
           setState(() {
             _session = nextSession;
             _tabIndex = 0;
+            _bootError = '';
           });
         },
       );

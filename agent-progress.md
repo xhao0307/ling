@@ -876,3 +876,24 @@
 - 下一步建议:
   - 下个迭代优先把“个人资料编辑”和“消息中心”从占位入口升级为真实页面。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-25 10:23] F021 修复 Web 启动阶段可能无限 loading
+- 会话目标: 解决你反馈的“页面一直加载转圈”问题，避免初始化异常时卡死在启动页。
+- 选择功能: `F021`
+- 实际改动:
+  - `flutter_client/lib/main.dart`：
+    - `AuthStore.init` 增加异常兜底，`SharedPreferences` 初始化失败时降级为内存会话模式；
+    - `CityLingHomePage._boot` 增加 `try/catch + timeout(8s)`，初始化异常时不再停留在 loading；
+    - 新增 `_bootError`，初始化异常时将提示透传到登录页，便于用户感知。
+- 验证结果:
+  - `cd flutter_client && flutter analyze` 通过（No issues found）；
+  - `scripts/web-chrome-up.sh restart` 成功，`status` 显示 running；
+  - `curl -I http://127.0.0.1:7357` 返回 `HTTP/1.0 200 OK`。
+- 风险与遗留:
+  - 若用户浏览器本地缓存异常，仍可能看到旧 JS；需强制刷新（`Cmd+Shift+R`）；
+  - 若浏览器完全禁用本地存储，将进入“离线登录模式”（可用但不持久化账号）。
+- 下一步建议:
+  - 你本机执行一次强制刷新并确认不再出现长期转圈；若仍复现，贴控制台首条报错定位。
+- 对应提交: （本次提交）
