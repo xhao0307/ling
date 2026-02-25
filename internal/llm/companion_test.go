@@ -44,10 +44,14 @@ func TestGenerateCharacterImage(t *testing.T) {
 			t.Fatalf("missing bearer auth")
 		}
 		var req struct {
-			Image string `json:"image"`
+			Image     string `json:"image"`
+			Watermark bool   `json:"watermark"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			t.Fatalf("decode request body: %v", err)
+		}
+		if req.Watermark {
+			t.Fatalf("expected watermark=false for generated images")
 		}
 		receivedImage = strings.TrimSpace(req.Image)
 		w.Header().Set("Content-Type", "application/json")

@@ -1026,3 +1026,33 @@
 - 下一步建议:
   - 按 `prompt_style_guide.md` 重跑 `scripts/gen-fairy-asset-pack.sh` 并对 `v3` 结果做抽检，确认无文字污染后再将 `F024` 置为 `true`。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-25 14:11] F019 去剪影并改为“绘本背景内对话”交互
+- 会话目标: 去掉角色剪影逻辑，将识别输入图绘本化并作为当前剧情背景，对话框改为背景图中下半透明样式，按点击推进新句子。
+- 选择功能: `F019`
+- 实际改动:
+  - 后端 `internal/service/service.go`：
+    - 调整 i2i 场景 `imagePrompt`，明确“参考图主体绘本化 + 自动补充日常生活场景背景 + 适合作为剧情对话背景 + 禁止文字水印”；
+  - 后端 `internal/llm/companion.go`：
+    - 生图请求参数 `watermark` 从 `true` 改为 `false`；
+  - 前端 `flutter_client/lib/main.dart`：
+    - 删除 `_AnimatedNameSilhouette` 剪影组件及其渲染入口；
+    - 重构剧情卡为“背景图 + 中下半透明对话气泡”布局；
+    - 移除“总句数进度”显示；
+    - 移除“下一句”按钮，保留点击画面推进剧情；
+    - 提示文案改为“点击画面加载下一句/点击画面推进到提问”。
+  - 测试更新：
+    - `internal/service/service_test.go` 增加 i2i prompt 包含“日常生活场景背景”断言；
+    - `internal/llm/companion_test.go` 增加 watermark=false 断言。
+- 验证结果:
+  - `./init.sh` 通过（`smoke 通过: http://127.0.0.1:39028`）；
+  - `go test ./internal/llm ./internal/service` 通过；
+  - `cd flutter_client && flutter analyze` 通过（No issues found）。
+- 风险与遗留:
+  - 本次未完成浏览器自动化截图验收，`F019.passes` 仍保持 `false`；
+  - 若上游生图模型忽略约束，仍可能偶发出现不理想背景，需要继续重采样策略。
+- 下一步建议:
+  - 用真实上传图跑一轮 Web 端 e2e，确认“背景图即对话背景 + 点击推进 + 输入回答”交互观感，再决定是否置 `F019=true`。
+- 对应提交: （本次提交）

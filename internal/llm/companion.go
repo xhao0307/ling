@@ -112,7 +112,7 @@ func (c *Client) GenerateCharacterImage(ctx context.Context, imagePrompt string,
 		"response_format": c.imageResponseFormat,
 		"size":            "2K",
 		"stream":          false,
-		"watermark":       true,
+		"watermark":       false,
 	}
 	if trimmedSourceImage := strings.TrimSpace(sourceImage); trimmedSourceImage != "" {
 		body["image"] = normalizeSourceImageInput(trimmedSourceImage)

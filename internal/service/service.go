@@ -336,7 +336,7 @@ func (s *Service) GenerateCompanionScene(req CompanionSceneRequest) (CompanionSc
 	imagePrompt := scene.ImagePrompt
 	if sourceImageBase64 != "" {
 		imagePrompt = fmt.Sprintf(
-			"基于参考图进行图生图，将图中主体“%s”转为儿童向二次元拟人角色，保留主体外形与配色特征，单人清晰构图，明亮柔和插画风。",
+			"基于参考图进行图生图，将图中主体“%s”绘本化，保留主体外形与配色特征；如果原图只有主体或背景单调，请自动补充自然的日常生活场景背景（如公园、小区、街角、校园一角），形成前中后景层次；整体保持童话儿童绘本风，柔和光线，画面适合作为剧情对话背景；禁止文字、水印、logo。",
 			strings.TrimSpace(objectTypeToChinese(objectType)),
 		)
 	}

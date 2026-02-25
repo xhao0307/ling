@@ -1129,7 +1129,7 @@ class _ExplorePageState extends State<ExplorePage> {
                             ),
                             SizedBox(width: 6),
                             Text(
-                              '点击屏幕继续对话',
+                              '点击画面加载下一句',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
@@ -1484,16 +1484,12 @@ class _ExplorePageState extends State<ExplorePage> {
 
   Widget _buildSpiritCard(ScanResult scan) {
     final companionName = _companionScene?.characterName ?? scan.spirit.name;
-    final silhouetteImageUrl = _companionScene?.characterImageUrl ?? '';
     final currentLine = _currentStoryLine;
     final hasStoryLine = currentLine != null;
     final displaySpeaker = hasStoryLine ? currentLine.speaker : companionName;
     final displayText = hasStoryLine
         ? currentLine.text
         : (_companionScene == null ? '剧情生成中，请稍候...' : '剧情准备中...');
-    final storyProgress = hasStoryLine
-        ? '${_currentStoryIndex + 1}/${_storyLines.length}'
-        : '--/${_storyLines.length}';
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -1552,203 +1548,180 @@ class _ExplorePageState extends State<ExplorePage> {
                   ),
               ],
             ),
-            const SizedBox(height: 8),
-            if (_companionScene == null) ...[
-              const LinearProgressIndicator(minHeight: 3),
-            ],
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               child: AspectRatio(
                 aspectRatio: 16 / 10,
-                child: _companionScene == null
-                    ? ColoredBox(
-                        color: Colors.black12,
-                        child: Center(
-                          child: Icon(
-                            Icons.auto_awesome,
-                            size: 46,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                      )
-                    : _buildCompanionImage(_companionScene!),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xEE24345A),
-                        Color(0xEE18233C),
-                        Color(0xEE101828),
-                      ],
-                      stops: [0, 0.62, 1],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.22),
-                    ),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x55000000),
-                        blurRadius: 20,
-                        offset: Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 18, 12, 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: Text(
-                            storyProgress,
-                            style: const TextStyle(
-                              color: Color(0xFFE7EBFF),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          displayText,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            height: 1.4,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            FilledButton.tonalIcon(
-                              onPressed: _busy
-                                  ? null
-                                  : () async {
-                                      await _playCurrentStoryVoice();
-                                    },
-                              icon: const Icon(Icons.volume_up, size: 18),
-                              label: const Text('重播本句'),
-                            ),
-                            if (_canAdvanceStory)
-                              FilledButton.icon(
-                                onPressed: _busy
-                                    ? null
-                                    : () async {
-                                        await _advanceStoryLine();
-                                      },
-                                icon: const Icon(Icons.skip_next, size: 18),
-                                label: const Text('下一句'),
-                              ),
-                            if (_busy)
-                              const Padding(
-                                padding: EdgeInsets.only(top: 8),
-                                child: SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        if (_waitingForAnswerInput && !_quizSolved)
-                          TextField(
-                            controller: _companionReplyCtrl,
-                            minLines: 1,
-                            maxLines: 3,
-                            textInputAction: TextInputAction.send,
-                            onSubmitted: (_) async {
-                              await _sendCompanionMessage(scan);
-                            },
-                            decoration: InputDecoration(
-                              filled: true,
-                              fillColor: Colors.white,
-                              labelText: '输入你的回答',
-                              border: const OutlineInputBorder(),
-                              suffixIcon: IconButton(
-                                onPressed: _busy
-                                    ? null
-                                    : () async {
-                                        await _sendCompanionMessage(scan);
-                                      },
-                                icon: const Icon(Icons.send),
-                                tooltip: '发送',
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    _companionScene == null
+                        ? ColoredBox(
+                            color: Colors.black12,
+                            child: Center(
+                              child: Icon(
+                                Icons.auto_awesome,
+                                size: 46,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                             ),
                           )
-                        else
-                          Text(
-                            _quizSolved
-                                ? '你已经完成本轮问答，可以继续拍照探索新目标。'
-                                : (_canTapScreenToAdvance
-                                    ? '点击屏幕任意位置继续剧情。'
-                                    : '等待剧情加载或角色回应。'),
+                        : _buildCompanionImage(_companionScene!),
+                    Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.14),
+                              Colors.black.withValues(alpha: 0.08),
+                              Colors.black.withValues(alpha: 0.38),
+                            ],
+                            stops: const [0, 0.55, 1],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 12,
+                      top: 10,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFBE8B0), Color(0xFFE7C36A)],
+                          ),
+                          borderRadius: BorderRadius.circular(999),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x33000000),
+                              blurRadius: 10,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 5,
+                          ),
+                          child: Text(
+                            displaySpeaker,
                             style: const TextStyle(
-                              color: Color(0xFFD9DFF7),
-                              fontSize: 12,
+                              color: Color(0xFF332200),
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
                             ),
                           ),
-                      ],
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 18,
-                  top: -74,
-                  child: _AnimatedNameSilhouette(
-                    imageBytes: _companionScene?.characterImageBytes,
-                    imageUrl: silhouetteImageUrl,
-                    fallbackIcon: _iconForObjectType(scan.objectType),
-                  ),
-                ),
-                Positioned(
-                  left: 12,
-                  top: -14,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFFBE8B0), Color(0xFFE7C36A)],
-                      ),
-                      borderRadius: BorderRadius.circular(999),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x33000000),
-                          blurRadius: 10,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 5,
-                      ),
-                      child: Text(
-                        displaySpeaker,
-                        style: const TextStyle(
-                          color: Color(0xFF332200),
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
                         ),
                       ),
                     ),
-                  ),
+                    if (_companionScene == null)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 24),
+                          child: LinearProgressIndicator(minHeight: 3),
+                        ),
+                      ),
+                    Positioned(
+                      left: 10,
+                      right: 10,
+                      bottom: 10,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.50),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.24),
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                displayText,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  height: 1.45,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              if (_waitingForAnswerInput && !_quizSolved)
+                                TextField(
+                                  controller: _companionReplyCtrl,
+                                  minLines: 1,
+                                  maxLines: 3,
+                                  textInputAction: TextInputAction.send,
+                                  onSubmitted: (_) async {
+                                    await _sendCompanionMessage(scan);
+                                  },
+                                  decoration: InputDecoration(
+                                    filled: true,
+                                    fillColor: Colors.white.withValues(
+                                      alpha: 0.95,
+                                    ),
+                                    labelText: '输入你的回答',
+                                    border: const OutlineInputBorder(),
+                                    suffixIcon: IconButton(
+                                      onPressed: _busy
+                                          ? null
+                                          : () async {
+                                              await _sendCompanionMessage(scan);
+                                            },
+                                      icon: const Icon(Icons.send),
+                                      tooltip: '发送',
+                                    ),
+                                  ),
+                                )
+                              else
+                                Text(
+                                  _quizSolved
+                                      ? '你已经完成本轮问答，可以继续拍照探索新目标。'
+                                      : (_canTapScreenToAdvance
+                                          ? '点击画面继续剧情。'
+                                          : '等待剧情加载或角色回应。'),
+                                  style: const TextStyle(
+                                    color: Color(0xFFE3E7FB),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  FilledButton.tonalIcon(
+                                    onPressed: _busy
+                                        ? null
+                                        : () async {
+                                            await _playCurrentStoryVoice();
+                                          },
+                                    icon: const Icon(Icons.volume_up, size: 18),
+                                    label: const Text('重播本句'),
+                                  ),
+                                  if (_busy) ...[
+                                    const SizedBox(width: 10),
+                                    const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
             const SizedBox(height: 4),
             Wrap(
@@ -2122,7 +2095,7 @@ class _ExplorePageState extends State<ExplorePage> {
       return;
     }
     if (!_waitingForAnswerInput) {
-      _showSnack(_quizSolved ? '本轮问答已完成。' : '请先点击“下一句”推进到提问。');
+      _showSnack(_quizSolved ? '本轮问答已完成。' : '请先点击画面推进到提问。');
       return;
     }
 
@@ -2540,204 +2513,6 @@ class _StoryLine {
   final String voiceAudioBase64;
   final String voiceMimeType;
   final bool requiresAnswerAfter;
-}
-
-class _AnimatedNameSilhouette extends StatefulWidget {
-  const _AnimatedNameSilhouette({
-    this.imageBytes,
-    required this.imageUrl,
-    required this.fallbackIcon,
-  });
-
-  final Uint8List? imageBytes;
-  final String imageUrl;
-  final IconData fallbackIcon;
-
-  @override
-  State<_AnimatedNameSilhouette> createState() =>
-      _AnimatedNameSilhouetteState();
-}
-
-class _AnimatedNameSilhouetteState extends State<_AnimatedNameSilhouette>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1800),
-  )..repeat(reverse: true);
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final portrait = ClipOval(
-      child: SizedBox(
-        width: 56,
-        height: 56,
-        child: _buildSilhouettePortrait(),
-      ),
-    );
-
-    return AnimatedBuilder(
-      animation: _controller,
-      child: portrait,
-      builder: (context, child) {
-        final t = Curves.easeInOut.transform(_controller.value);
-        final scale = 0.96 + 0.07 * t;
-        final lift = -2 + 4 * t;
-        final glow = 10 + 7 * t;
-        return Transform.translate(
-          offset: Offset(0, lift),
-          child: Transform.scale(
-            scale: scale,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xAA84C8FF)
-                        .withValues(alpha: 0.18 + 0.2 * t),
-                    blurRadius: glow,
-                    spreadRadius: 0.5,
-                  ),
-                ],
-              ),
-              child: child,
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildSilhouettePortrait() {
-    if (widget.imageBytes != null && widget.imageBytes!.isNotEmpty) {
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          ColorFiltered(
-            colorFilter: const ColorFilter.matrix([
-              0.33,
-              0.33,
-              0.33,
-              0,
-              0,
-              0.33,
-              0.33,
-              0.33,
-              0,
-              0,
-              0.33,
-              0.33,
-              0.33,
-              0,
-              0,
-              0,
-              0,
-              0,
-              1,
-              0,
-            ]),
-            child: Image.memory(
-              widget.imageBytes!,
-              fit: BoxFit.cover,
-              errorBuilder: (context, _, __) => _fallbackSilhouetteIcon(),
-            ),
-          ),
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.60),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.16),
-                  width: 1.2,
-                ),
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-
-    final imageUrl = widget.imageUrl.trim();
-    if (imageUrl.isEmpty) {
-      return _fallbackSilhouetteIcon();
-    }
-
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        ColorFiltered(
-          colorFilter: const ColorFilter.matrix([
-            0.33,
-            0.33,
-            0.33,
-            0,
-            0,
-            0.33,
-            0.33,
-            0.33,
-            0,
-            0,
-            0.33,
-            0.33,
-            0.33,
-            0,
-            0,
-            0,
-            0,
-            0,
-            1,
-            0,
-          ]),
-          child: Image.network(
-            imageUrl,
-            fit: BoxFit.cover,
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) {
-                return child;
-              }
-              return const Center(
-                child: CircularProgressIndicator(strokeWidth: 2),
-              );
-            },
-            errorBuilder: (context, error, stackTrace) {
-              // 图片加载失败时，返回 fallback 图标
-              return _fallbackSilhouetteIcon();
-            },
-          ),
-        ),
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.60),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.16),
-                width: 1.2,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _fallbackSilhouetteIcon() {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF2E3A55), Color(0xFF111A2E)],
-        ),
-      ),
-      child:
-          Icon(widget.fallbackIcon, color: const Color(0xFFDCE8FF), size: 30),
-    );
-  }
 }
 
 class _SpiritOverlay extends StatelessWidget {

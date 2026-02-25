@@ -322,6 +322,9 @@ func TestGenerateCompanionSceneImageToImageIgnoresEnvironmentFields(t *testing.T
 	if !strings.Contains(imagePrompt, "基于参考图进行图生图") {
 		t.Fatalf("expected i2i prompt, got %q", imagePrompt)
 	}
+	if !strings.Contains(imagePrompt, "日常生活场景背景") {
+		t.Fatalf("expected i2i prompt to add daily scene background, got %q", imagePrompt)
+	}
 	if strings.Contains(imagePrompt, "旧的天气环境提示") {
 		t.Fatalf("expected llm image prompt to be overridden in i2i mode, got %q", imagePrompt)
 	}
