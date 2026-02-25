@@ -1089,8 +1089,8 @@ class _ExplorePageState extends State<ExplorePage> {
   }
 
   Widget _buildExploreScreen() {
-    final theme = Theme.of(context);
     final safeTop = MediaQuery.paddingOf(context).top;
+    final storyModeActive = _scanResult != null && !_scanCardCollapsed;
 
     return Stack(
       fit: StackFit.expand,
@@ -1107,7 +1107,7 @@ class _ExplorePageState extends State<ExplorePage> {
                 alignment: Alignment.bottomCenter,
                 child: IgnorePointer(
                   child: Padding(
-                    padding: const EdgeInsets.only(bottom: 290),
+                    padding: const EdgeInsets.only(bottom: 140),
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.52),
@@ -1144,201 +1144,190 @@ class _ExplorePageState extends State<ExplorePage> {
               ),
             ),
           ),
-        Positioned(
-          top: safeTop + 10,
-          left: 12,
-          right: 12,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.45),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              widget.session.isDebug
-                                  ? '调试模式 · ${widget.session.displayName}'
-                                  : '账号：${widget.session.displayName}',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            Text(
-                              '孩子：$_childId · 年龄：$_childAge',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      FilledButton.tonalIcon(
-                        onPressed:
-                            _busy || _detecting ? null : _pickPhotoAndGenerate,
-                        style: FilledButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.white.withValues(alpha: 0.14),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
-                          ),
-                        ),
-                        icon: const Icon(Icons.file_upload, size: 18),
-                        label: const Text(
-                          '上传',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      IconButton(
-                        onPressed: _busy || _detecting
-                            ? null
-                            : () => unawaited(widget.onOpenApiSettings()),
-                        icon: const Icon(Icons.settings_ethernet),
-                        style: IconButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.white.withValues(alpha: 0.14),
-                        ),
-                        tooltip: '后端地址',
-                      ),
-                      const SizedBox(width: 6),
-                      IconButton(
-                        onPressed: _busy || _detecting
-                            ? null
-                            : () => unawaited(widget.onLogout()),
-                        icon: const Icon(Icons.logout),
-                        style: IconButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.white.withValues(alpha: 0.14),
-                        ),
-                        tooltip: '退出登录',
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              _buildDetectionBadge(),
-              if (_scanResult != null) ...[
-                const SizedBox(height: 8),
+        if (!storyModeActive)
+          Positioned(
+            top: safeTop + 10,
+            left: 12,
+            right: 12,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.82),
-                    borderRadius: BorderRadius.circular(14),
+                    color: Colors.black.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Text(
-                      '已生成：${_scanResult!.spirit.name}（${_labelToChinese(_scanResult!.objectType)}）',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                widget.session.isDebug
+                                    ? '调试模式 · ${widget.session.displayName}'
+                                    : '账号：${widget.session.displayName}',
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                '孩子：$_childId · 年龄：$_childAge',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        FilledButton.tonalIcon(
+                          onPressed: _busy || _detecting
+                              ? null
+                              : _pickPhotoAndGenerate,
+                          style: FilledButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            foregroundColor: Colors.white,
+                            backgroundColor:
+                                Colors.white.withValues(alpha: 0.14),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
+                          ),
+                          icon: const Icon(Icons.file_upload, size: 18),
+                          label: const Text(
+                            '上传',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        IconButton(
+                          onPressed: _busy || _detecting
+                              ? null
+                              : () => unawaited(widget.onOpenApiSettings()),
+                          icon: const Icon(Icons.settings_ethernet),
+                          style: IconButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor:
+                                Colors.white.withValues(alpha: 0.14),
+                          ),
+                          tooltip: '后端地址',
+                        ),
+                        const SizedBox(width: 6),
+                        IconButton(
+                          onPressed: _busy || _detecting
+                              ? null
+                              : () => unawaited(widget.onLogout()),
+                          icon: const Icon(Icons.logout),
+                          style: IconButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor:
+                                Colors.white.withValues(alpha: 0.14),
+                          ),
+                          tooltip: '退出登录',
+                        ),
+                      ],
                     ),
                   ),
                 ),
+                const SizedBox(height: 8),
+                _buildDetectionBadge(),
               ],
-            ],
+            ),
           ),
-        ),
-        if (_scanResult != null)
+        if (_scanResult != null && !storyModeActive)
           Positioned(
             left: 12,
             right: 12,
             bottom: 120,
-            child: _scanCardCollapsed
-                ? Align(
-                    alignment: Alignment.center,
-                    child: Wrap(
-                      spacing: 8,
-                      children: [
-                        FilledButton.tonalIcon(
-                          onPressed: () {
-                            setState(() {
-                              _scanCardCollapsed = false;
-                            });
-                          },
-                          icon: const Icon(Icons.unfold_more, size: 18),
-                          label: const Text('展开剧情'),
-                        ),
-                        TextButton.icon(
-                          onPressed: _dismissScanCard,
-                          icon: const Icon(Icons.close, size: 18),
-                          label: const Text('关闭剧情'),
-                        ),
-                      ],
-                    ),
-                  )
-                : _buildSpiritCard(_scanResult!),
-          ),
-        Positioned(
-          bottom: 28,
-          left: 0,
-          right: 0,
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                InkWell(
-                  onTap: _busy || _detecting ? null : _captureAndGenerate,
-                  borderRadius: BorderRadius.circular(40),
-                  child: Ink(
-                    width: 76,
-                    height: 76,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _busy || _detecting
-                          ? Colors.white.withValues(alpha: 0.45)
-                          : Colors.white,
-                      border: Border.all(
-                        color: const Color(0xFF0C7E78),
-                        width: 5,
-                      ),
-                    ),
-                    child: Icon(
-                      _detecting ? Icons.hourglass_top : Icons.camera_alt,
-                      color: const Color(0xFF0C7E78),
-                      size: 34,
-                    ),
+            child: Align(
+              alignment: Alignment.center,
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  FilledButton.tonalIcon(
+                    onPressed: () {
+                      setState(() {
+                        _scanCardCollapsed = false;
+                      });
+                    },
+                    icon: const Icon(Icons.unfold_more, size: 18),
+                    label: const Text('展开剧情'),
                   ),
-                ),
-                const SizedBox(height: 8),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.45),
-                    borderRadius: BorderRadius.circular(999),
+                  TextButton.icon(
+                    onPressed: _dismissScanCard,
+                    icon: const Icon(Icons.close, size: 18),
+                    label: const Text('关闭剧情'),
                   ),
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    child: Text(
-                      _detecting ? '识别中...' : '拍照识别',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
+        if (storyModeActive && _scanResult != null)
+          Positioned.fill(
+            child: _buildStoryFullscreen(_scanResult!),
+          ),
+        if (!storyModeActive)
+          Positioned(
+            bottom: 28,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  InkWell(
+                    onTap: _busy || _detecting ? null : _captureAndGenerate,
+                    borderRadius: BorderRadius.circular(40),
+                    child: Ink(
+                      width: 76,
+                      height: 76,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _busy || _detecting
+                            ? Colors.white.withValues(alpha: 0.45)
+                            : Colors.white,
+                        border: Border.all(
+                          color: const Color(0xFF0C7E78),
+                          width: 5,
+                        ),
+                      ),
+                      child: Icon(
+                        _detecting ? Icons.hourglass_top : Icons.camera_alt,
+                        color: const Color(0xFF0C7E78),
+                        size: 34,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      child: Text(
+                        _detecting ? '识别中...' : '拍照识别',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -1482,7 +1471,7 @@ class _ExplorePageState extends State<ExplorePage> {
     );
   }
 
-  Widget _buildSpiritCard(ScanResult scan) {
+  Widget _buildStoryFullscreen(ScanResult scan) {
     final companionName = _companionScene?.characterName ?? scan.spirit.name;
     final currentLine = _currentStoryLine;
     final hasStoryLine = currentLine != null;
@@ -1490,264 +1479,214 @@ class _ExplorePageState extends State<ExplorePage> {
     final displayText = hasStoryLine
         ? currentLine.text
         : (_companionScene == null ? '剧情生成中，请稍候...' : '剧情准备中...');
+    final scene = _companionScene;
+    final hasSceneImage = scene != null &&
+        ((scene.characterImageBytes != null &&
+                scene.characterImageBytes!.isNotEmpty) ||
+            scene.characterImageUrl.trim().isNotEmpty);
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Theme.of(context)
-            .colorScheme
-            .surfaceContainerHighest
-            .withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '${scan.spirit.name}（${_labelToChinese(scan.objectType)}）',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  tooltip: '收起',
-                  onPressed: () {
-                    setState(() {
-                      _scanCardCollapsed = true;
-                    });
-                  },
-                  icon: const Icon(Icons.expand_more),
-                  visualDensity: VisualDensity.compact,
-                ),
-              ],
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _companionScene == null ? '剧情生成中...' : '剧情互动进行中',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ),
-                if (_quizSolved)
-                  Chip(
-                    avatar: const Icon(Icons.check_circle, size: 16),
-                    label: const Text('已完成收集'),
-                    visualDensity: VisualDensity.compact,
-                  )
-                else
-                  const Text(
-                    '请在对话中回答问题',
-                    style: TextStyle(fontSize: 12),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: AspectRatio(
-                aspectRatio: 16 / 10,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    _companionScene == null
-                        ? ColoredBox(
-                            color: Colors.black12,
-                            child: Center(
-                              child: Icon(
-                                Icons.auto_awesome,
-                                size: 46,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                            ),
-                          )
-                        : _buildCompanionImage(_companionScene!),
-                    Positioned.fill(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.black.withValues(alpha: 0.14),
-                              Colors.black.withValues(alpha: 0.08),
-                              Colors.black.withValues(alpha: 0.38),
-                            ],
-                            stops: const [0, 0.55, 1],
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      left: 12,
-                      top: 10,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFFBE8B0), Color(0xFFE7C36A)],
-                          ),
-                          borderRadius: BorderRadius.circular(999),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x33000000),
-                              blurRadius: 10,
-                              offset: Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 5,
-                          ),
-                          child: Text(
-                            displaySpeaker,
-                            style: const TextStyle(
-                              color: Color(0xFF332200),
-                              fontWeight: FontWeight.w800,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (_companionScene == null)
-                      const Center(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 24),
-                          child: LinearProgressIndicator(minHeight: 3),
-                        ),
-                      ),
-                    Positioned(
-                      left: 10,
-                      right: 10,
-                      bottom: 10,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.50),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.24),
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                displayText,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  height: 1.45,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              if (_waitingForAnswerInput && !_quizSolved)
-                                TextField(
-                                  controller: _companionReplyCtrl,
-                                  minLines: 1,
-                                  maxLines: 3,
-                                  textInputAction: TextInputAction.send,
-                                  onSubmitted: (_) async {
-                                    await _sendCompanionMessage(scan);
-                                  },
-                                  decoration: InputDecoration(
-                                    filled: true,
-                                    fillColor: Colors.white.withValues(
-                                      alpha: 0.95,
-                                    ),
-                                    labelText: '输入你的回答',
-                                    border: const OutlineInputBorder(),
-                                    suffixIcon: IconButton(
-                                      onPressed: _busy
-                                          ? null
-                                          : () async {
-                                              await _sendCompanionMessage(scan);
-                                            },
-                                      icon: const Icon(Icons.send),
-                                      tooltip: '发送',
-                                    ),
-                                  ),
-                                )
-                              else
-                                Text(
-                                  _quizSolved
-                                      ? '你已经完成本轮问答，可以继续拍照探索新目标。'
-                                      : (_canTapScreenToAdvance
-                                          ? '点击画面继续剧情。'
-                                          : '等待剧情加载或角色回应。'),
-                                  style: const TextStyle(
-                                    color: Color(0xFFE3E7FB),
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  FilledButton.tonalIcon(
-                                    onPressed: _busy
-                                        ? null
-                                        : () async {
-                                            await _playCurrentStoryVoice();
-                                          },
-                                    icon: const Icon(Icons.volume_up, size: 18),
-                                    label: const Text('重播本句'),
-                                  ),
-                                  if (_busy) ...[
-                                    const SizedBox(width: 10),
-                                    const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+    if (!hasSceneImage) {
+      return DecoratedBox(
+        decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.72)),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(
+                width: 34,
+                height: 34,
+                child: CircularProgressIndicator(strokeWidth: 3),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                '剧情图片生成中...',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Wrap(
-              spacing: 8,
-              children: [
-                TextButton.icon(
-                  onPressed: _busy
-                      ? null
-                      : () {
-                          setState(() {
-                            _scanCardCollapsed = true;
-                          });
-                        },
-                  icon: const Icon(Icons.expand_less, size: 18),
-                  label: const Text('收起剧情'),
-                ),
-                TextButton.icon(
-                  onPressed: _busy ? null : _dismissScanCard,
-                  icon: const Icon(Icons.close, size: 18),
-                  label: const Text('关闭剧情'),
-                ),
-              ],
-            ),
-          ],
+              const SizedBox(height: 6),
+              const Text(
+                '图片加载完成后自动进入剧情',
+                style: TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 16),
+              TextButton.icon(
+                onPressed: _dismissScanCard,
+                icon: const Icon(Icons.close, size: 18),
+                label: const Text('退出剧情'),
+                style: TextButton.styleFrom(foregroundColor: Colors.white),
+              ),
+            ],
+          ),
         ),
-      ),
+      );
+    }
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        _buildCompanionImage(scene),
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withValues(alpha: 0.30),
+                  Colors.black.withValues(alpha: 0.12),
+                  Colors.black.withValues(alpha: 0.56),
+                ],
+                stops: const [0, 0.46, 1],
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 16,
+          left: 14,
+          right: 14,
+          child: Row(
+            children: [
+              Expanded(child: _buildDetectionBadge()),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: _dismissScanCard,
+                icon: const Icon(Icons.close),
+                style: IconButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.black.withValues(alpha: 0.38),
+                ),
+                tooltip: '关闭剧情',
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          left: 12,
+          right: 12,
+          bottom: 16,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.46),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.26),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFBE8B0), Color(0xFFE7C36A)],
+                      ),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 5,
+                      ),
+                      child: Text(
+                        displaySpeaker,
+                        style: const TextStyle(
+                          color: Color(0xFF332200),
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    displayText,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      height: 1.45,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (_waitingForAnswerInput && !_quizSolved)
+                    TextField(
+                      controller: _companionReplyCtrl,
+                      minLines: 1,
+                      maxLines: 3,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) async {
+                        await _sendCompanionMessage(scan);
+                      },
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.white.withValues(alpha: 0.95),
+                        labelText: '输入你的回答',
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          onPressed: _busy
+                              ? null
+                              : () async {
+                                  await _sendCompanionMessage(scan);
+                                },
+                          icon: const Icon(Icons.send),
+                          tooltip: '发送',
+                        ),
+                      ),
+                    )
+                  else
+                    Text(
+                      _quizSolved
+                          ? '你已经完成本轮问答，可以退出剧情继续探索。'
+                          : (_canTapScreenToAdvance
+                              ? '点击画面继续剧情。'
+                              : '等待剧情加载或角色回应。'),
+                      style: const TextStyle(
+                        color: Color(0xFFE3E7FB),
+                        fontSize: 13,
+                      ),
+                    ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          onPressed: _busy
+                              ? null
+                              : () async {
+                                  await _playCurrentStoryVoice();
+                                },
+                          icon:
+                              const Icon(Icons.volume_up, color: Colors.white),
+                          tooltip: '播放语音',
+                        ),
+                      ),
+                      if (_busy) ...[
+                        const SizedBox(width: 10),
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

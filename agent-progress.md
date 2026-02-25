@@ -1103,3 +1103,29 @@
 - 下一步建议:
   - 部署后抓一次 `/api/v1/companion/scene` 请求日志，确认优先候选已命中成功（不再出现 500）。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-25 14:33] F019 剧情全屏改版 + 生图链路移除客户端超时
+- 会话目标: 解决“剧情图未显示时体验异常”和 `companion/scene` 生图超时失败问题。
+- 选择功能: `F019`
+- 实际改动:
+  - 前端 `flutter_client/lib/main.dart`：
+    - 探索页增加“剧情全屏模式”，进入剧情后隐藏常规识别工具区，剧情层铺满可视区域；
+    - 当剧情图片尚不可用时，仅显示“剧情图片生成中”加载态，不展示对话框；
+    - 对话控件改为全屏底部半透明气泡；
+    - 去掉“重播本句”文字按钮，仅保留可点击声音图标；
+    - 非剧情模式继续保留拍照识别入口。
+  - 后端 `internal/llm/companion.go`：
+    - `GenerateCharacterImage` 去掉函数内 `context.WithTimeout`，避免慢请求被客户端提前 `context deadline exceeded` 取消。
+- 验证结果:
+  - `go test ./internal/llm ./internal/service` 通过；
+  - `dart format flutter_client/lib/main.dart` 通过；
+  - `cd flutter_client && flutter analyze` 通过（No issues found）。
+- 风险与遗留:
+  - 去掉客户端超时后，极慢上游请求会拉长一次接口等待时长；
+  - `F019.passes` 仍保持 `false`（尚未完成最新交互版本的 Web e2e 截图验收）。
+- 下一步建议:
+  - 部署后复测 `/api/v1/companion/scene`，确认不再出现 `context deadline exceeded`；
+  - 跑一轮移动端真机 e2e，确认“无图不出对话框 + 全屏剧情 + 点击推进 + 声音图标播放”符合预期。
+- 对应提交: （本次提交）

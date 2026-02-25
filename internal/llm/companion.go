@@ -101,9 +101,8 @@ func (c *Client) GenerateCharacterImage(ctx context.Context, imagePrompt string,
 	if strings.TrimSpace(c.imageAPIKey) == "" {
 		return "", ErrImageCapabilityUnavailable
 	}
-
-	ctx, cancel := context.WithTimeout(ctx, c.timeout)
-	defer cancel()
+	// 这里不再额外套超时，避免上游慢请求在客户端提前被 context cancel。
+	// 调用方可按需在更高层控制超时策略。
 
 	body := map[string]any{
 		"model":           c.imageModel,
