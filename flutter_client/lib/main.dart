@@ -917,7 +917,7 @@ class _ExplorePageState extends State<ExplorePage> {
   String _detectedLabel = '';
   String _detectedRawLabel = '';
   String _detectedReason = '';
-  String _lastDetectedImageBase64 = '';
+  String _lastDetectedImageUrl = '';
 
   bool _cameraInitializing = false;
   bool _cameraReady = false;
@@ -1768,7 +1768,7 @@ class _ExplorePageState extends State<ExplorePage> {
 
     setState(() {
       _detecting = true;
-      _lastDetectedImageBase64 = '';
+      _lastDetectedImageUrl = '';
     });
     try {
       if (controller.value.isTakingPicture) {
@@ -1777,7 +1777,7 @@ class _ExplorePageState extends State<ExplorePage> {
 
       final frame = await controller.takePicture();
       final imageBytes = await frame.readAsBytes();
-      await _detectFromImageBytes(imageBytes);
+      await _detectFromImageBytes(imageBytes, fileName: 'camera_capture.jpg');
     } catch (e) {
       _showSnack('视觉识别失败：$e');
     } finally {
@@ -1800,9 +1800,12 @@ class _ExplorePageState extends State<ExplorePage> {
       final imageBytes = await picked.readAsBytes();
       setState(() {
         _detecting = true;
-        _lastDetectedImageBase64 = '';
+        _lastDetectedImageUrl = '';
       });
-      await _detectFromImageBytes(imageBytes);
+      await _detectFromImageBytes(
+        imageBytes,
+        fileName: picked.name.isEmpty ? 'gallery_upload.jpg' : picked.name,
+      );
       if (!mounted || _detectedLabel.isEmpty) {
         return;
       }
@@ -1816,12 +1819,18 @@ class _ExplorePageState extends State<ExplorePage> {
     }
   }
 
-  Future<void> _detectFromImageBytes(Uint8List imageBytes) async {
-    final imageBase64 = base64Encode(imageBytes);
+  Future<void> _detectFromImageBytes(
+    Uint8List imageBytes, {
+    required String fileName,
+  }) async {
+    final imageUrl = await widget.api.uploadImage(
+      bytes: imageBytes,
+      fileName: fileName,
+    );
     final match = await widget.api.scanImage(
       childId: _childId,
       childAge: _childAge,
-      imageBase64: imageBase64,
+      imageUrl: imageUrl,
     );
 
     if (!mounted) {
@@ -1832,7 +1841,7 @@ class _ExplorePageState extends State<ExplorePage> {
       _detectedLabel = _normalizeObjectLabel(match.detectedLabel);
       _detectedRawLabel = match.rawLabel;
       _detectedReason = match.reason;
-      _lastDetectedImageBase64 = imageBase64;
+      _lastDetectedImageUrl = imageUrl;
     });
 
     _showSnack('识别到 ${_labelToChinese(match.detectedLabel)}，请确认主体。');
@@ -1930,7 +1939,7 @@ class _ExplorePageState extends State<ExplorePage> {
         weather: _lastSceneWeather,
         environment: _lastSceneEnvironment,
         objectTraits: _lastSceneTraits,
-        sourceImageBase64: _lastDetectedImageBase64,
+        sourceImageUrl: _lastDetectedImageUrl,
       );
 
       if (!mounted) {
@@ -2343,7 +2352,7 @@ class _ExplorePageState extends State<ExplorePage> {
       _scanResult = null;
       _scanCardCollapsed = false;
       _clearCompanionFlow();
-      _lastDetectedImageBase64 = '';
+      _lastDetectedImageUrl = '';
     });
     unawaited(_voicePlayer.stop());
   }
@@ -2370,7 +2379,7 @@ class _ExplorePageState extends State<ExplorePage> {
       _detectedLabel = '';
       _detectedRawLabel = '';
       _detectedReason = '';
-      _lastDetectedImageBase64 = '';
+      _lastDetectedImageUrl = '';
     });
     unawaited(_voicePlayer.stop());
   }
@@ -3708,6 +3717,29 @@ class ApiClient {
     return ScanImageResult.fromJson(body);
   }
 
+  Future<String> uploadImage({
+    required Uint8List bytes,
+    required String fileName,
+  }) async {
+    final base = baseUrl;
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$base/api/v1/media/upload'),
+    );
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'file',
+        bytes,
+        filename: fileName.trim().isEmpty ? 'upload.jpg' : fileName.trim(),
+      ),
+    );
+
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+    final body = _decode(response);
+    return (body['image_url'] as String? ?? '').trim();
+  }
+
   Future<AnswerResult> submitAnswer({
     required String sessionId,
     required String childId,
@@ -3763,7 +3795,7 @@ class ApiClient {
     required String weather,
     required String environment,
     String objectTraits = '',
-    String sourceImageBase64 = '',
+    String sourceImageUrl = '',
   }) async {
     final base = baseUrl;
     final response = await http.post(
@@ -3776,7 +3808,7 @@ class ApiClient {
         'weather': weather,
         'environment': environment,
         'object_traits': objectTraits,
-        'source_image_base64': sourceImageBase64,
+        'source_image_url': sourceImageUrl,
       }),
     );
     final body = _decode(response);

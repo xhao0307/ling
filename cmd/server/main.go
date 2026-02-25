@@ -151,6 +151,8 @@ func initLLMClientFromEnv() *llm.Client {
 		VoiceModelID:        envOrDefault("CITYLING_TTS_MODEL_ID", "eleven_multilingual_v2"),
 		VoiceLangCode:       envOrDefault("CITYLING_TTS_LANGUAGE_CODE", "zh"),
 		VoiceFormat:         envOrDefault("CITYLING_TTS_OUTPUT_FORMAT", "mp3_44100_128"),
+		ImageUploadScript:   envOrDefault("CITYLING_IMAGE_UPLOAD_SCRIPT_PATH", "upload.py"),
+		ImageUploadPython:   envOrDefault("CITYLING_IMAGE_UPLOAD_PYTHON", "python3"),
 	}
 
 	client, err := llm.NewClient(cfg)

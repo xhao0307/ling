@@ -29,6 +29,7 @@ var (
 	ErrObjectTypeMissing = errors.New("请提供 object_type")
 	ErrChildMessageEmpty = errors.New("请提供 child_message")
 	ErrMediaUnavailable  = errors.New("角色形象或语音能力暂不可用")
+	ErrImageUpload       = errors.New("图片上传失败")
 )
 
 type ScanRequest struct {
@@ -84,6 +85,7 @@ type CompanionSceneRequest struct {
 	Environment       string `json:"environment,omitempty"`
 	ObjectTraits      string `json:"object_traits,omitempty"`
 	SourceImageBase64 string `json:"source_image_base64,omitempty"`
+	SourceImageURL    string `json:"source_image_url,omitempty"`
 }
 
 type CompanionSceneResponse struct {
@@ -115,6 +117,15 @@ type CompanionChatResponse struct {
 	ReplyText        string `json:"reply_text"`
 	VoiceAudioBase64 string `json:"voice_audio_base64"`
 	VoiceMimeType    string `json:"voice_mime_type"`
+}
+
+type UploadImageRequest struct {
+	FileName string
+	Bytes    []byte
+}
+
+type UploadImageResponse struct {
+	ImageURL string `json:"image_url"`
 }
 
 type cacheEntry struct {
@@ -306,10 +317,18 @@ func (s *Service) GenerateCompanionScene(req CompanionSceneRequest) (CompanionSc
 	}
 
 	sourceImageBase64 := strings.TrimSpace(req.SourceImageBase64)
+	sourceImageURL := strings.TrimSpace(req.SourceImageURL)
+	if sourceImageURL == "" && sourceImageBase64 != "" {
+		// 向后兼容：旧客户端仍传 base64 时，先上传成 URL，避免下游继续使用 base64。
+		uploaded, err := s.uploadBase64ToPublicURL(sourceImageBase64, "source.jpg")
+		if err == nil {
+			sourceImageURL = uploaded
+		}
+	}
 	weather := strings.TrimSpace(req.Weather)
 	environment := strings.TrimSpace(req.Environment)
 	objectTraits := strings.TrimSpace(req.ObjectTraits)
-	if sourceImageBase64 != "" {
+	if sourceImageURL != "" || sourceImageBase64 != "" {
 		// 图生图模式由参考图主导，不再强制注入环境参数。
 		weather = ""
 		environment = ""
@@ -334,17 +353,23 @@ func (s *Service) GenerateCompanionScene(req CompanionSceneRequest) (CompanionSc
 	}
 
 	imagePrompt := scene.ImagePrompt
-	if sourceImageBase64 != "" {
+	if sourceImageURL != "" || sourceImageBase64 != "" {
 		imagePrompt = fmt.Sprintf(
 			"基于参考图进行图生图，将图中主体“%s”绘本化，保留主体外形与配色特征；如果原图只有主体或背景单调，请自动补充自然的日常生活场景背景（如公园、小区、街角、校园一角），形成前中后景层次；整体保持童话儿童绘本风，柔和光线，画面适合作为剧情对话背景；禁止文字、水印、logo。",
 			strings.TrimSpace(objectTypeToChinese(objectType)),
 		)
 	}
 
+	sourceImageRef := sourceImageURL
+	if sourceImageRef == "" {
+		// 兼容旧客户端：上传能力不可用时继续使用原始 base64 入参。
+		sourceImageRef = sourceImageBase64
+	}
+
 	imageURL, err := s.llm.GenerateCharacterImage(
 		context.Background(),
 		imagePrompt,
-		sourceImageBase64,
+		sourceImageRef,
 	)
 	if err != nil {
 		if errors.Is(err, llm.ErrImageCapabilityUnavailable) {
@@ -386,6 +411,46 @@ func (s *Service) GenerateCompanionScene(req CompanionSceneRequest) (CompanionSc
 		VoiceAudioBase64:     base64.StdEncoding.EncodeToString(audioBytes),
 		VoiceMimeType:        mimeType,
 	}, nil
+}
+
+func (s *Service) UploadImage(req UploadImageRequest) (UploadImageResponse, error) {
+	if len(req.Bytes) == 0 {
+		return UploadImageResponse{}, ErrImageRequired
+	}
+	if s.llm == nil {
+		return UploadImageResponse{}, ErrLLMUnavailable
+	}
+	url, err := s.llm.UploadImageBytesToPublicURL(context.Background(), req.Bytes, req.FileName)
+	if err != nil {
+		return UploadImageResponse{}, fmt.Errorf("%w: %v", ErrImageUpload, err)
+	}
+	return UploadImageResponse{ImageURL: strings.TrimSpace(url)}, nil
+}
+
+func (s *Service) uploadBase64ToPublicURL(base64Image string, fileName string) (string, error) {
+	trimmed := strings.TrimSpace(base64Image)
+	if trimmed == "" {
+		return "", ErrImageRequired
+	}
+	payload := trimmed
+	if strings.HasPrefix(strings.ToLower(trimmed), "data:image/") {
+		idx := strings.Index(trimmed, ",")
+		if idx > 0 && idx < len(trimmed)-1 {
+			payload = strings.TrimSpace(trimmed[idx+1:])
+		}
+	}
+	raw, err := base64.StdEncoding.DecodeString(payload)
+	if err != nil {
+		return "", err
+	}
+	resp, err := s.UploadImage(UploadImageRequest{
+		FileName: fileName,
+		Bytes:    raw,
+	})
+	if err != nil {
+		return "", err
+	}
+	return resp.ImageURL, nil
 }
 
 func (s *Service) ChatCompanion(req CompanionChatRequest) (CompanionChatResponse, error) {

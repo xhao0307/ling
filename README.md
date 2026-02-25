@@ -95,8 +95,15 @@ curl -s -X POST http://localhost:8080/api/v1/scan/image \
   -d '{
     "child_id":"kid_1",
     "child_age":8,
-    "image_base64":"<base64>"
+    "image_url":"https://example.com/cat.jpg"
   }'
+```
+
+### Upload image (返回公网 URL，前端推荐先调用)
+
+```bash
+curl -s -X POST http://localhost:8080/api/v1/media/upload \
+  -F "file=@./cat.png"
 ```
 
 ### Companion scene (角色剧情图像+语音)
@@ -111,7 +118,7 @@ curl -s -X POST http://localhost:8080/api/v1/companion/scene \
     "weather":"雨后",
     "environment":"小区花园",
     "object_traits":"细长金属杆，顶部发暖光",
-    "source_image_base64":"<可选，识别原图base64，用于图生图>"
+    "source_image_url":"https://example.com/cat.jpg"
   }'
 ```
 

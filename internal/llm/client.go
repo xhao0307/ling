@@ -35,6 +35,8 @@ type Config struct {
 	VoiceModelID        string
 	VoiceLangCode       string
 	VoiceFormat         string
+	ImageUploadScript   string
+	ImageUploadPython   string
 }
 
 type Client struct {
@@ -56,6 +58,8 @@ type Client struct {
 	voiceModelID        string
 	voiceLangCode       string
 	voiceFormat         string
+	imageUploadScript   string
+	imageUploadPython   string
 }
 
 type RecognizeResult struct {
@@ -138,6 +142,14 @@ func NewClient(cfg Config) (*Client, error) {
 	if voiceFormat == "" {
 		voiceFormat = "mp3_44100_128"
 	}
+	imageUploadScript := strings.TrimSpace(cfg.ImageUploadScript)
+	if imageUploadScript == "" {
+		imageUploadScript = "upload.py"
+	}
+	imageUploadPython := strings.TrimSpace(cfg.ImageUploadPython)
+	if imageUploadPython == "" {
+		imageUploadPython = "python3"
+	}
 	appID := strings.TrimSpace(cfg.AppID)
 	if appID == "" {
 		appID = "4"
@@ -166,6 +178,8 @@ func NewClient(cfg Config) (*Client, error) {
 		voiceModelID:        voiceModelID,
 		voiceLangCode:       voiceLangCode,
 		voiceFormat:         voiceFormat,
+		imageUploadScript:   imageUploadScript,
+		imageUploadPython:   imageUploadPython,
 	}, nil
 }
 

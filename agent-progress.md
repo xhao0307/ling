@@ -1129,3 +1129,42 @@
   - 部署后复测 `/api/v1/companion/scene`，确认不再出现 `context deadline exceeded`；
   - 跑一轮移动端真机 e2e，确认“无图不出对话框 + 全屏剧情 + 点击推进 + 声音图标播放”符合预期。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-25 15:28] F019 图片链路改为 URL 优先（上传后再识别/剧情）
+- 会话目标: 按“不要再使用 base64”要求，优化项目图片使用方式为 URL 优先链路。
+- 选择功能: `F019`
+- 实际改动:
+  - 新增后端上传接口：
+    - `POST /api/v1/media/upload`（multipart `file`），返回 `image_url`；
+    - 文件：`internal/httpapi/router.go`、`internal/httpapi/handlers.go`。
+  - 后端上传实现：
+    - `llm.Client` 新增 `UploadImageBytesToPublicURL`，通过 `upload.py <tempfile>` 上传并解析 URL；
+    - 文件：`internal/llm/upload.go`、`internal/llm/client.go`、`cmd/server/main.go`（新增上传脚本配置项）。
+  - 服务层剧情入参升级：
+    - `CompanionSceneRequest` 新增 `source_image_url`；
+    - `GenerateCompanionScene` 优先使用 URL 作为图生图输入，`source_image_base64` 仅保留兼容；
+    - 文件：`internal/service/service.go`。
+  - Flutter 前端改造：
+    - 上传图片后先调用 `/api/v1/media/upload` 获取 URL；
+    - `scan/image` 改传 `image_url`；
+    - `companion/scene` 改传 `source_image_url`；
+    - 文件：`flutter_client/lib/main.dart`。
+  - 文档/Swagger更新：
+    - `README.md` 新增上传接口示例，`companion/scene` 示例改为 `source_image_url`；
+    - `internal/httpapi/swagger.go` 新增 `/api/v1/media/upload`、`UploadImageResponse`、`source_image_url` 字段说明。
+  - `upload.py` 改造：
+    - 支持 `python3 upload.py <文件路径>` 参数化调用，不再固定 `cat.png`。
+- 验证结果:
+  - `go test ./...` 通过；
+  - `cd flutter_client && flutter analyze` 通过；
+  - `./init.sh` smoke 通过；
+  - `python3 upload.py ./cat.png` 实测成功，返回公网 URL。
+- 风险与遗留:
+  - 上传能力依赖服务运行环境可执行 `python3` 且可访问 COS；
+  - `source_image_base64` 字段仍保留兼容（老客户端），新客户端已切换到 URL。
+- 下一步建议:
+  - 部署后用前端实测一轮“上传 -> 识别 -> 剧情”完整链路，确认网络日志只出现 URL 入参；
+  - 若需要生产化，建议把 `upload.py` 的秘钥迁移到环境变量并加最小权限策略。
+- 对应提交: （本次提交）

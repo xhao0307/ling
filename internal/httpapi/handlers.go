@@ -3,6 +3,7 @@ package httpapi
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -129,6 +130,50 @@ func (h *Handler) companionScene(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusServiceUnavailable, err.Error())
 		default:
 			log.Printf("companionScene internal error: child_id=%s object_type=%s err=%v", req.ChildID, req.ObjectType, err)
+			writeError(w, http.StatusInternalServerError, err.Error())
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handler) uploadImage(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseMultipartForm(16 << 20); err != nil {
+		log.Printf("uploadImage parse form error: %v", err)
+		writeError(w, http.StatusBadRequest, "上传表单格式不正确")
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		log.Printf("uploadImage form file error: %v", err)
+		writeError(w, http.StatusBadRequest, "请提供 file 文件字段")
+		return
+	}
+	defer file.Close()
+
+	data, err := io.ReadAll(io.LimitReader(file, 16<<20))
+	if err != nil {
+		log.Printf("uploadImage read error: %v", err)
+		writeError(w, http.StatusBadRequest, "读取上传文件失败")
+		return
+	}
+
+	resp, err := h.svc.UploadImage(service.UploadImageRequest{
+		FileName: header.Filename,
+		Bytes:    data,
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrImageRequired):
+			log.Printf("uploadImage bad request: err=%v", err)
+			writeError(w, http.StatusBadRequest, err.Error())
+		case errors.Is(err, service.ErrLLMUnavailable), errors.Is(err, service.ErrImageUpload):
+			log.Printf("uploadImage unavailable: err=%v", err)
+			writeError(w, http.StatusServiceUnavailable, err.Error())
+		default:
+			log.Printf("uploadImage internal error: err=%v", err)
 			writeError(w, http.StatusInternalServerError, err.Error())
 		}
 		return

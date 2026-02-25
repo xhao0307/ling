@@ -110,7 +110,7 @@ func openAPISpec(serverURL string) map[string]any {
 			},
 			"/api/v1/scan/image": map[string]any{
 				"post": map[string]any{
-					"summary":     "上传图片并由大模型识别主体",
+					"summary":     "传图片 URL（推荐）或 base64 并由大模型识别主体",
 					"operationId": "scanImage",
 					"requestBody": map[string]any{
 						"required": true,
@@ -131,6 +131,42 @@ func openAPISpec(serverURL string) map[string]any {
 						},
 						"400": map[string]any{"description": "请求错误"},
 						"503": map[string]any{"description": "未配置大模型能力"},
+						"500": map[string]any{"description": "服务错误"},
+					},
+				},
+			},
+			"/api/v1/media/upload": map[string]any{
+				"post": map[string]any{
+					"summary":     "上传图片并返回公网 URL",
+					"operationId": "uploadImage",
+					"requestBody": map[string]any{
+						"required": true,
+						"content": map[string]any{
+							"multipart/form-data": map[string]any{
+								"schema": map[string]any{
+									"type":     "object",
+									"required": []string{"file"},
+									"properties": map[string]any{
+										"file": map[string]any{
+											"type":   "string",
+											"format": "binary",
+										},
+									},
+								},
+							},
+						},
+					},
+					"responses": map[string]any{
+						"200": map[string]any{
+							"description": "成功",
+							"content": map[string]any{
+								"application/json": map[string]any{
+									"schema": map[string]any{"$ref": "#/components/schemas/UploadImageResponse"},
+								},
+							},
+						},
+						"400": map[string]any{"description": "请求错误"},
+						"503": map[string]any{"description": "未配置上传能力"},
 						"500": map[string]any{"description": "服务错误"},
 					},
 				},
@@ -331,7 +367,14 @@ func openAPISpec(serverURL string) map[string]any {
 						"weather":             map[string]any{"type": "string"},
 						"environment":         map[string]any{"type": "string"},
 						"object_traits":       map[string]any{"type": "string"},
-						"source_image_base64": map[string]any{"type": "string", "description": "可选。传入识别原图，启用图生图角色生成"},
+						"source_image_url":    map[string]any{"type": "string", "description": "可选。传入识别原图 URL，启用图生图角色生成（推荐）"},
+						"source_image_base64": map[string]any{"type": "string", "description": "可选。旧字段，建议迁移到 source_image_url"},
+					},
+				},
+				"UploadImageResponse": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"image_url": map[string]any{"type": "string"},
 					},
 				},
 				"CompanionChatRequest": map[string]any{
