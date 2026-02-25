@@ -288,6 +288,32 @@
         "核心功能（登录、调试入口、底部导航）保持可用"
       ],
       "passes": true
+    },
+    {
+      "id": "F023",
+      "category": "design",
+      "priority": "P1",
+      "description": "建设设计资产底座并落地真实功能页（品牌/tokens/文案/验收/可用性）",
+      "steps": [
+        "仓库新增品牌规范、design tokens、页面高保真规范、文案库、动效规范、多端验收清单和可用性测试模板",
+        "新增 Logo 资产文件与 Flutter 端设计常量文件，形成可复用视觉资源",
+        "“我的”页占位入口改为真实可进入页面（个人资料/消息中心/学习记录/成长勋章/隐私与安全/帮助反馈）",
+        "Web 端验证“我的”页与至少 2 个子页面可访问并截图留档"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F024",
+      "category": "design",
+      "priority": "P1",
+      "description": "按参考图批量生成高质量插画资源包（i2i）",
+      "steps": [
+        "执行 scripts/gen-fairy-asset-pack.sh 并传入参考图 URL 或本地路径",
+        "脚本为登录/空状态/引导/勋章/场景背景生成资源并写入 index.json",
+        "生成结果输出到 flutter_client/assets/fairy/illustrations",
+        "随机抽检至少 3 张图片风格一致性与可用性"
+      ],
+      "passes": false
     }
   ]
 }

@@ -933,3 +933,74 @@
 - 下一步建议:
   - 后续可继续补“探索中相机页/对话页”的童话化动效（云朵按钮、角色气泡过渡）。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-25 11:40] F023 设计资源包落地 + 我的页真实子页面实现
+- 会话目标: 交付“接近完整 App 所需”的设计资源底座，并把“我的”页占位入口升级为真实功能页。
+- 选择功能: `F023`
+- 实际改动:
+  - 资源体系新增：
+    - `design/README.md`
+    - `design/brand/brand_visual_guide.md`
+    - `design/brand/brand_palette.json`
+    - `design/brand/font_strategy.md`
+    - `design/tokens/design_tokens.json`
+    - `design/illustration/asset_generation_plan.json`
+    - `design/motion/motion_resource_spec.md`
+    - `design/pages/hifi_page_spec.md`
+    - `design/copy/children_copy_zh_cn.json`
+    - `design/qa/multi_device_baseline_checklist.md`
+    - `design/research/usability_test_round1_template.md`
+    - `design/research/usability_feedback_sample.csv`
+  - 视觉资产新增：
+    - `flutter_client/assets/brand/logo_cityling_fairy.svg`
+    - `flutter_client/assets/brand/logo_cityling_fairy_mark.svg`
+    - `flutter_client/lib/design/fairy_tokens.dart`
+  - 业务页面实现（替换“我的”页占位入口）：
+    - `ProfileDetailPage`（资料编辑+本地保存）
+    - `MessageCenterPage`
+    - `LearningRecordPage`
+    - `AchievementBadgesPage`
+    - `FavoritesPage`
+    - `PrivacySecurityPage`
+    - `HelpFeedbackPage`
+    - 均接入 `ProfilePage` 入口点击跳转。
+  - 批量生图流水线新增：
+    - `scripts/gen-fairy-asset-pack.sh`（读取计划文件、批量调用 i2i、生图索引写入）。
+- 验证结果:
+  - `dart format flutter_client/lib/main.dart flutter_client/lib/design/fairy_tokens.dart` 通过；
+  - `cd flutter_client && flutter analyze` 通过；
+  - `./init.sh` smoke 通过；
+  - Web e2e（chrome-devtools）：
+    - “我的”页可进入；
+    - “消息中心”可进入；
+    - “个人资料”可进入并展示可编辑表单。
+  - 关键证据截图：
+    - `test_screenshots/e2e_fairy_profile_full_resources.png`
+    - `test_screenshots/e2e_message_center_real_page.png`
+    - `test_screenshots/e2e_profile_detail_real_page.png`
+- 风险与遗留:
+  - 本轮新增的“消息/收藏/帮助”等页面为可用 MVP 版本，后续仍需接真实后端数据；
+  - 字体策略文档已给出，但商用字体文件尚未入仓（待你确认选型并提供字体文件）。
+- 下一步建议:
+  - 下一轮优先完成 `F024`：在可联网环境执行批量 i2i 资源生成并做风格筛选。
+- 对应提交: （本次提交）
+
+---
+
+### [2026-02-25 11:41] F024 批量生图执行受网络限制（阻塞记录）
+- 会话目标: 基于参考图批量生成登录/空态/引导/勋章/背景插画资源。
+- 选择功能: `F024`
+- 实际改动:
+  - 执行 `scripts/gen-fairy-asset-pack.sh`（输入为你提供的参考图 URL）；
+  - 脚本可正常启动与计划解析，但外部请求失败。
+- 验证结果:
+  - 失败复现命令：`scripts/gen-fairy-asset-pack.sh \"<参考图URL>\"`
+  - 失败摘要：`curl: (6) Could not resolve host: api-image.charaboard.com`
+- 风险与遗留:
+  - 当前执行环境 DNS/外网受限，无法完成真实出图产物落盘；
+  - `feature_list.json` 中 `F024.passes` 保持 `false`。
+- 下一步建议:
+  - 在可联网环境执行同一命令，或将 `CITYLING_IMAGE_API_BASE_URL` 指向可访问域名后重试。
+- 对应提交: （本次提交）

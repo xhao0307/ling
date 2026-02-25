@@ -1,0 +1,27 @@
+{
+  "login": {
+    "title": "城市灵童话站",
+    "subtitle": "欢迎来到童话小镇，登录后开始奇妙识别冒险。",
+    "debug_entry": "调试测试入口（免登录）"
+  },
+  "empty_state": {
+    "pokedex": "还没有收集到精灵，快去探索第一个伙伴吧！",
+    "report": "今天还没有学习记录，来一次新的识别冒险吧。",
+    "message": "暂无新消息，去看看今天的小任务吧。"
+  },
+  "error": {
+    "network": "网络有点慢，稍后再试试。",
+    "camera": "镜头暂时不可用，请检查权限后重试。",
+    "server": "小镇服务器打了个盹，马上回来。"
+  },
+  "task": {
+    "daily_1": "完成 1 次识别",
+    "daily_2": "阅读 1 条知识点",
+    "daily_3": "和角色聊 1 轮"
+  },
+  "achievement": {
+    "morning_explorer": "晨光探索者",
+    "knowledge_rookie": "知识小新星",
+    "streak_master": "连续学习王"
+  }
+}

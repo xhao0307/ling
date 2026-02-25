@@ -1,0 +1,55 @@
+{
+  "color": {
+    "brand": {
+      "primary": "#F08CB7",
+      "secondary": "#A7D8FF",
+      "accent": "#9EE6D2",
+      "highlight": "#FFE7A7",
+      "ink": "#5F4B74"
+    },
+    "surface": {
+      "background": "#FFF8FE",
+      "card": "#FFFFFD",
+      "soft": "#F7F0FA"
+    },
+    "border": {
+      "default": "#E7D6F2",
+      "strong": "#D8BDE9"
+    }
+  },
+  "radius": {
+    "sm": 12,
+    "md": 18,
+    "lg": 24,
+    "xl": 32,
+    "pill": 999
+  },
+  "spacing": {
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "xxl": 32
+  },
+  "shadow": {
+    "card": {
+      "color": "#22A35B87",
+      "blur": 30,
+      "offsetX": 0,
+      "offsetY": 16
+    }
+  },
+  "typography": {
+    "display": {"size": 32, "weight": 800, "lineHeight": 1.1},
+    "h1": {"size": 24, "weight": 700, "lineHeight": 1.2},
+    "h2": {"size": 20, "weight": 700, "lineHeight": 1.25},
+    "body": {"size": 16, "weight": 400, "lineHeight": 1.5},
+    "caption": {"size": 12, "weight": 500, "lineHeight": 1.4}
+  },
+  "componentState": {
+    "button": ["default", "hover", "pressed", "disabled", "loading"],
+    "input": ["default", "focus", "filled", "error", "disabled"],
+    "card": ["default", "highlight", "disabled"]
+  }
+}

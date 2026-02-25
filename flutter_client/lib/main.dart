@@ -2981,22 +2981,30 @@ class _ProfilePageState extends State<ProfilePage> {
                 _buildQuickAction(
                   icon: Icons.favorite_outline,
                   label: '我的收藏',
-                  onTap: () => _showFeatureComingSoon('我的收藏'),
+                  onTap: () => _openPage(const FavoritesPage()),
                 ),
                 _buildQuickAction(
                   icon: Icons.chat_bubble_outline,
                   label: '消息中心',
-                  onTap: () => _showFeatureComingSoon('消息中心'),
+                  onTap: () => _openPage(const MessageCenterPage()),
                 ),
                 _buildQuickAction(
                   icon: Icons.auto_stories_outlined,
                   label: '学习记录',
-                  onTap: () => _showFeatureComingSoon('学习记录'),
+                  onTap: () => _openPage(
+                    LearningRecordPage(
+                      totalCaptures: _totalCaptures,
+                      todayCaptures: _todayCaptures,
+                      todayKnowledgePoints: _todayKnowledgePoints,
+                    ),
+                  ),
                 ),
                 _buildQuickAction(
                   icon: Icons.card_giftcard,
                   label: '成长勋章',
-                  onTap: () => _showFeatureComingSoon('成长勋章'),
+                  onTap: () => _openPage(
+                    AchievementBadgesPage(totalCaptures: _totalCaptures),
+                  ),
                 ),
               ],
             ),
@@ -3008,19 +3016,21 @@ class _ProfilePageState extends State<ProfilePage> {
                     icon: Icons.person_outline,
                     title: '个人资料',
                     subtitle: '管理头像、昵称与展示信息',
-                    onTap: () => _showFeatureComingSoon('个人资料'),
+                    onTap: () => _openPage(
+                      ProfileDetailPage(session: widget.session),
+                    ),
                   ),
                   _buildMenuTile(
                     icon: Icons.notifications_none,
                     title: '消息通知',
                     subtitle: '配置提醒与通知偏好',
-                    onTap: () => _showFeatureComingSoon('消息通知'),
+                    onTap: () => _openPage(const MessageCenterPage()),
                   ),
                   _buildMenuTile(
                     icon: Icons.verified_user_outlined,
                     title: '隐私与安全',
                     subtitle: '账号安全、权限与隐私设置',
-                    onTap: () => _showFeatureComingSoon('隐私与安全'),
+                    onTap: () => _openPage(const PrivacySecurityPage()),
                   ),
                   _buildMenuTile(
                     icon: Icons.settings_ethernet,
@@ -3032,7 +3042,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     icon: Icons.help_outline,
                     title: '帮助与反馈',
                     subtitle: '常见问题与问题反馈',
-                    onTap: () => _showFeatureComingSoon('帮助与反馈'),
+                    onTap: () => _openPage(const HelpFeedbackPage()),
                     showDivider: false,
                   ),
                 ],
@@ -3199,9 +3209,469 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  void _showFeatureComingSoon(String name) {
+  Future<void> _openPage(Widget page) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => page),
+    );
+  }
+}
+
+class ProfileDetailPage extends StatefulWidget {
+  const ProfileDetailPage({
+    required this.session,
+    super.key,
+  });
+
+  final AuthSession session;
+
+  @override
+  State<ProfileDetailPage> createState() => _ProfileDetailPageState();
+}
+
+class _ProfileDetailPageState extends State<ProfileDetailPage> {
+  static const String _nickKeyPrefix = 'cityling_profile_nick_';
+  static const String _guardianKeyPrefix = 'cityling_profile_guardian_';
+
+  late final TextEditingController _nickCtrl;
+  late final TextEditingController _guardianCtrl;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nickCtrl = TextEditingController(text: widget.session.displayName);
+    _guardianCtrl = TextEditingController();
+    _loadLocalProfile();
+  }
+
+  @override
+  void dispose() {
+    _nickCtrl.dispose();
+    _guardianCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('个人资料')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '基础信息',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _nickCtrl,
+                    decoration: const InputDecoration(
+                      labelText: '昵称',
+                      hintText: '如：小小探险家',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _guardianCtrl,
+                    decoration: const InputDecoration(
+                      labelText: '家长称呼',
+                      hintText: '如：妈妈/爸爸',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text('账号ID：${widget.session.accountId}'),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: _saving ? null : _save,
+                    icon: _saving
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.save_outlined),
+                    label: Text(_saving ? '保存中...' : '保存资料'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _loadLocalProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final account = widget.session.accountId;
+    _nickCtrl.text = prefs.getString('$_nickKeyPrefix$account') ??
+        widget.session.displayName;
+    _guardianCtrl.text = prefs.getString('$_guardianKeyPrefix$account') ?? '';
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    final prefs = await SharedPreferences.getInstance();
+    final account = widget.session.accountId;
+    await prefs.setString('$_nickKeyPrefix$account', _nickCtrl.text.trim());
+    await prefs.setString(
+      '$_guardianKeyPrefix$account',
+      _guardianCtrl.text.trim(),
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() => _saving = false);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$name 即将上线')),
+      const SnackBar(content: Text('已保存个人资料')),
+    );
+  }
+}
+
+class MessageCenterPage extends StatelessWidget {
+  const MessageCenterPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final messages = <(String, String, bool)>[
+      ('今日识别任务已更新', '去探索页完成 1 次识别可点亮新星星。', true),
+      ('本周成长报告可查看', '你家小朋友本周已经收集 3 个新知识点。', false),
+      ('新勋章解锁提醒', '连续 3 天学习可解锁“晨光探索者”。', false),
+    ];
+    return Scaffold(
+      appBar: AppBar(title: const Text('消息中心')),
+      body: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemBuilder: (context, i) {
+          final item = messages[i];
+          return Card(
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor:
+                    item.$3 ? const Color(0xFFFFDDEB) : const Color(0xFFE8F1FF),
+                child: Icon(
+                  item.$3 ? Icons.mark_chat_unread : Icons.mark_chat_read,
+                  color: const Color(0xFF7B5DA0),
+                ),
+              ),
+              title: Text(item.$1),
+              subtitle: Text(item.$2),
+              trailing: item.$3
+                  ? const Chip(
+                      label: Text('未读'),
+                      backgroundColor: Color(0xFFFFEAF3),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          );
+        },
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemCount: messages.length,
+      ),
+    );
+  }
+}
+
+class LearningRecordPage extends StatelessWidget {
+  const LearningRecordPage({
+    required this.totalCaptures,
+    required this.todayCaptures,
+    required this.todayKnowledgePoints,
+    super.key,
+  });
+
+  final int totalCaptures;
+  final int todayCaptures;
+  final int todayKnowledgePoints;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('学习记录')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  _metric('累计收集', '$totalCaptures'),
+                  _metric('今日收集', '$todayCaptures'),
+                  _metric('今日知识点', '$todayKnowledgePoints'),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            '近期学习轨迹',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          const Card(
+            child: ListTile(
+              leading: Icon(Icons.auto_stories),
+              title: Text('认识了路边“井盖”'),
+              subtitle: Text('获得新知识：井盖图案代表地下管网信息。'),
+            ),
+          ),
+          const Card(
+            child: ListTile(
+              leading: Icon(Icons.emoji_nature),
+              title: Text('识别了小区里的树'),
+              subtitle: Text('获得新知识：树叶形状可帮助辨别树种。'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _metric(String label, String value) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF7B5DA0),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(label),
+        ],
+      ),
+    );
+  }
+}
+
+class AchievementBadgesPage extends StatelessWidget {
+  const AchievementBadgesPage({
+    required this.totalCaptures,
+    super.key,
+  });
+
+  final int totalCaptures;
+
+  @override
+  Widget build(BuildContext context) {
+    final unlocked = totalCaptures >= 3;
+    final badges = <(String, IconData, bool)>[
+      ('晨光探索者', Icons.wb_sunny_outlined, unlocked),
+      ('知识小达人', Icons.lightbulb_outline, totalCaptures >= 5),
+      ('连续学习王', Icons.local_fire_department_outlined, false),
+      ('城市观察家', Icons.travel_explore, totalCaptures >= 1),
+    ];
+    return Scaffold(
+      appBar: AppBar(title: const Text('成长勋章')),
+      body: GridView.builder(
+        padding: const EdgeInsets.all(16),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 1.05,
+        ),
+        itemCount: badges.length,
+        itemBuilder: (context, i) {
+          final badge = badges[i];
+          return Card(
+            color: badge.$3 ? const Color(0xFFFFF2C7) : const Color(0xFFF3F1F7),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  badge.$2,
+                  size: 42,
+                  color: badge.$3
+                      ? const Color(0xFFE3A622)
+                      : const Color(0xFFA294B3),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  badge.$1,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: badge.$3
+                        ? const Color(0xFF7C5D12)
+                        : const Color(0xFF7A6D88),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  badge.$3 ? '已点亮' : '待解锁',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class FavoritesPage extends StatelessWidget {
+  const FavoritesPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    const favorites = ['会发光的路牌', '会唱歌的邮箱', '跳舞的小树', '微笑井盖'];
+    return Scaffold(
+      appBar: AppBar(title: const Text('我的收藏')),
+      body: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: favorites.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (context, i) => Card(
+          child: ListTile(
+            leading: const Icon(Icons.favorite, color: Color(0xFFE46FA3)),
+            title: Text(favorites[i]),
+            subtitle: const Text('点击后可跳转对应故事页（下一版接入）'),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class PrivacySecurityPage extends StatefulWidget {
+  const PrivacySecurityPage({super.key});
+
+  @override
+  State<PrivacySecurityPage> createState() => _PrivacySecurityPageState();
+}
+
+class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
+  bool _allowVoice = true;
+  bool _allowAnalytics = false;
+  bool _privateMode = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('隐私与安全')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            child: Column(
+              children: [
+                SwitchListTile(
+                  value: _allowVoice,
+                  title: const Text('允许语音播放'),
+                  subtitle: const Text('用于角色对话语音功能'),
+                  onChanged: (v) => setState(() => _allowVoice = v),
+                ),
+                SwitchListTile(
+                  value: _allowAnalytics,
+                  title: const Text('匿名体验统计'),
+                  subtitle: const Text('帮助我们优化儿童学习体验'),
+                  onChanged: (v) => setState(() => _allowAnalytics = v),
+                ),
+                SwitchListTile(
+                  value: _privateMode,
+                  title: const Text('儿童隐私模式'),
+                  subtitle: const Text('隐藏部分互动信息与历史记录'),
+                  onChanged: (v) => setState(() => _privateMode = v),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class HelpFeedbackPage extends StatefulWidget {
+  const HelpFeedbackPage({super.key});
+
+  @override
+  State<HelpFeedbackPage> createState() => _HelpFeedbackPageState();
+}
+
+class _HelpFeedbackPageState extends State<HelpFeedbackPage> {
+  final TextEditingController _feedbackCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _feedbackCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('帮助与反馈')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Card(
+            child: ListTile(
+              leading: Icon(Icons.help_outline),
+              title: Text('为什么有时候识别会失败？'),
+              subtitle: Text('可尝试在光线更稳定的环境下重新拍摄。'),
+            ),
+          ),
+          const Card(
+            child: ListTile(
+              leading: Icon(Icons.help_outline),
+              title: Text('如何切换孩子账号？'),
+              subtitle: Text('在“我的”页点击退出登录后重新登录即可。'),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    '问题反馈',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _feedbackCtrl,
+                    minLines: 4,
+                    maxLines: 8,
+                    decoration: const InputDecoration(
+                      hintText: '请输入你遇到的问题或建议...',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  FilledButton(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('反馈已记录，感谢你的建议')),
+                      );
+                      _feedbackCtrl.clear();
+                    },
+                    child: const Text('提交反馈'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,0 +1,6 @@
+participant_id,role,age_group,task_1_login_sec,task_2_scan_sec,task_3_message_sec,task_4_report_sec,mis_tap_count,like_score,safety_score,notes
+P01,parent,adult,22,45,14,19,1,4,5,"按钮清晰，孩子喜欢插画"
+P02,child,6-8,35,61,21,27,3,5,4,"很喜欢小动物和颜色"
+P03,parent,adult,18,42,12,15,0,4,5,"希望消息页可筛选"
+P04,child,9-10,20,38,10,14,1,4,4,"勋章页面很有动力"
+P05,parent,adult,26,50,16,20,2,3,5,"字体可再大一点"

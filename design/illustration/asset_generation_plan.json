@@ -1,0 +1,42 @@
+{
+  "style_name": "fairy_children_storybook_v1",
+  "base_prompt": "儿童绘本手绘风，柔和粉蓝薄荷配色，蜡笔+水彩笔触，角色可爱，留白呼吸感，禁止写实照片感。",
+  "assets": [
+    {
+      "id": "login_scene_daydream",
+      "category": "login",
+      "size": "2K",
+      "prompt": "登录页主插画：小女孩与小动物在花草中探索，画面温暖，适配移动端纵向裁切。"
+    },
+    {
+      "id": "empty_pokedex",
+      "category": "empty_state",
+      "size": "2K",
+      "prompt": "空状态插画：图鉴书页打开，星星微光，鼓励孩子去探索第一只精灵。"
+    },
+    {
+      "id": "empty_report",
+      "category": "empty_state",
+      "size": "2K",
+      "prompt": "空状态插画：小角色拿放大镜寻找知识点，文字区域留白。"
+    },
+    {
+      "id": "onboarding_explore",
+      "category": "onboarding",
+      "size": "2K",
+      "prompt": "新手引导插画：孩子举着小地图与精灵伙伴前进，动线清晰。"
+    },
+    {
+      "id": "badge_morning_explorer",
+      "category": "achievement",
+      "size": "1024x1024",
+      "prompt": "勋章图标：晨光探索者，太阳+小书+星星元素，圆形徽章，透明背景优先。"
+    },
+    {
+      "id": "scene_suburb_road",
+      "category": "background",
+      "size": "2K",
+      "prompt": "场景背景：社区道路与树木，童话感，低干扰细节，适合叠加前景角色。"
+    }
+  ]
+}
