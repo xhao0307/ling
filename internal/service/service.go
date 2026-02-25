@@ -144,6 +144,9 @@ type Service struct {
 	aliases map[string]string
 	llm     *llm.Client
 
+	badgeRules    []badgeRule
+	badgeImageURL map[string]string
+
 	cacheMu  sync.RWMutex
 	cache    map[string]cacheEntry
 	cacheTTL time.Duration
@@ -164,12 +167,14 @@ func New(st store.Store, knowledge []model.KnowledgeItem) *Service {
 	}
 
 	return &Service{
-		store:    st,
-		items:    items,
-		aliases:  aliases,
-		cache:    make(map[string]cacheEntry),
-		cacheTTL: 5 * time.Minute,
-		rng:      rand.New(rand.NewSource(time.Now().UnixNano())),
+		store:         st,
+		items:         items,
+		aliases:       aliases,
+		badgeRules:    loadBadgeRules(),
+		badgeImageURL: loadBadgeImageURLMap(),
+		cache:         make(map[string]cacheEntry),
+		cacheTTL:      5 * time.Minute,
+		rng:           rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
@@ -528,6 +533,20 @@ func (s *Service) SubmitAnswer(req AnswerRequest) (AnswerResponse, error) {
 			Correct:  false,
 			Captured: false,
 			Message:  "答案不正确，再扫描一次获取新题目吧。",
+		}, nil
+	}
+
+	if !s.isObjectTrackedByBadge(session.ObjectType) {
+		session.Captured = true
+		session.CapturedAt = time.Now()
+		session.AnswerGiven = answer
+		if err := s.store.UpdateSession(session); err != nil {
+			return AnswerResponse{}, err
+		}
+		return AnswerResponse{
+			Correct:  true,
+			Captured: false,
+			Message:  "回答正确，已记录识别结果；该对象不在勋章收集范围内。",
 		}, nil
 	}
 

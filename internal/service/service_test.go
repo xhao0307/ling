@@ -13,6 +13,7 @@ import (
 
 	"ling/internal/knowledge"
 	"ling/internal/llm"
+	"ling/internal/model"
 	"ling/internal/service"
 	"ling/internal/store"
 )
@@ -86,6 +87,96 @@ func TestUnknownObjectFallsBackToTemplateContent(t *testing.T) {
 	}
 	if resp.Quiz == "" || resp.Fact == "" {
 		t.Fatalf("expected fallback fact and quiz, got %+v", resp)
+	}
+}
+
+func TestSubmitAnswerOutsideBadgeScopeDoesNotCapturePokedex(t *testing.T) {
+	t.Parallel()
+	svc, st := newTestService(t)
+
+	scanResp, err := svc.Scan(service.ScanRequest{
+		ChildID:       "kid_outside",
+		ChildAge:      8,
+		DetectedLabel: "spaceship_console",
+	})
+	if err != nil {
+		t.Fatalf("Scan() error = %v", err)
+	}
+	session, ok, err := st.GetSession(scanResp.SessionID)
+	if err != nil || !ok {
+		t.Fatalf("GetSession() error = %v, ok=%v", err, ok)
+	}
+
+	answerResp, err := svc.SubmitAnswer(service.AnswerRequest{
+		SessionID: scanResp.SessionID,
+		ChildID:   "kid_outside",
+		Answer:    session.QuizA,
+	})
+	if err != nil {
+		t.Fatalf("SubmitAnswer() error = %v", err)
+	}
+	if !answerResp.Correct {
+		t.Fatalf("expected correct answer")
+	}
+	if answerResp.Captured {
+		t.Fatalf("expected non-badge object not to be captured in pokedex")
+	}
+
+	pokedex, err := svc.Pokedex("kid_outside")
+	if err != nil {
+		t.Fatalf("Pokedex() error = %v", err)
+	}
+	if len(pokedex) != 0 {
+		t.Fatalf("expected no pokedex captures for non-badge object, got %d", len(pokedex))
+	}
+}
+
+func TestPokedexBadgesRequireFullCollectionToUnlock(t *testing.T) {
+	t.Parallel()
+	svc, st := newTestService(t)
+
+	scanResp, err := svc.Scan(service.ScanRequest{
+		ChildID:       "kid_badge",
+		ChildAge:      8,
+		DetectedLabel: "tree",
+	})
+	if err != nil {
+		t.Fatalf("Scan() error = %v", err)
+	}
+	session, ok, err := st.GetSession(scanResp.SessionID)
+	if err != nil || !ok {
+		t.Fatalf("GetSession() error = %v, ok=%v", err, ok)
+	}
+	if _, err := svc.SubmitAnswer(service.AnswerRequest{
+		SessionID: scanResp.SessionID,
+		ChildID:   "kid_badge",
+		Answer:    session.QuizA,
+	}); err != nil {
+		t.Fatalf("SubmitAnswer() error = %v", err)
+	}
+
+	badges, err := svc.PokedexBadges("kid_badge")
+	if err != nil {
+		t.Fatalf("PokedexBadges() error = %v", err)
+	}
+	var plantBadge *model.PokedexBadge
+	for i := range badges {
+		if badges[i].Code == "PLANTAE" {
+			plantBadge = &badges[i]
+			break
+		}
+	}
+	if plantBadge == nil {
+		t.Fatalf("expected PLANTAE badge")
+	}
+	if plantBadge.Progress < 1 {
+		t.Fatalf("expected progress >= 1, got %d", plantBadge.Progress)
+	}
+	if plantBadge.Target <= 1 {
+		t.Fatalf("expected full-collection target > 1, got %d", plantBadge.Target)
+	}
+	if plantBadge.Unlocked {
+		t.Fatalf("expected badge to remain locked before full collection")
 	}
 }
 

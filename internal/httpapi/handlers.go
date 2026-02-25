@@ -226,6 +226,20 @@ func (h *Handler) pokedex(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *Handler) pokedexBadges(w http.ResponseWriter, r *http.Request) {
+	childID := strings.TrimSpace(r.URL.Query().Get("child_id"))
+	badges, err := h.svc.PokedexBadges(childID)
+	if err != nil {
+		log.Printf("pokedex badges internal error: child_id=%s err=%v", childID, err)
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"child_id": childID,
+		"badges":   badges,
+	})
+}
+
 func (h *Handler) dailyReport(w http.ResponseWriter, r *http.Request) {
 	childID := strings.TrimSpace(r.URL.Query().Get("child_id"))
 	dateParam := strings.TrimSpace(r.URL.Query().Get("date"))

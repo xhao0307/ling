@@ -277,6 +277,31 @@ func openAPISpec(serverURL string) map[string]any {
 					},
 				},
 			},
+			"/api/v1/pokedex/badges": map[string]any{
+				"get": map[string]any{
+					"summary":     "查询图鉴勋章进度",
+					"operationId": "pokedexBadges",
+					"parameters": []map[string]any{
+						{
+							"name":        "child_id",
+							"in":          "query",
+							"required":    false,
+							"description": "孩子 ID，默认 guest",
+							"schema":      map[string]any{"type": "string"},
+						},
+					},
+					"responses": map[string]any{
+						"200": map[string]any{
+							"description": "成功",
+							"content": map[string]any{
+								"application/json": map[string]any{
+									"schema": map[string]any{"$ref": "#/components/schemas/PokedexBadgeResponse"},
+								},
+							},
+						},
+					},
+				},
+			},
 			"/api/v1/report/daily": map[string]any{
 				"get": map[string]any{
 					"summary":     "查询每日报告",
@@ -497,6 +522,37 @@ func openAPISpec(serverURL string) map[string]any {
 						"entries": map[string]any{
 							"type":  "array",
 							"items": map[string]any{"$ref": "#/components/schemas/PokedexEntry"},
+						},
+					},
+				},
+				"PokedexBadge": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"id":           map[string]any{"type": "string"},
+						"category_id":  map[string]any{"type": "string"},
+						"name":         map[string]any{"type": "string"},
+						"code":         map[string]any{"type": "string"},
+						"description":  map[string]any{"type": "string"},
+						"record_scope": map[string]any{"type": "string"},
+						"rule":         map[string]any{"type": "string"},
+						"image_url":    map[string]any{"type": "string"},
+						"image_file":   map[string]any{"type": "string"},
+						"unlocked":     map[string]any{"type": "boolean"},
+						"progress":     map[string]any{"type": "integer"},
+						"target":       map[string]any{"type": "integer"},
+						"examples": map[string]any{
+							"type":  "array",
+							"items": map[string]any{"type": "string"},
+						},
+					},
+				},
+				"PokedexBadgeResponse": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"child_id": map[string]any{"type": "string"},
+						"badges": map[string]any{
+							"type":  "array",
+							"items": map[string]any{"$ref": "#/components/schemas/PokedexBadge"},
 						},
 					},
 				},

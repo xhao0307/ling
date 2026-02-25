@@ -1,0 +1,75 @@
+{
+  "updated_at": "2026-02-25 17:13:36",
+  "items": [
+    {
+      "badge_id": "badge_01_plantae",
+      "source_file": "勋章图例/01绿萌芽.jpg",
+      "image_url": "https://media-1406176426.cos.ap-hongkong.myqcloud.com/1772010811_ce1a5948_01_.jpg"
+    },
+    {
+      "badge_id": "badge_02_terrestrial_animal",
+      "source_file": "勋章图例/02陆地动物.jpg",
+      "image_url": "https://media-1406176426.cos.ap-hongkong.myqcloud.com/1772010812_a1e29d20_02_.jpg"
+    },
+    {
+      "badge_id": "badge_03_aviary_insect",
+      "source_file": "勋章图例/03飞行生物.jpg",
+      "image_url": "https://media-1406176426.cos.ap-hongkong.myqcloud.com/1772010813_eb5a35ea_03_.jpg"
+    },
+    {
+      "badge_id": "badge_04_aquatic_life",
+      "source_file": "勋章图例/04水生生物.jpg",
+      "image_url": "https://media-1406176426.cos.ap-hongkong.myqcloud.com/1772010813_4d61f541_04_.jpg"
+    },
+    {
+      "badge_id": "badge_05_geology_landscape",
+      "source_file": "勋章图例/06自然地质.jpg",
+      "image_url": "https://media-1406176426.cos.ap-hongkong.myqcloud.com/1772010814_03fdd722_06_.jpg"
+    },
+    {
+      "badge_id": "badge_06_energy_power",
+      "source_file": "勋章图例/07能量体.jpg",
+      "image_url": "https://media-1406176426.cos.ap-hongkong.myqcloud.com/1772010814_57087660_07_.jpg"
+    },
+    {
+      "badge_id": "badge_10_invisible_interaction",
+      "source_file": "勋章图例/08无形交互.jpg",
+      "image_url": "https://media-1406176426.cos.ap-hongkong.myqcloud.com/1772010814_95b2238a_08_.jpg"
+    },
+    {
+      "badge_id": "badge_09_computing_device",
+      "source_file": "勋章图例/09计算设备.jpg",
+      "image_url": "https://media-1406176426.cos.ap-hongkong.myqcloud.com/1772010814_7c205032_09_.jpg"
+    },
+    {
+      "badge_id": "badge_07_transportation",
+      "source_file": "勋章图例/10交通工具.jpg",
+      "image_url": "https://media-1406176426.cos.ap-hongkong.myqcloud.com/1772010815_ef9cb72c_10_.jpg"
+    },
+    {
+      "badge_id": "badge_11_textile_fabric",
+      "source_file": "勋章图例/11柔软织物.jpg",
+      "image_url": "https://media-1406176426.cos.ap-hongkong.myqcloud.com/1772010815_5e6ce1c6_11_.jpg"
+    },
+    {
+      "badge_id": "badge_08_macro_structure",
+      "source_file": "勋章图例/12大型结构.jpg",
+      "image_url": "https://media-1406176426.cos.ap-hongkong.myqcloud.com/1772010815_73fe13df_12_.jpg"
+    },
+    {
+      "badge_id": "badge_12_fluid_transparency",
+      "source_file": "勋章图例/13流动与透明.jpg",
+      "image_url": "https://media-1406176426.cos.ap-hongkong.myqcloud.com/1772010815_3bb0d2a5_13_.jpg"
+    },
+    {
+      "badge_id": "badge_14_food_culinary",
+      "source_file": "勋章图例/14所有食物.jpg",
+      "image_url": "https://media-1406176426.cos.ap-hongkong.myqcloud.com/1772010816_aa0c811a_14_.jpg"
+    },
+    {
+      "badge_id": "badge_15_tools_art",
+      "source_file": "勋章图例/15工具与艺术.jpg",
+      "image_url": "https://media-1406176426.cos.ap-hongkong.myqcloud.com/1772010816_a800bdf1_15_.jpg"
+    }
+  ]
+}

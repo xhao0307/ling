@@ -1286,3 +1286,45 @@
   - 跑一轮真机/浏览器剧情链路，确认点击聊天框推进体验和节奏符合预期；
   - 如需更强构图一致性，可把“主体占比1/5”下沉为可配置参数并联动压测脚本。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-25 17:18] F007 图鉴引入勋章系统（云图URL）并落实“范围外仅识别记录”
+- 会话目标: 在图鉴系统接入勋章能力，按 `勋章图例/文字介绍.txt` 规则计算勋章进度；勋章图批量上传到云并以 URL 展示；范围外对象可识别但不计入图鉴收集。
+- 选择功能: `F007`
+- 实际改动:
+  - 后端模型与规则:
+    - 新增 `internal/service/badge_rules.json`（15 类勋章规则、code、范围、示例关键词）；
+    - 新增 `internal/service/badges.go`：加载规则、加载云图清单、计算勋章进度与解锁状态；
+    - 解锁规则改为“全收集点亮”：`target = 该类示例总数`。
+  - 后端接口:
+    - 新增 `GET /api/v1/pokedex/badges`；
+    - 更新 `internal/httpapi/router.go`、`internal/httpapi/handlers.go`、`internal/httpapi/swagger.go`；
+    - 更新 `internal/model/model.go` 勋章返回结构。
+  - 收集逻辑调整（关键需求）:
+    - `SubmitAnswer` 在对象不属于勋章范围时：
+      - 仍可识别并答题；
+      - 返回 `correct=true, captured=false`；
+      - 不写入图鉴 captures（即“只记录识别，不标识为已收集”）。
+    - 文件：`internal/service/service.go`。
+  - 前端图鉴页:
+    - `PokedexPage` 接入勋章 API 并展示勋章墙；
+    - 卡片展示云图、进度 `progress/target`、点亮状态；
+    - 文案明确“每个勋章需完成该类全部示例收集后点亮”。
+    - 文件：`flutter_client/lib/main.dart`。
+  - 云端资源上传:
+    - 新增 `scripts/upload-badge-assets.sh` 批量上传脚本；
+    - 生成并写入 `design/badges/cloud_badge_assets.json`（14 张勋章图云 URL）。
+- 验证结果:
+  - `go test ./...` 通过；
+  - `cd flutter_client && flutter analyze` 通过；
+  - `./init.sh` smoke 通过；
+  - `scripts/upload-badge-assets.sh` 成功上传 14 张，生成 URL 清单；
+  - `GET /api/v1/pokedex/badges` 返回 200，包含 `image_url/progress/target/unlocked` 字段。
+- 风险与遗留:
+  - 勋章图例目录当前仅有 14 张图，`居家环境(13)` 暂无对应独立图，前端显示占位图标；
+  - 规则采用关键词匹配，后续可根据真实识别数据补充同义词表。
+- 下一步建议:
+  - 补齐 `居家环境` 勋章图后重跑上传脚本，清单可自动覆盖更新；
+  - 做一轮前端端到端截图验收（图鉴页勋章墙 + 范围外对象答题后不入图鉴）。
+- 对应提交: （本次提交）

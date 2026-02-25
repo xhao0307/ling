@@ -57,6 +57,22 @@ type PokedexEntry struct {
 	LastSeenAt time.Time `json:"last_seen_at"`
 }
 
+type PokedexBadge struct {
+	ID          string   `json:"id"`
+	CategoryID  string   `json:"category_id"`
+	Name        string   `json:"name"`
+	Code        string   `json:"code"`
+	Description string   `json:"description"`
+	RecordScope string   `json:"record_scope"`
+	Rule        string   `json:"rule"`
+	ImageURL    string   `json:"image_url"`
+	ImageFile   string   `json:"image_file"`
+	Unlocked    bool     `json:"unlocked"`
+	Progress    int      `json:"progress"`
+	Target      int      `json:"target"`
+	Examples    []string `json:"examples,omitempty"`
+}
+
 type DailyReport struct {
 	Date            string    `json:"date"`
 	ChildID         string    `json:"child_id"`

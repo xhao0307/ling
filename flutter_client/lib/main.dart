@@ -2034,6 +2034,7 @@ class _ExplorePageState extends State<ExplorePage> {
 
     try {
       var answerCorrectNow = false;
+      var answerCapturedNow = false;
       if (!_quizSolved) {
         final answer = await widget.api.submitAnswer(
           sessionId: scan.sessionId,
@@ -2042,6 +2043,7 @@ class _ExplorePageState extends State<ExplorePage> {
         );
         if (answer.correct) {
           answerCorrectNow = true;
+          answerCapturedNow = answer.captured;
           if (mounted) {
             setState(() {
               _quizSolved = true;
@@ -2054,8 +2056,10 @@ class _ExplorePageState extends State<ExplorePage> {
       }
 
       final hints = <String>[];
-      if (answerCorrectNow) {
+      if (answerCorrectNow && answerCapturedNow) {
         hints.add('系统：孩子刚刚回答正确并已完成收集，请先祝贺，再收尾。');
+      } else if (answerCorrectNow && !answerCapturedNow) {
+        hints.add('系统：孩子刚刚回答正确，已记录识别但未计入勋章收集，请先鼓励观察，再收尾。');
       } else if (!_quizSolved) {
         hints.add('系统：孩子回答暂未命中标准答案，请鼓励并给提示，不要直接公布完整答案。');
       }
@@ -3387,6 +3391,7 @@ class _PokedexPageState extends State<PokedexPage> {
   bool _loading = false;
   String _error = '';
   List<PokedexEntry> _entries = const [];
+  List<PokedexBadge> _badges = const [];
 
   @override
   void initState() {
@@ -3434,6 +3439,86 @@ class _PokedexPageState extends State<PokedexPage> {
               padding: const EdgeInsets.only(top: 12),
               child: Text(_error, style: const TextStyle(color: Colors.red)),
             ),
+          if (_badges.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            const Text(
+              '勋章进度',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              '规则：每个勋章需完成该类全部示例收集后才会点亮。',
+              style: TextStyle(color: Color(0xFF6E6581), fontSize: 12),
+            ),
+            const SizedBox(height: 8),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 0.95,
+              ),
+              itemCount: _badges.length,
+              itemBuilder: (context, i) {
+                final badge = _badges[i];
+                final image = badge.imageUrl.trim();
+                return Card(
+                  color: badge.unlocked
+                      ? const Color(0xFFFFF2C7)
+                      : const Color(0xFFF3F1F7),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Center(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: image.isNotEmpty
+                                  ? Opacity(
+                                      opacity: badge.unlocked ? 1 : 0.42,
+                                      child: Image.network(
+                                        image,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                _buildBadgeFallbackIcon(badge),
+                                      ),
+                                    )
+                                  : _buildBadgeFallbackIcon(badge),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '${badge.categoryId}. ${badge.name}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: badge.unlocked
+                                ? const Color(0xFF6F4D0B)
+                                : const Color(0xFF7A6D88),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '进度 ${badge.progress}/${badge.target}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF6E6581),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
           const SizedBox(height: 12),
           if (_entries.isEmpty && !_loading) const Text('还没有收集到精灵。'),
           ..._entries.map(
@@ -3458,8 +3543,15 @@ class _PokedexPageState extends State<PokedexPage> {
       _error = '';
     });
     try {
-      final entries = await widget.api.fetchPokedex(_childIdCtrl.text.trim());
-      setState(() => _entries = entries);
+      final childId = _childIdCtrl.text.trim();
+      final results = await Future.wait<dynamic>([
+        widget.api.fetchPokedex(childId),
+        widget.api.fetchPokedexBadges(childId),
+      ]);
+      setState(() {
+        _entries = results[0] as List<PokedexEntry>;
+        _badges = results[1] as List<PokedexBadge>;
+      });
     } catch (e) {
       setState(() => _error = '加载失败：$e');
     } finally {
@@ -3467,6 +3559,19 @@ class _PokedexPageState extends State<PokedexPage> {
         setState(() => _loading = false);
       }
     }
+  }
+
+  Widget _buildBadgeFallbackIcon(PokedexBadge badge) {
+    return Container(
+      color: badge.unlocked ? const Color(0xFFFFE8A8) : const Color(0xFFE0DCE7),
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.workspace_premium,
+        size: 42,
+        color:
+            badge.unlocked ? const Color(0xFFE3A622) : const Color(0xFFA294B3),
+      ),
+    );
   }
 }
 
@@ -3740,6 +3845,20 @@ class ApiClient {
         .toList();
   }
 
+  Future<List<PokedexBadge>> fetchPokedexBadges(String childId) async {
+    final base = baseUrl;
+    final response = await http.get(
+      Uri.parse(
+        '$base/api/v1/pokedex/badges?child_id=${Uri.encodeQueryComponent(childId)}',
+      ),
+    );
+    final body = _decode(response);
+    final badges = (body['badges'] as List<dynamic>? ?? const []);
+    return badges
+        .map((raw) => PokedexBadge.fromJson(raw as Map<String, dynamic>))
+        .toList();
+  }
+
   Future<DailyReport> fetchDailyReport({
     required String childId,
     required DateTime date,
@@ -3954,6 +4073,50 @@ class PokedexEntry {
       captures: json['captures'] as int? ?? 0,
       lastSeenAt: DateTime.tryParse(json['last_seen_at'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
+    );
+  }
+}
+
+class PokedexBadge {
+  PokedexBadge({
+    required this.id,
+    required this.categoryId,
+    required this.name,
+    required this.code,
+    required this.description,
+    required this.recordScope,
+    required this.rule,
+    required this.imageUrl,
+    required this.unlocked,
+    required this.progress,
+    required this.target,
+  });
+
+  final String id;
+  final String categoryId;
+  final String name;
+  final String code;
+  final String description;
+  final String recordScope;
+  final String rule;
+  final String imageUrl;
+  final bool unlocked;
+  final int progress;
+  final int target;
+
+  factory PokedexBadge.fromJson(Map<String, dynamic> json) {
+    return PokedexBadge(
+      id: json['id'] as String? ?? '',
+      categoryId: json['category_id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      code: json['code'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      recordScope: json['record_scope'] as String? ?? '',
+      rule: json['rule'] as String? ?? '',
+      imageUrl: json['image_url'] as String? ?? '',
+      unlocked: json['unlocked'] as bool? ?? false,
+      progress: json['progress'] as int? ?? 0,
+      target: json['target'] as int? ?? 1,
     );
   }
 }
