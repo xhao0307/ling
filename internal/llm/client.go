@@ -35,8 +35,11 @@ type Config struct {
 	VoiceModelID        string
 	VoiceLangCode       string
 	VoiceFormat         string
-	ImageUploadScript   string
-	ImageUploadPython   string
+	COSSecretID         string
+	COSSecretKey        string
+	COSRegion           string
+	COSBucketName       string
+	COSPublicDomain     string
 }
 
 type Client struct {
@@ -58,8 +61,11 @@ type Client struct {
 	voiceModelID        string
 	voiceLangCode       string
 	voiceFormat         string
-	imageUploadScript   string
-	imageUploadPython   string
+	cosSecretID         string
+	cosSecretKey        string
+	cosRegion           string
+	cosBucketName       string
+	cosPublicDomain     string
 }
 
 type RecognizeResult struct {
@@ -142,13 +148,9 @@ func NewClient(cfg Config) (*Client, error) {
 	if voiceFormat == "" {
 		voiceFormat = "mp3_44100_128"
 	}
-	imageUploadScript := strings.TrimSpace(cfg.ImageUploadScript)
-	if imageUploadScript == "" {
-		imageUploadScript = "upload.py"
-	}
-	imageUploadPython := strings.TrimSpace(cfg.ImageUploadPython)
-	if imageUploadPython == "" {
-		imageUploadPython = "python3"
+	cosRegion := strings.TrimSpace(cfg.COSRegion)
+	if cosRegion == "" {
+		cosRegion = "ap-hongkong"
 	}
 	appID := strings.TrimSpace(cfg.AppID)
 	if appID == "" {
@@ -178,8 +180,11 @@ func NewClient(cfg Config) (*Client, error) {
 		voiceModelID:        voiceModelID,
 		voiceLangCode:       voiceLangCode,
 		voiceFormat:         voiceFormat,
-		imageUploadScript:   imageUploadScript,
-		imageUploadPython:   imageUploadPython,
+		cosSecretID:         strings.TrimSpace(cfg.COSSecretID),
+		cosSecretKey:        strings.TrimSpace(cfg.COSSecretKey),
+		cosRegion:           cosRegion,
+		cosBucketName:       strings.TrimSpace(cfg.COSBucketName),
+		cosPublicDomain:     strings.TrimRight(strings.TrimSpace(cfg.COSPublicDomain), "/"),
 	}, nil
 }
 

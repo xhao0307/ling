@@ -1168,3 +1168,27 @@
   - 部署后用前端实测一轮“上传 -> 识别 -> 剧情”完整链路，确认网络日志只出现 URL 入参；
   - 若需要生产化，建议把 `upload.py` 的秘钥迁移到环境变量并加最小权限策略。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-25 15:52] F019 移除 Python 兜底，上传只走 Go 原生 COS
+- 会话目标: 按要求“upload.py 仅用于可行性验证，不作为兜底”，将服务端上传改为纯 Go 原生逻辑。
+- 选择功能: `F019`
+- 实际改动:
+  - `internal/llm/upload.go`：
+    - 删除 `upload.py` 子进程兜底逻辑；
+    - `UploadImageBytesToPublicURL` 仅使用 Go COS SDK 上传；
+    - 若缺少 `CITYLING_COS_*` 配置，直接返回 `ErrUploadCapabilityUnavailable`。
+  - `internal/llm/client.go`：
+    - 移除 `ImageUploadScript/ImageUploadPython` 配置字段与实例字段。
+  - `cmd/server/main.go`：
+    - 移除 `CITYLING_IMAGE_UPLOAD_SCRIPT_PATH/CITYLING_IMAGE_UPLOAD_PYTHON` 的读取注入。
+- 验证结果:
+  - `go test ./...` 通过；
+  - `cd flutter_client && flutter analyze` 通过；
+  - `./init.sh` smoke 通过。
+- 风险与遗留:
+  - 服务端部署环境必须具备有效 `CITYLING_COS_*` 环境变量，否则上传接口会返回 503。
+- 下一步建议:
+  - 部署后先调用一次 `/api/v1/media/upload` 验证 COS 配置，再走前端整链路回归。
+- 对应提交: （本次提交）
