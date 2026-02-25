@@ -1356,3 +1356,52 @@
 - 下一步建议:
   - 在 Web 端执行一轮视觉验收：勋章墙灰彩状态、点击详情中的“收集物品/进度”是否符合预期。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-25 18:06] F019 LLM 主链路切换到 DashScope compatible-mode
+- 会话目标: 将文本/识别/剧情对话的大模型请求从旧 chat 平台切换到 DashScope 兼容接口，统一使用 `qwen3.5-flash`。
+- 选择功能: `F019`
+- 实际改动:
+  - `internal/llm/client.go`：
+    - 默认 `BaseURL` 改为 `https://dashscope.aliyuncs.com`；
+    - 新增 `ChatModel`（默认 `qwen3.5-flash`）与兼容路径解析；
+    - `RecognizeObject/GenerateLearningContent/JudgeAnswer` 统一走 `/compatible-mode/v1/chat/completions`；
+    - 请求体从 `gpt_type` 改为 `model`；
+    - DashScope 聊天请求不再附带 `x-app-id/x-platform-id`。
+  - `internal/llm/companion.go`：
+    - `GenerateCompanionScene/GenerateCompanionReply` 同步改为 `model + compatible-mode` 路径。
+  - `cmd/server/main.go`：
+    - LLM key 支持回退读取 `CITYLING_DASHSCOPE_API_KEY/DASHSCOPE_API_KEY`；
+    - 新增 `CITYLING_LLM_MODEL` 读取并注入客户端配置；
+    - LLM 默认 base url 改为 DashScope。
+  - 配置与文档：
+    - `ling.ini.example`、`README.md`、`ecosystem.config.cjs` 同步更新默认值与 `CITYLING_LLM_MODEL`。
+  - 测试：
+    - `internal/service/service_test.go`、`internal/llm/companion_test.go` 的 chat 路径断言改为 `compatible-mode`。
+- 验证结果:
+  - `go test ./...` 通过；
+  - `./init.sh` smoke 通过。
+- 风险与遗留:
+  - `CITYLING_LLM_APP_ID/PLATFORM_ID` 仍保留用于非 DashScope 媒体链路兼容；后续如完全收敛可再清理。
+- 下一步建议:
+  - 部署后用真实 key 跑一轮 `scan/image -> scan -> companion/scene -> companion/chat` 端到端，确认线上响应一致。
+- 对应提交: （本次提交）
+
+---
+
+### [2026-02-25 18:08] F019 LLM key 收敛为 DASHSCOPE_API_KEY
+- 会话目标: 按要求取消多 key 互通，LLM 仅使用 `DASHSCOPE_API_KEY`。
+- 选择功能: `F019`
+- 实际改动:
+  - `cmd/server/main.go`：`initLLMClientFromEnv` 改为仅读取 `DASHSCOPE_API_KEY`。
+  - `ecosystem.config.cjs`：进程环境变量改为注入 `DASHSCOPE_API_KEY`。
+  - `ling.ini.example`：示例 key 改为 `DASHSCOPE_API_KEY`，并更新注释回退说明。
+  - `README.md`：LLM 主 key 文档改为 `DASHSCOPE_API_KEY`，图片/TTS 回退说明同步更新。
+- 验证结果:
+  - `go test ./...` 通过。
+- 风险与遗留:
+  - 已不再读取 `CITYLING_LLM_API_KEY`；部署环境需确认已设置 `DASHSCOPE_API_KEY`。
+- 下一步建议:
+  - 线上发布前执行 `printenv DASHSCOPE_API_KEY` 自检，避免空 key 导致 LLM 功能关闭。
+- 对应提交: （本次提交）

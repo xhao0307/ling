@@ -137,18 +137,17 @@ func firstNonEmpty(values ...string) string {
 }
 
 func initLLMClientFromEnv() *llm.Client {
-	apiKey := strings.TrimSpace(os.Getenv("CITYLING_LLM_API_KEY"))
+	apiKey := strings.TrimSpace(os.Getenv("DASHSCOPE_API_KEY"))
 	if apiKey == "" {
 		return nil
 	}
 
 	cfg := llm.Config{
-		BaseURL:             envOrDefault("CITYLING_LLM_BASE_URL", "https://api-chat.charaboard.com"),
+		BaseURL:             envOrDefault("CITYLING_LLM_BASE_URL", "https://dashscope.aliyuncs.com"),
 		APIKey:              apiKey,
+		ChatModel:           firstNonEmpty(envOrDefault("CITYLING_LLM_MODEL", ""), envOrDefault("CITYLING_DASHSCOPE_MODEL", ""), "qwen3.5-flash"),
 		AppID:               envOrDefault("CITYLING_LLM_APP_ID", "4"),
 		PlatformID:          envOrDefault("CITYLING_LLM_PLATFORM_ID", "5"),
-		VisionGPTType:       parseEnvInt("CITYLING_LLM_VISION_GPT_TYPE", 8102),
-		TextGPTType:         parseEnvInt("CITYLING_LLM_TEXT_GPT_TYPE", 8602),
 		Timeout:             time.Duration(parseEnvInt("CITYLING_LLM_TIMEOUT_SECONDS", 20)) * time.Second,
 		ImageBaseURL:        firstNonEmpty(envOrDefault("CITYLING_DASHSCOPE_API_URL", ""), envOrDefault("CITYLING_IMAGE_API_BASE_URL", "https://dashscope.aliyuncs.com")),
 		ImageAPIKey:         firstNonEmpty(os.Getenv("CITYLING_DASHSCOPE_API_KEY"), os.Getenv("DASHSCOPE_API_KEY"), os.Getenv("CITYLING_IMAGE_API_KEY")),

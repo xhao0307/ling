@@ -17,9 +17,16 @@ var (
 	ErrInvalidResponse = errors.New("invalid llm response")
 )
 
+const (
+	defaultDashScopeBaseURL               = "https://dashscope.aliyuncs.com"
+	dashScopeCompatibleChatCompletionsURL = "/compatible-mode/v1/chat/completions"
+	defaultDashScopeChatModel             = "qwen3.5-flash"
+)
+
 type Config struct {
 	BaseURL             string
 	APIKey              string
+	ChatModel           string
 	AppID               string
 	PlatformID          string
 	VisionGPTType       int
@@ -45,6 +52,8 @@ type Config struct {
 type Client struct {
 	baseURL             string
 	apiKey              string
+	chatModel           string
+	chatCompletionsPath string
 	appID               string
 	platformID          string
 	visionGPTType       int
@@ -94,7 +103,11 @@ func NewClient(cfg Config) (*Client, error) {
 	}
 	baseURL := strings.TrimSpace(cfg.BaseURL)
 	if baseURL == "" {
-		baseURL = "https://api-chat.charaboard.com"
+		baseURL = defaultDashScopeBaseURL
+	}
+	chatModel := strings.TrimSpace(cfg.ChatModel)
+	if chatModel == "" {
+		chatModel = defaultDashScopeChatModel
 	}
 	if cfg.VisionGPTType == 0 {
 		cfg.VisionGPTType = 8102
@@ -164,6 +177,8 @@ func NewClient(cfg Config) (*Client, error) {
 	return &Client{
 		baseURL:             strings.TrimRight(baseURL, "/"),
 		apiKey:              strings.TrimSpace(cfg.APIKey),
+		chatModel:           chatModel,
+		chatCompletionsPath: resolveChatCompletionsPath(baseURL),
 		appID:               appID,
 		platformID:          platformID,
 		visionGPTType:       cfg.VisionGPTType,
@@ -208,7 +223,7 @@ func (c *Client) RecognizeObject(ctx context.Context, imageBase64 string, imageU
 	var lastErr error
 	for attempt := 0; attempt < 2; attempt++ {
 		body := c.buildVisionRequestBody(imageRef, attempt > 0)
-		raw, err := c.doJSON(ctx, "/v2/chat/completions", body)
+		raw, err := c.doJSON(ctx, c.chatCompletionsPath, body)
 		if err != nil {
 			lastErr = err
 			continue
@@ -237,7 +252,7 @@ func (c *Client) GenerateLearningContent(ctx context.Context, objectType string,
 	defer cancel()
 
 	body := map[string]any{
-		"gpt_type": c.textGPTType,
+		"model": c.chatModel,
 		"messages": []map[string]any{
 			{
 				"role":    "system",
@@ -255,7 +270,7 @@ func (c *Client) GenerateLearningContent(ctx context.Context, objectType string,
 		},
 	}
 
-	raw, err := c.doJSON(ctx, "/v1/chat/completions", body)
+	raw, err := c.doJSON(ctx, c.chatCompletionsPath, body)
 	if err != nil {
 		return LearningContent{}, err
 	}
@@ -292,7 +307,7 @@ func (c *Client) JudgeAnswer(ctx context.Context, question string, expectedAnswe
 	defer cancel()
 
 	body := map[string]any{
-		"gpt_type": c.textGPTType,
+		"model": c.chatModel,
 		"messages": []map[string]any{
 			{
 				"role":    "system",
@@ -316,7 +331,7 @@ func (c *Client) JudgeAnswer(ctx context.Context, question string, expectedAnswe
 		},
 	}
 
-	raw, err := c.doJSON(ctx, "/v1/chat/completions", body)
+	raw, err := c.doJSON(ctx, c.chatCompletionsPath, body)
 	if err != nil {
 		return AnswerJudgeResult{}, err
 	}
@@ -337,14 +352,20 @@ func (c *Client) doJSON(ctx context.Context, path string, payload any) ([]byte, 
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, bytes.NewReader(body))
+	requestURL := c.baseURL + path
+	if strings.TrimSpace(path) == "" {
+		requestURL = c.baseURL
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-app-id", c.appID)
-	req.Header.Set("x-platform-id", c.platformID)
+	if !isDashScopeChatRequest(requestURL) {
+		req.Header.Set("x-app-id", c.appID)
+		req.Header.Set("x-platform-id", c.platformID)
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -379,7 +400,7 @@ func (c *Client) buildVisionRequestBody(imageRef string, strict bool) map[string
 	}
 
 	return map[string]any{
-		"gpt_type": c.visionGPTType,
+		"model": c.chatModel,
 		"messages": []map[string]any{
 			{
 				"role": "user",
@@ -400,6 +421,23 @@ func (c *Client) buildVisionRequestBody(imageRef string, strict bool) map[string
 		"temperature": 0.1,
 		"max_tokens":  320,
 	}
+}
+
+func resolveChatCompletionsPath(baseURL string) string {
+	lower := strings.ToLower(strings.TrimSpace(baseURL))
+	if strings.Contains(lower, "/chat/completions") {
+		return ""
+	}
+	return dashScopeCompatibleChatCompletionsURL
+}
+
+func isDashScopeChatRequest(requestURL string) bool {
+	lower := strings.ToLower(strings.TrimSpace(requestURL))
+	if lower == "" {
+		return false
+	}
+	return strings.Contains(lower, "dashscope.aliyuncs.com") ||
+		strings.Contains(lower, "/compatible-mode/v1/chat/completions")
 }
 
 func extractAssistantContent(raw []byte) (string, error) {

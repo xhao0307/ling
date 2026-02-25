@@ -457,7 +457,7 @@ func TestParseCompanionReplyWithTrailingJSON(t *testing.T) {
 
 func TestGenerateCompanionReply(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/v1/chat/completions" {
+		if r.URL.Path != "/compatible-mode/v1/chat/completions" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		w.Header().Set("Content-Type", "application/json")

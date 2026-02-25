@@ -61,7 +61,7 @@ func (c *Client) GenerateCompanionScene(ctx context.Context, req CompanionSceneR
 	defer cancel()
 
 	body := map[string]any{
-		"gpt_type": c.textGPTType,
+		"model": c.chatModel,
 		"messages": []map[string]any{
 			{
 				"role":    "system",
@@ -86,7 +86,7 @@ func (c *Client) GenerateCompanionScene(ctx context.Context, req CompanionSceneR
 		},
 	}
 
-	raw, err := c.doJSON(ctx, "/v1/chat/completions", body)
+	raw, err := c.doJSON(ctx, c.chatCompletionsPath, body)
 	if err != nil {
 		return CompanionScene{}, err
 	}
@@ -357,7 +357,7 @@ func (c *Client) GenerateCompanionReply(ctx context.Context, req CompanionReplyR
 	}
 
 	body := map[string]any{
-		"gpt_type": c.textGPTType,
+		"model": c.chatModel,
 		"messages": []map[string]any{
 			{
 				"role":    "system",
@@ -386,7 +386,7 @@ func (c *Client) GenerateCompanionReply(ctx context.Context, req CompanionReplyR
 		},
 	}
 
-	raw, err := c.doJSON(ctx, "/v1/chat/completions", body)
+	raw, err := c.doJSON(ctx, c.chatCompletionsPath, body)
 	if err != nil {
 		return CompanionReply{}, err
 	}

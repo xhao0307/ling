@@ -273,7 +273,7 @@ func TestGenerateCompanionSceneFallsBackWhenSceneLLMFailed(t *testing.T) {
 	var mockImageURL string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
-		case r.Method == http.MethodPost && r.URL.Path == "/v1/chat/completions":
+		case r.Method == http.MethodPost && r.URL.Path == "/compatible-mode/v1/chat/completions":
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
 			_, _ = w.Write([]byte(`{"errorCode":500,"errMsg":"model invocation failed"}`))
@@ -352,7 +352,7 @@ func TestGenerateCompanionSceneImageToImageIgnoresEnvironmentFields(t *testing.T
 	var imageInput string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
-		case r.Method == http.MethodPost && r.URL.Path == "/v1/chat/completions":
+		case r.Method == http.MethodPost && r.URL.Path == "/compatible-mode/v1/chat/completions":
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
 				t.Fatalf("read chat body failed: %v", err)
@@ -442,7 +442,7 @@ func TestGenerateCompanionSceneSupportsB64JSONImageResponse(t *testing.T) {
 	var imagePrompt string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
-		case r.Method == http.MethodPost && r.URL.Path == "/v1/chat/completions":
+		case r.Method == http.MethodPost && r.URL.Path == "/compatible-mode/v1/chat/completions":
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"{\"character_name\":\"喵喵星友\",\"personality\":\"温柔\",\"dialog_text\":\"你好呀\",\"image_prompt\":\"猫咪卡通角色\"}"}}]}`))
 		case r.Method == http.MethodPost && r.URL.Path == "/v1/byteplus/images/generations":
