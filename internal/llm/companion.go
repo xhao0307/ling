@@ -51,6 +51,11 @@ type CompanionReply struct {
 	RawContent string
 }
 
+const (
+	bytePlusImageGenerationPath  = "/v1/byteplus/images/generations"
+	dashScopeImageGenerationPath = "/api/v1/services/aigc/multimodal-generation/generation"
+)
+
 func (c *Client) GenerateCompanionScene(ctx context.Context, req CompanionSceneRequest) (CompanionScene, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
@@ -103,17 +108,28 @@ func (c *Client) GenerateCharacterImage(ctx context.Context, imagePrompt string,
 	}
 	// 这里不再额外套超时，避免上游慢请求在客户端提前被 context cancel。
 	// 调用方可按需在更高层控制超时策略。
+	requestURL := resolveImageGenerationRequestURL(c.imageBaseURL)
+	trimmedPrompt := strings.TrimSpace(imagePrompt)
+	trimmedSourceImage := strings.TrimSpace(sourceImage)
+
+	if isDashScopeImageRequestURL(requestURL) {
+		body := buildDashScopeImageGenerationBody(c.imageModel, trimmedPrompt, trimmedSourceImage)
+		respBody, _, err := c.doMediaJSON(ctx, requestURL, c.imageAPIKey, body)
+		if err != nil {
+			return "", err
+		}
+		return parseGeneratedImageValue(respBody)
+	}
 
 	body := map[string]any{
 		"model":           c.imageModel,
-		"prompt":          strings.TrimSpace(imagePrompt),
+		"prompt":          trimmedPrompt,
 		"n":               1,
 		"response_format": c.imageResponseFormat,
 		"size":            "2K",
 		"stream":          false,
 		"watermark":       false,
 	}
-	trimmedSourceImage := strings.TrimSpace(sourceImage)
 	candidates := normalizeSourceImageInputCandidates(trimmedSourceImage)
 	var (
 		respBody []byte
@@ -122,7 +138,7 @@ func (c *Client) GenerateCharacterImage(ctx context.Context, imagePrompt string,
 	if len(candidates) > 0 {
 		for _, candidate := range candidates {
 			body["image"] = candidate
-			respBody, _, err = c.doMediaJSON(ctx, c.imageBaseURL+"/v1/byteplus/images/generations", c.imageAPIKey, body)
+			respBody, _, err = c.doMediaJSON(ctx, requestURL, c.imageAPIKey, body)
 			if err == nil {
 				break
 			}
@@ -133,15 +149,70 @@ func (c *Client) GenerateCharacterImage(ctx context.Context, imagePrompt string,
 		if err != nil {
 			// 某些上游实现只接受公网 URL 作为 image 参数。候选格式均失败时，自动降级为纯 prompt 生图重试一次。
 			delete(body, "image")
-			respBody, _, err = c.doMediaJSON(ctx, c.imageBaseURL+"/v1/byteplus/images/generations", c.imageAPIKey, body)
+			respBody, _, err = c.doMediaJSON(ctx, requestURL, c.imageAPIKey, body)
 		}
 	} else {
-		respBody, _, err = c.doMediaJSON(ctx, c.imageBaseURL+"/v1/byteplus/images/generations", c.imageAPIKey, body)
+		respBody, _, err = c.doMediaJSON(ctx, requestURL, c.imageAPIKey, body)
 	}
 	if err != nil {
 		return "", err
 	}
+	return parseGeneratedImageValue(respBody)
+}
 
+func resolveImageGenerationRequestURL(baseURL string) string {
+	trimmed := strings.TrimSpace(baseURL)
+	if trimmed == "" {
+		return "https://dashscope.aliyuncs.com" + dashScopeImageGenerationPath
+	}
+	lower := strings.ToLower(trimmed)
+	if strings.Contains(lower, "/api/v1/services/aigc/multimodal-generation/generation") ||
+		strings.Contains(lower, "/v1/byteplus/images/generations") {
+		return strings.TrimRight(trimmed, "/")
+	}
+	if strings.Contains(lower, "dashscope.aliyuncs.com") {
+		return strings.TrimRight(trimmed, "/") + dashScopeImageGenerationPath
+	}
+	return strings.TrimRight(trimmed, "/") + bytePlusImageGenerationPath
+}
+
+func isDashScopeImageRequestURL(requestURL string) bool {
+	lower := strings.ToLower(strings.TrimSpace(requestURL))
+	if lower == "" {
+		return false
+	}
+	return strings.Contains(lower, "dashscope.aliyuncs.com") ||
+		strings.Contains(lower, "/api/v1/services/aigc/multimodal-generation/generation")
+}
+
+func buildDashScopeImageGenerationBody(model string, prompt string, sourceImage string) map[string]any {
+	content := []map[string]any{
+		{"text": strings.TrimSpace(prompt)},
+	}
+	if strings.TrimSpace(sourceImage) != "" {
+		content = append(content, map[string]any{"image": strings.TrimSpace(sourceImage)})
+	}
+	return map[string]any{
+		"model": strings.TrimSpace(model),
+		"input": map[string]any{
+			"messages": []map[string]any{
+				{
+					"role":    "user",
+					"content": content,
+				},
+			},
+		},
+		"parameters": map[string]any{
+			"prompt_extend":     true,
+			"watermark":         false,
+			"n":                 1,
+			"enable_interleave": false,
+			"size":              "1280*1280",
+		},
+	}
+}
+
+func parseGeneratedImageValue(respBody []byte) (string, error) {
 	var resp struct {
 		Data []struct {
 			URL     string `json:"url"`
@@ -155,12 +226,67 @@ func (c *Client) GenerateCharacterImage(ctx context.Context, imagePrompt string,
 			Code    string `json:"code"`
 			Message string `json:"message"`
 		} `json:"error"`
+		Code    string `json:"code"`
+		Message string `json:"message"`
+		Output  struct {
+			Image   string   `json:"image"`
+			Images  []string `json:"images"`
+			Results []struct {
+				URL     string `json:"url"`
+				Image   string `json:"image"`
+				B64JSON string `json:"b64_json"`
+			} `json:"results"`
+			Choices []struct {
+				Message struct {
+					Content []struct {
+						Image   string `json:"image"`
+						URL     string `json:"url"`
+						B64JSON string `json:"b64_json"`
+					} `json:"content"`
+				} `json:"message"`
+			} `json:"choices"`
+		} `json:"output"`
 	}
 	if err := json.Unmarshal(respBody, &resp); err != nil {
 		return "", fmt.Errorf("parse image generation response failed: %w", err)
 	}
 	if resp.Error != nil {
 		return "", fmt.Errorf("image generation failed: code=%s message=%s", strings.TrimSpace(resp.Error.Code), strings.TrimSpace(resp.Error.Message))
+	}
+	if code := strings.TrimSpace(resp.Code); code != "" && !strings.EqualFold(code, "200") && !strings.EqualFold(code, "ok") {
+		return "", fmt.Errorf("image generation failed: code=%s message=%s", code, strings.TrimSpace(resp.Message))
+	}
+	for _, item := range resp.Output.Choices {
+		for _, content := range item.Message.Content {
+			if trimmed := strings.TrimSpace(content.B64JSON); trimmed != "" {
+				return "data:image/png;base64," + trimmed, nil
+			}
+			if trimmed := strings.TrimSpace(content.Image); trimmed != "" {
+				return trimmed, nil
+			}
+			if trimmed := strings.TrimSpace(content.URL); trimmed != "" {
+				return trimmed, nil
+			}
+		}
+	}
+	for _, item := range resp.Output.Results {
+		if trimmed := strings.TrimSpace(item.B64JSON); trimmed != "" {
+			return "data:image/png;base64," + trimmed, nil
+		}
+		if trimmed := strings.TrimSpace(item.Image); trimmed != "" {
+			return trimmed, nil
+		}
+		if trimmed := strings.TrimSpace(item.URL); trimmed != "" {
+			return trimmed, nil
+		}
+	}
+	if trimmed := strings.TrimSpace(resp.Output.Image); trimmed != "" {
+		return trimmed, nil
+	}
+	for _, imageURL := range resp.Output.Images {
+		if trimmed := strings.TrimSpace(imageURL); trimmed != "" {
+			return trimmed, nil
+		}
 	}
 	for _, item := range resp.Data {
 		if trimmed := strings.TrimSpace(item.B64JSON); trimmed != "" {
@@ -402,8 +528,10 @@ func (c *Client) doMediaRequest(ctx context.Context, requestURL string, apiKey s
 	}
 	req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(apiKey))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-app-id", c.appID)
-	req.Header.Set("x-platform-id", c.platformID)
+	if !isDashScopeImageRequestURL(requestURL) {
+		req.Header.Set("x-app-id", c.appID)
+		req.Header.Set("x-platform-id", c.platformID)
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

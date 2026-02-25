@@ -107,7 +107,7 @@ func NewClient(cfg Config) (*Client, error) {
 	}
 	imageBaseURL := strings.TrimSpace(cfg.ImageBaseURL)
 	if imageBaseURL == "" {
-		imageBaseURL = "https://api-image.charaboard.com"
+		imageBaseURL = "https://dashscope.aliyuncs.com"
 	}
 	imageAPIKey := strings.TrimSpace(cfg.ImageAPIKey)
 	if imageAPIKey == "" {
@@ -115,11 +115,11 @@ func NewClient(cfg Config) (*Client, error) {
 	}
 	imageModel := strings.TrimSpace(cfg.ImageModel)
 	if imageModel == "" {
-		imageModel = "seedream-4-0-250828"
+		imageModel = "wan2.6-image"
 	}
 	imageResponseFormat := strings.ToLower(strings.TrimSpace(cfg.ImageResponseFormat))
 	if imageResponseFormat == "" {
-		imageResponseFormat = "b64_json"
+		imageResponseFormat = "url"
 	}
 	if imageResponseFormat != "url" && imageResponseFormat != "b64_json" {
 		imageResponseFormat = "b64_json"

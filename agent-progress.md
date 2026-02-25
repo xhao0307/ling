@@ -1221,3 +1221,39 @@
 - 下一步建议:
   - 若要进一步压测稳定性，可把 `CITYLING_IMAGE_BENCH_REQUESTS` 提升到 10/20 并分时段对比。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-25 16:55] F019 新增 DashScope 连通脚本并切换后端生图主链路
+- 会话目标: 按新接口要求，先验证 DashScope 图生图可用，再将服务端 `companion` 生图切换到 DashScope 协议。
+- 选择功能: `F019`
+- 实际改动:
+  - 新增 `scripts/test-image-dashscope.sh`：
+    - 读取 `.env` 与环境变量；
+    - 按 DashScope `multimodal-generation/generation` 请求结构发起 i2i；
+    - 输出 `HTTP code/耗时/图片URL`，并落盘响应到 `test_screenshots/dashscope_i2i_last_response.json`。
+  - 后端生图请求升级（`internal/llm/companion.go`）：
+    - 增加 `resolveImageGenerationRequestURL`，自动识别 DashScope/BytePlus 路径；
+    - DashScope 路径下改为 `model + input.messages + parameters` 结构；
+    - 新增统一响应解析，兼容 `output.choices[].message.content[].image` 与旧 `data[].url/b64_json`；
+    - DashScope 请求不再附带 `x-app-id/x-platform-id` 头。
+  - 配置默认值切换为 DashScope（`internal/llm/client.go`、`cmd/server/main.go`）：
+    - 默认 `CITYLING_IMAGE_API_BASE_URL=https://dashscope.aliyuncs.com`；
+    - 默认 `CITYLING_IMAGE_MODEL=wan2.6-image`；
+    - 增加 key 回退读取：`CITYLING_DASHSCOPE_API_KEY` / `DASHSCOPE_API_KEY` / `CITYLING_IMAGE_API_KEY`。
+  - 测试更新：
+    - `internal/llm/companion_test.go` 新增 DashScope 请求与响应解析用例；
+    - 调整 b64_json 相关测试显式指定 `ImageResponseFormat`，避免默认值变更导致回归。
+- 验证结果:
+  - DashScope 实测：
+    - 命令：`CITYLING_DASHSCOPE_API_KEY=*** scripts/test-image-dashscope.sh`
+    - 结果：`HTTP 200`，`time_total=12.964589s`，返回有效 `image_url`。
+  - `go test ./...` 通过；
+  - `./init.sh` smoke 通过。
+- 风险与遗留:
+  - 若部署环境未配置 DashScope key（推荐 `CITYLING_DASHSCOPE_API_KEY`），生图仍会失败；
+  - `F019` 仍缺一轮线上前端端到端验收，`passes` 暂保持 `false`。
+- 下一步建议:
+  - 部署后跑一轮“上传 -> 识别 -> companion/scene”真链路，确认返回图 URL 可在前端稳定显示；
+  - 如需继续压测，可基于新脚本扩展并记录 p50/p95。
+- 对应提交: （本次提交）

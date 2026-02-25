@@ -60,10 +60,11 @@ func TestGenerateCharacterImage(t *testing.T) {
 	defer server.Close()
 
 	client, err := NewClient(Config{
-		APIKey:       "test-key",
-		BaseURL:      server.URL,
-		ImageBaseURL: server.URL,
-		VoiceBaseURL: server.URL,
+		APIKey:              "test-key",
+		BaseURL:             server.URL,
+		ImageBaseURL:        server.URL,
+		ImageResponseFormat: "b64_json",
+		VoiceBaseURL:        server.URL,
 	})
 	if err != nil {
 		t.Fatalf("NewClient() error = %v", err)
@@ -79,6 +80,71 @@ func TestGenerateCharacterImage(t *testing.T) {
 	}
 	if receivedImage != "base64-cat-source" {
 		t.Fatalf("expected source image to be forwarded, got %q", receivedImage)
+	}
+}
+
+func TestGenerateCharacterImageWithDashScope(t *testing.T) {
+	var gotPrompt string
+	var gotImage string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/services/aigc/multimodal-generation/generation" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		if strings.TrimSpace(r.Header.Get("x-app-id")) != "" || strings.TrimSpace(r.Header.Get("x-platform-id")) != "" {
+			t.Fatalf("dashscope request should not include x-app-id/x-platform-id")
+		}
+
+		var req struct {
+			Model string `json:"model"`
+			Input struct {
+				Messages []struct {
+					Content []struct {
+						Text  string `json:"text"`
+						Image string `json:"image"`
+					} `json:"content"`
+				} `json:"messages"`
+			} `json:"input"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request body: %v", err)
+		}
+		if req.Model != "wan2.6-image" {
+			t.Fatalf("expected model=wan2.6-image, got %q", req.Model)
+		}
+		if len(req.Input.Messages) != 1 || len(req.Input.Messages[0].Content) != 2 {
+			t.Fatalf("unexpected messages payload: %+v", req.Input.Messages)
+		}
+		gotPrompt = strings.TrimSpace(req.Input.Messages[0].Content[0].Text)
+		gotImage = strings.TrimSpace(req.Input.Messages[0].Content[1].Image)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"output":{"choices":[{"message":{"content":[{"image":"https://img.example.com/dashscope.png"}]}}]}}`))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(Config{
+		APIKey:       "test-key",
+		BaseURL:      server.URL,
+		ImageBaseURL: server.URL + "/api/v1/services/aigc/multimodal-generation/generation",
+		ImageModel:   "wan2.6-image",
+		VoiceBaseURL: server.URL,
+	})
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+	client.httpClient = server.Client()
+
+	got, err := client.GenerateCharacterImage(context.Background(), "绘本风猫咪", "https://example.com/cat.png")
+	if err != nil {
+		t.Fatalf("GenerateCharacterImage() error = %v", err)
+	}
+	if got != "https://img.example.com/dashscope.png" {
+		t.Fatalf("unexpected image url: %s", got)
+	}
+	if gotPrompt != "绘本风猫咪" {
+		t.Fatalf("unexpected prompt: %q", gotPrompt)
+	}
+	if gotImage != "https://example.com/cat.png" {
+		t.Fatalf("unexpected image: %q", gotImage)
 	}
 }
 
@@ -102,10 +168,11 @@ func TestGenerateCharacterImageWithB64JSON(t *testing.T) {
 	defer server.Close()
 
 	client, err := NewClient(Config{
-		APIKey:       "test-key",
-		BaseURL:      server.URL,
-		ImageBaseURL: server.URL,
-		VoiceBaseURL: server.URL,
+		APIKey:              "test-key",
+		BaseURL:             server.URL,
+		ImageBaseURL:        server.URL,
+		ImageResponseFormat: "b64_json",
+		VoiceBaseURL:        server.URL,
 	})
 	if err != nil {
 		t.Fatalf("NewClient() error = %v", err)
@@ -184,31 +251,31 @@ func TestNormalizeSourceImageInputCandidates(t *testing.T) {
 		outputs []string
 	}{
 		{
-			name:   "raw base64",
-			input:  "YWJjMTIz",
+			name:  "raw base64",
+			input: "YWJjMTIz",
 			outputs: []string{
 				"YWJjMTIz",
 				"data:image/jpeg;base64,YWJjMTIz",
 			},
 		},
 		{
-			name:   "http url",
-			input:  "http://example.com/cat.png",
+			name:    "http url",
+			input:   "http://example.com/cat.png",
 			outputs: []string{"http://example.com/cat.png"},
 		},
 		{
-			name:   "data url",
-			input:  "data:image/png;base64,abcd",
+			name:    "data url",
+			input:   "data:image/png;base64,abcd",
 			outputs: []string{"abcd", "data:image/png;base64,abcd"},
 		},
 		{
-			name:   "trim spaces",
-			input:  "  dGVzdA==  ",
+			name:    "trim spaces",
+			input:   "  dGVzdA==  ",
 			outputs: []string{"dGVzdA==", "data:image/jpeg;base64,dGVzdA=="},
 		},
 		{
-			name:   "empty",
-			input:  "   ",
+			name:    "empty",
+			input:   "   ",
 			outputs: nil,
 		},
 	}
@@ -225,6 +292,53 @@ func TestNormalizeSourceImageInputCandidates(t *testing.T) {
 				if got[i] != tt.outputs[i] {
 					t.Fatalf("normalizeSourceImageInputCandidates()[%d] got %q, want %q", i, got[i], tt.outputs[i])
 				}
+			}
+		})
+	}
+}
+
+func TestResolveImageGenerationRequestURL(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{
+			name: "dashscope host default path",
+			in:   "https://dashscope.aliyuncs.com",
+			want: "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
+		},
+		{
+			name: "already full dashscope path",
+			in:   "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
+			want: "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
+		},
+		{
+			name: "byteplus host",
+			in:   "https://api-image.charaboard.com",
+			want: "https://api-image.charaboard.com/v1/byteplus/images/generations",
+		},
+		{
+			name: "already full byteplus path",
+			in:   "https://api-image.charaboard.com/v1/byteplus/images/generations",
+			want: "https://api-image.charaboard.com/v1/byteplus/images/generations",
+		},
+		{
+			name: "empty",
+			in:   "",
+			want: "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := resolveImageGenerationRequestURL(tt.in)
+			if got != tt.want {
+				t.Fatalf("resolveImageGenerationRequestURL(%q) = %q, want %q", tt.in, got, tt.want)
 			}
 		})
 	}

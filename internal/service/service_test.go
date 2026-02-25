@@ -211,10 +211,11 @@ func TestGenerateCompanionSceneFallsBackWhenSceneLLMFailed(t *testing.T) {
 	mockImageURL = server.URL + "/mock-image.png"
 
 	client, err := llm.NewClient(llm.Config{
-		APIKey:       "test-key",
-		BaseURL:      server.URL,
-		ImageBaseURL: server.URL,
-		VoiceBaseURL: server.URL,
+		APIKey:              "test-key",
+		BaseURL:             server.URL,
+		ImageBaseURL:        server.URL,
+		ImageResponseFormat: "b64_json",
+		VoiceBaseURL:        server.URL,
 	})
 	if err != nil {
 		t.Fatalf("NewClient() error = %v", err)
@@ -291,10 +292,11 @@ func TestGenerateCompanionSceneImageToImageIgnoresEnvironmentFields(t *testing.T
 	mockImageURL = server.URL + "/mock-image.png"
 
 	client, err := llm.NewClient(llm.Config{
-		APIKey:       "test-key",
-		BaseURL:      server.URL,
-		ImageBaseURL: server.URL,
-		VoiceBaseURL: server.URL,
+		APIKey:              "test-key",
+		BaseURL:             server.URL,
+		ImageBaseURL:        server.URL,
+		ImageResponseFormat: "b64_json",
+		VoiceBaseURL:        server.URL,
 	})
 	if err != nil {
 		t.Fatalf("NewClient() error = %v", err)
@@ -364,10 +366,11 @@ func TestGenerateCompanionSceneSupportsB64JSONImageResponse(t *testing.T) {
 	defer server.Close()
 
 	client, err := llm.NewClient(llm.Config{
-		APIKey:       "test-key",
-		BaseURL:      server.URL,
-		ImageBaseURL: server.URL,
-		VoiceBaseURL: server.URL,
+		APIKey:              "test-key",
+		BaseURL:             server.URL,
+		ImageBaseURL:        server.URL,
+		ImageResponseFormat: "b64_json",
+		VoiceBaseURL:        server.URL,
 	})
 	if err != nil {
 		t.Fatalf("NewClient() error = %v", err)
