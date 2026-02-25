@@ -802,3 +802,41 @@
 - 下一步建议:
   - 线上部署后跑 `scripts/test-companion-scene-cat.sh`，确认 `character_image_base64` 稳定返回且前端不再依赖外链。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-25 09:44] F020 移动端 UI 美化 + 登录注册（保留调试测试入口）
+- 会话目标: 完成移动端视觉升级，并新增登录/注册流程，同时保留免登录调试测试入口。
+- 选择功能: `F020`
+- 实际改动:
+  - `flutter_client/lib/main.dart`：
+    - 新增 `AuthStore/AuthSession`，基于 `shared_preferences` 持久化账号与会话；
+    - 新增 `AuthEntryPage`（登录/注册切换、错误提示、账号密码校验）；
+    - `CityLingHomePage` 增加认证门禁、会话恢复与退出登录逻辑；
+    - 保留并增强“调试测试入口（免登录）”；
+    - 优化移动端 UI（渐变背景、卡片层次、按钮与输入框主题、探索页账号状态展示）；
+    - `PokedexPage/DailyReportPage` 支持从登录会话注入默认 `child_id`。
+  - `flutter_client/pubspec.yaml`、`flutter_client/pubspec.lock`：
+    - 新增依赖 `shared_preferences` 及关联锁文件更新。
+  - `flutter_client/macos/Podfile.lock`、`flutter_client/macos/Runner.xcodeproj/project.pbxproj`：
+    - 插件依赖变更后自动更新（macOS CocoaPods 集成）。
+  - `feature_list.json`：
+    - 新增 `F020`，并在本次验证通过后置 `passes=true`。
+- 验证结果:
+  - 基础可用性：
+    - `./init.sh` 通过（`smoke 通过: http://127.0.0.1:39028`）。
+    - `cd flutter_client && flutter analyze` 通过（No issues found）。
+  - Web e2e（`chrome-devtools-mcp`）关键路径通过：
+    - 注册路径：`注册 -> 输入账号/密码 -> 注册并进入` 成功进入探索页（账号标识 `账号：reg001`）；
+    - 登录路径：退出后回到认证页，`账号 reg001 + 密码` 登录成功进入探索页；
+    - 调试路径：点击 `调试测试入口（免登录）` 成功进入探索页并显示 `调试测试账号`。
+  - 关键证据截图：
+    - `test_screenshots/e2e_auth_register_success.png`
+    - `test_screenshots/e2e_auth_login_success.png`
+    - `test_screenshots/e2e_auth_debug_entry_success.png`
+- 风险与遗留:
+  - 当前账号体系为前端本地持久化（调试/联调用），尚未对接服务端统一身份系统；
+  - 密码仅作本地弱编码存储，不适合作为生产安全方案。
+- 下一步建议:
+  - 若进入多端正式环境，下一步优先改为后端鉴权（token/session）并迁移本地账号逻辑。
+- 对应提交: （本次提交）

@@ -1,7 +1,7 @@
 {
   "project": "city-ling",
   "version": 1,
-  "updated_at": "2026-02-24",
+  "updated_at": "2026-02-25",
   "notes": "功能清单用于长任务增量开发。仅在端到端验证通过后将 passes 改为 true。",
   "features": [
     {
@@ -249,6 +249,19 @@
         "前端可播放 voice_audio_base64 对应音频并展示对话"
       ],
       "passes": false
+    },
+    {
+      "id": "F020",
+      "category": "frontend",
+      "priority": "P1",
+      "description": "移动端 UI 美化并支持登录/注册，保留调试测试入口",
+      "steps": [
+        "打开 Flutter Web 客户端，展示登录/注册认证页与移动端风格 UI",
+        "切换到注册并创建新账号，成功进入探索页且展示账号信息",
+        "在探索页退出登录，返回认证页后使用同账号密码登录成功",
+        "点击“调试测试入口（免登录）”，可直接进入调试模式并展示调试账号标识"
+      ],
+      "passes": true
     }
   ]
 }

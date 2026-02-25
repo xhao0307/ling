@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'voice_player.dart';
 
@@ -33,9 +34,524 @@ class CityLingApp extends StatelessWidget {
           seedColor: const Color(0xFF0C7E78),
           brightness: Brightness.light,
         ),
+        scaffoldBackgroundColor: const Color(0xFFF2F6F4),
+        inputDecorationTheme: const InputDecorationTheme(
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(14)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(14)),
+            borderSide: BorderSide(color: Color(0xFFCEE3E0)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(14)),
+            borderSide: BorderSide(color: Color(0xFF0C7E78), width: 1.4),
+          ),
+        ),
+        cardTheme: const CardThemeData(
+          surfaceTintColor: Colors.transparent,
+        ),
+        navigationBarTheme: const NavigationBarThemeData(
+          indicatorColor: Color(0xFFD9EEE9),
+          labelTextStyle: WidgetStatePropertyAll(
+            TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          ),
+        ),
         useMaterial3: true,
       ),
       home: const CityLingHomePage(),
+    );
+  }
+}
+
+enum _AuthMode { login, register }
+
+class AuthSession {
+  const AuthSession({
+    required this.accountId,
+    required this.displayName,
+    required this.isDebug,
+  });
+
+  final String accountId;
+  final String displayName;
+  final bool isDebug;
+
+  String get preferredChildId => isDebug ? 'kid_1' : accountId;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'account_id': accountId,
+      'display_name': displayName,
+      'is_debug': isDebug,
+    };
+  }
+
+  factory AuthSession.fromJson(Map<String, dynamic> json) {
+    return AuthSession(
+      accountId: json['account_id'] as String? ?? '',
+      displayName: json['display_name'] as String? ?? '',
+      isDebug: json['is_debug'] as bool? ?? false,
+    );
+  }
+}
+
+class AuthStore {
+  static const String _accountsKey = 'cityling_accounts_v1';
+  static const String _sessionKey = 'cityling_auth_session_v1';
+
+  final Map<String, String> _accounts = <String, String>{};
+  SharedPreferences? _prefs;
+  AuthSession? _session;
+
+  Future<void> init() async {
+    final prefs = await SharedPreferences.getInstance();
+    _prefs = prefs;
+    _loadAccounts();
+    _loadSession();
+  }
+
+  Future<AuthSession?> restoreSession() async {
+    return _session;
+  }
+
+  Future<AuthSession> register({
+    required String account,
+    required String password,
+    required String confirmPassword,
+  }) async {
+    final normalizedAccount = _normalizeAccount(account);
+    if (normalizedAccount.length < 3) {
+      throw Exception('账号至少 3 位，只能包含字母、数字、下划线');
+    }
+    if (password.length < 6) {
+      throw Exception('密码至少 6 位');
+    }
+    if (password != confirmPassword) {
+      throw Exception('两次输入的密码不一致');
+    }
+    if (_accounts.containsKey(normalizedAccount)) {
+      throw Exception('账号已存在，请直接登录');
+    }
+
+    _accounts[normalizedAccount] = _encodePassword(password);
+    await _saveAccounts();
+
+    final session = AuthSession(
+      accountId: normalizedAccount,
+      displayName: normalizedAccount,
+      isDebug: false,
+    );
+    await _saveSession(session);
+    return session;
+  }
+
+  Future<AuthSession> login({
+    required String account,
+    required String password,
+  }) async {
+    final normalizedAccount = _normalizeAccount(account);
+    final stored = _accounts[normalizedAccount];
+    if (stored == null) {
+      throw Exception('账号不存在，请先注册');
+    }
+    if (stored != _encodePassword(password)) {
+      throw Exception('密码错误，请重试');
+    }
+
+    final session = AuthSession(
+      accountId: normalizedAccount,
+      displayName: normalizedAccount,
+      isDebug: false,
+    );
+    await _saveSession(session);
+    return session;
+  }
+
+  Future<AuthSession> enterDebugMode() async {
+    final session = const AuthSession(
+      accountId: 'debug',
+      displayName: '调试测试账号',
+      isDebug: true,
+    );
+    await _saveSession(session);
+    return session;
+  }
+
+  Future<void> logout() async {
+    _session = null;
+    await _prefs?.remove(_sessionKey);
+  }
+
+  String _normalizeAccount(String value) {
+    final trimmed = value.trim().toLowerCase();
+    final safe = trimmed.replaceAll(RegExp(r'[^a-z0-9_]'), '');
+    return safe;
+  }
+
+  String _encodePassword(String password) {
+    return base64Encode(utf8.encode('city-ling:$password'));
+  }
+
+  void _loadAccounts() {
+    final raw = _prefs?.getString(_accountsKey);
+    if (raw == null || raw.isEmpty) {
+      return;
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) {
+        _accounts
+          ..clear()
+          ..addAll(decoded.map((key, value) => MapEntry(key, '$value')));
+      }
+    } catch (_) {
+      _accounts.clear();
+    }
+  }
+
+  void _loadSession() {
+    final raw = _prefs?.getString(_sessionKey);
+    if (raw == null || raw.isEmpty) {
+      _session = null;
+      return;
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) {
+        _session = AuthSession.fromJson(decoded);
+      }
+    } catch (_) {
+      _session = null;
+    }
+  }
+
+  Future<void> _saveAccounts() async {
+    await _prefs?.setString(_accountsKey, jsonEncode(_accounts));
+  }
+
+  Future<void> _saveSession(AuthSession session) async {
+    _session = session;
+    await _prefs?.setString(_sessionKey, jsonEncode(session.toJson()));
+  }
+}
+
+class AuthEntryPage extends StatefulWidget {
+  const AuthEntryPage({
+    required this.authStore,
+    required this.onAuthed,
+    super.key,
+  });
+
+  final AuthStore authStore;
+  final ValueChanged<AuthSession> onAuthed;
+
+  @override
+  State<AuthEntryPage> createState() => _AuthEntryPageState();
+}
+
+class _AuthEntryPageState extends State<AuthEntryPage> {
+  final TextEditingController _accountCtrl = TextEditingController();
+  final TextEditingController _passwordCtrl = TextEditingController();
+  final TextEditingController _confirmCtrl = TextEditingController();
+
+  _AuthMode _mode = _AuthMode.login;
+  bool _submitting = false;
+  String _error = '';
+
+  @override
+  void dispose() {
+    _accountCtrl.dispose();
+    _passwordCtrl.dispose();
+    _confirmCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_submitting) {
+      return;
+    }
+    setState(() {
+      _submitting = true;
+      _error = '';
+    });
+
+    try {
+      final account = _accountCtrl.text.trim();
+      final password = _passwordCtrl.text;
+
+      final session = _mode == _AuthMode.login
+          ? await widget.authStore.login(account: account, password: password)
+          : await widget.authStore.register(
+              account: account,
+              password: password,
+              confirmPassword: _confirmCtrl.text,
+            );
+      if (!mounted) {
+        return;
+      }
+      widget.onAuthed(session);
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _error = '$e'.replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
+    }
+  }
+
+  Future<void> _enterDebugMode() async {
+    if (_submitting) {
+      return;
+    }
+    setState(() {
+      _submitting = true;
+      _error = '';
+    });
+    try {
+      final session = await widget.authStore.enterDebugMode();
+      if (!mounted) {
+        return;
+      }
+      widget.onAuthed(session);
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _error = '进入调试模式失败：$e');
+    } finally {
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFE3F5F2), Color(0xFFF4F8FF), Color(0xFFFFF5E8)],
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: -80,
+              right: -40,
+              child: _buildGlowCircle(
+                color: const Color(0xFF9CDDD4).withValues(alpha: 0.8),
+                size: 220,
+              ),
+            ),
+            Positioned(
+              bottom: -90,
+              left: -20,
+              child: _buildGlowCircle(
+                color: const Color(0xFFFFCF9E).withValues(alpha: 0.75),
+                size: 210,
+              ),
+            ),
+            SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 24,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.94),
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x22000000),
+                            blurRadius: 28,
+                            offset: Offset(0, 12),
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(22),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const Text(
+                              '城市灵探索台',
+                              style: TextStyle(
+                                fontSize: 30,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF0A5F5A),
+                                height: 1.1,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              '先登录，再开始移动端识别与剧情探索。',
+                              style: TextStyle(
+                                color: Color(0xFF4C6360),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            SegmentedButton<_AuthMode>(
+                              segments: const [
+                                ButtonSegment<_AuthMode>(
+                                  value: _AuthMode.login,
+                                  icon: Icon(Icons.login),
+                                  label: Text('登录'),
+                                ),
+                                ButtonSegment<_AuthMode>(
+                                  value: _AuthMode.register,
+                                  icon: Icon(Icons.app_registration),
+                                  label: Text('注册'),
+                                ),
+                              ],
+                              selected: {_mode},
+                              onSelectionChanged: (selected) {
+                                setState(() {
+                                  _mode = selected.first;
+                                  _error = '';
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 14),
+                            TextField(
+                              controller: _accountCtrl,
+                              textInputAction: TextInputAction.next,
+                              decoration: const InputDecoration(
+                                labelText: '账号',
+                                hintText: '示例：kid_parent_01',
+                                prefixIcon: Icon(Icons.person_outline),
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            TextField(
+                              controller: _passwordCtrl,
+                              obscureText: true,
+                              textInputAction: _mode == _AuthMode.login
+                                  ? TextInputAction.done
+                                  : TextInputAction.next,
+                              onSubmitted: (_) {
+                                if (_mode == _AuthMode.login) {
+                                  unawaited(_submit());
+                                }
+                              },
+                              decoration: const InputDecoration(
+                                labelText: '密码',
+                                hintText: '不少于 6 位',
+                                prefixIcon: Icon(Icons.lock_outline),
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            if (_mode == _AuthMode.register) ...[
+                              const SizedBox(height: 12),
+                              TextField(
+                                controller: _confirmCtrl,
+                                obscureText: true,
+                                textInputAction: TextInputAction.done,
+                                onSubmitted: (_) => unawaited(_submit()),
+                                decoration: const InputDecoration(
+                                  labelText: '确认密码',
+                                  prefixIcon:
+                                      Icon(Icons.verified_user_outlined),
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 16),
+                            FilledButton.icon(
+                              onPressed: _submitting ? null : _submit,
+                              icon: Icon(_mode == _AuthMode.login
+                                  ? Icons.login
+                                  : Icons.check_circle),
+                              label: Text(
+                                _mode == _AuthMode.login ? '登录进入' : '注册并进入',
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            OutlinedButton.icon(
+                              onPressed: _submitting ? null : _enterDebugMode,
+                              icon: const Icon(Icons.bug_report_outlined),
+                              label: const Text('调试测试入口（免登录）'),
+                            ),
+                            if (_error.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFE9EA)
+                                      .withValues(alpha: 0.9),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(10),
+                                  child: Text(
+                                    _error,
+                                    style: const TextStyle(
+                                      color: Color(0xFFB22A30),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlowCircle({
+    required Color color,
+    required double size,
+  }) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [
+            color,
+            color.withValues(alpha: 0),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -49,22 +565,29 @@ class CityLingHomePage extends StatefulWidget {
 
 class _CityLingHomePageState extends State<CityLingHomePage> {
   final ApiClient _api = ApiClient();
+  final AuthStore _authStore = AuthStore();
   final ValueNotifier<int> _captureVersion = ValueNotifier<int>(0);
   int _tabIndex = 0;
-  bool _apiReady = false;
+  bool _bootReady = false;
+  AuthSession? _session;
 
   @override
   void initState() {
     super.initState();
-    _initApi();
+    _boot();
   }
 
-  Future<void> _initApi() async {
+  Future<void> _boot() async {
     await _api.init();
+    await _authStore.init();
+    final restored = await _authStore.restoreSession();
     if (!mounted) {
       return;
     }
-    setState(() => _apiReady = true);
+    setState(() {
+      _session = restored;
+      _bootReady = true;
+    });
   }
 
   Future<void> _openBackendSettings() async {
@@ -120,11 +643,61 @@ class _CityLingHomePageState extends State<CityLingHomePage> {
     }
   }
 
+  Future<void> _logout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('退出登录'),
+        content: const Text('确认退出当前账号吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('退出'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) {
+      return;
+    }
+    await _authStore.logout();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _session = null;
+      _tabIndex = 0;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('已退出登录')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (!_apiReady) {
+    if (!_bootReady) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final session = _session;
+    if (session == null) {
+      return AuthEntryPage(
+        authStore: _authStore,
+        onAuthed: (nextSession) {
+          if (!mounted) {
+            return;
+          }
+          setState(() {
+            _session = nextSession;
+            _tabIndex = 0;
+          });
+        },
       );
     }
 
@@ -133,14 +706,18 @@ class _CityLingHomePageState extends State<CityLingHomePage> {
         api: _api,
         onCaptured: () => _captureVersion.value += 1,
         onOpenApiSettings: _openBackendSettings,
+        session: session,
+        onLogout: _logout,
       ),
       PokedexPage(
         api: _api,
         refreshSignal: _captureVersion,
+        defaultChildId: session.preferredChildId,
       ),
       DailyReportPage(
         api: _api,
         refreshSignal: _captureVersion,
+        defaultChildId: session.preferredChildId,
       ),
     ];
 
@@ -148,12 +725,19 @@ class _CityLingHomePageState extends State<CityLingHomePage> {
       appBar: _tabIndex == 0
           ? null
           : AppBar(
-              title: const Text('城市灵'),
+              title: Text(
+                session.isDebug ? '城市灵（调试模式）' : '城市灵 · ${session.displayName}',
+              ),
               actions: [
                 IconButton(
                   onPressed: _openBackendSettings,
                   icon: const Icon(Icons.settings_ethernet),
                   tooltip: '后端地址',
+                ),
+                IconButton(
+                  onPressed: _logout,
+                  icon: const Icon(Icons.logout),
+                  tooltip: '退出登录',
                 ),
               ],
             ),
@@ -185,26 +769,30 @@ class ExplorePage extends StatefulWidget {
     required this.api,
     required this.onCaptured,
     required this.onOpenApiSettings,
+    required this.session,
+    required this.onLogout,
     super.key,
   });
 
   final ApiClient api;
   final VoidCallback onCaptured;
   final Future<void> Function() onOpenApiSettings;
+  final AuthSession session;
+  final Future<void> Function() onLogout;
 
   @override
   State<ExplorePage> createState() => _ExplorePageState();
 }
 
 class _ExplorePageState extends State<ExplorePage> {
-  final _childIdCtrl = TextEditingController(text: 'kid_1');
+  final _childIdCtrl = TextEditingController();
   final _ageCtrl = TextEditingController(text: '8');
   final _companionReplyCtrl = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
   final VoicePlayer _voicePlayer = createVoicePlayer();
 
   bool _profileReady = false;
-  String _childId = 'kid_1';
+  String _childId = '';
   int _childAge = 8;
 
   CameraController? _cameraController;
@@ -246,6 +834,8 @@ class _ExplorePageState extends State<ExplorePage> {
   @override
   void initState() {
     super.initState();
+    _childId = widget.session.preferredChildId;
+    _childIdCtrl.text = _childId;
     _initCamera();
   }
 
@@ -273,12 +863,17 @@ class _ExplorePageState extends State<ExplorePage> {
   }
 
   Widget _buildEntryScreen() {
+    final isDebug = widget.session.isDebug;
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topCenter,
+          begin: Alignment.topLeft,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFFEAF4F3), Color(0xFFF7FBFA)],
+          colors: [
+            const Color(0xFFE6F6F2),
+            const Color(0xFFF3FAF8),
+            const Color(0xFFFFF8EE).withValues(alpha: 0.95),
+          ],
         ),
       ),
       child: SafeArea(
@@ -289,6 +884,7 @@ class _ExplorePageState extends State<ExplorePage> {
               constraints: const BoxConstraints(maxWidth: 520),
               child: Card(
                 elevation: 0,
+                color: Colors.white.withValues(alpha: 0.92),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
                 ),
@@ -301,13 +897,44 @@ class _ExplorePageState extends State<ExplorePage> {
                       const Text(
                         '开始探索',
                         style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0A5F5A),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      const Text('先输入孩子信息，然后进入全屏识别模式。'),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 6),
+                      Text(
+                        isDebug ? '当前为调试测试模式，可快速验证流程。' : '先输入孩子信息，然后进入全屏识别模式。',
+                        style: const TextStyle(
+                          color: Color(0xFF4E6360),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Chip(
+                            avatar: Icon(
+                              isDebug ? Icons.bug_report : Icons.verified_user,
+                              size: 16,
+                            ),
+                            label: Text(
+                              isDebug
+                                  ? widget.session.displayName
+                                  : '账号：${widget.session.displayName}',
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: () => unawaited(widget.onLogout()),
+                            icon: const Icon(Icons.logout, size: 16),
+                            label: const Text('切换账号'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
                       TextField(
                         controller: _childIdCtrl,
                         decoration: const InputDecoration(
@@ -415,12 +1042,28 @@ class _ExplorePageState extends State<ExplorePage> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          '孩子：$_childId · 年龄：$_childAge',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              widget.session.isDebug
+                                  ? '调试模式 · ${widget.session.displayName}'
+                                  : '账号：${widget.session.displayName}',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              '孩子：$_childId · 年龄：$_childAge',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       FilledButton.tonalIcon(
@@ -452,6 +1095,18 @@ class _ExplorePageState extends State<ExplorePage> {
                           backgroundColor: Colors.white.withValues(alpha: 0.14),
                         ),
                         tooltip: '后端地址',
+                      ),
+                      const SizedBox(width: 6),
+                      IconButton(
+                        onPressed: _busy || _detecting
+                            ? null
+                            : () => unawaited(widget.onLogout()),
+                        icon: const Icon(Icons.logout),
+                        style: IconButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.white.withValues(alpha: 0.14),
+                        ),
+                        tooltip: '退出登录',
                       ),
                     ],
                   ),
@@ -1921,7 +2576,16 @@ class _AnimatedNameSilhouetteState extends State<_AnimatedNameSilhouette>
           child: Image.network(
             imageUrl,
             fit: BoxFit.cover,
-            errorBuilder: (context, _, __) {
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) {
+                return child;
+              }
+              return const Center(
+                child: CircularProgressIndicator(strokeWidth: 2),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              // 图片加载失败时，返回 fallback 图标
               return _fallbackSilhouetteIcon();
             },
           ),
@@ -2026,18 +2690,20 @@ class PokedexPage extends StatefulWidget {
   const PokedexPage({
     required this.api,
     required this.refreshSignal,
+    required this.defaultChildId,
     super.key,
   });
 
   final ApiClient api;
   final ValueNotifier<int> refreshSignal;
+  final String defaultChildId;
 
   @override
   State<PokedexPage> createState() => _PokedexPageState();
 }
 
 class _PokedexPageState extends State<PokedexPage> {
-  final _childIdCtrl = TextEditingController(text: 'kid_1');
+  late final TextEditingController _childIdCtrl;
   bool _loading = false;
   String _error = '';
   List<PokedexEntry> _entries = const [];
@@ -2045,6 +2711,7 @@ class _PokedexPageState extends State<PokedexPage> {
   @override
   void initState() {
     super.initState();
+    _childIdCtrl = TextEditingController(text: widget.defaultChildId);
     widget.refreshSignal.addListener(_refresh);
     _refresh();
   }
@@ -2127,18 +2794,20 @@ class DailyReportPage extends StatefulWidget {
   const DailyReportPage({
     required this.api,
     required this.refreshSignal,
+    required this.defaultChildId,
     super.key,
   });
 
   final ApiClient api;
   final ValueNotifier<int> refreshSignal;
+  final String defaultChildId;
 
   @override
   State<DailyReportPage> createState() => _DailyReportPageState();
 }
 
 class _DailyReportPageState extends State<DailyReportPage> {
-  final _childIdCtrl = TextEditingController(text: 'kid_1');
+  late final TextEditingController _childIdCtrl;
   DateTime _date = DateTime.now();
   bool _loading = false;
   String _error = '';
@@ -2147,6 +2816,7 @@ class _DailyReportPageState extends State<DailyReportPage> {
   @override
   void initState() {
     super.initState();
+    _childIdCtrl = TextEditingController(text: widget.defaultChildId);
     widget.refreshSignal.addListener(_refresh);
     _refresh();
   }
