@@ -719,26 +719,33 @@ class _CityLingHomePageState extends State<CityLingHomePage> {
         refreshSignal: _captureVersion,
         defaultChildId: session.preferredChildId,
       ),
+      ProfilePage(
+        api: _api,
+        refreshSignal: _captureVersion,
+        session: session,
+        onOpenApiSettings: _openBackendSettings,
+        onLogout: _logout,
+      ),
     ];
 
     return Scaffold(
       appBar: _tabIndex == 0
           ? null
           : AppBar(
-              title: Text(
-                session.isDebug ? '城市灵（调试模式）' : '城市灵 · ${session.displayName}',
-              ),
+              title: Text(_titleForTab(session)),
               actions: [
-                IconButton(
-                  onPressed: _openBackendSettings,
-                  icon: const Icon(Icons.settings_ethernet),
-                  tooltip: '后端地址',
-                ),
-                IconButton(
-                  onPressed: _logout,
-                  icon: const Icon(Icons.logout),
-                  tooltip: '退出登录',
-                ),
+                if (_tabIndex != 3) ...[
+                  IconButton(
+                    onPressed: _openBackendSettings,
+                    icon: const Icon(Icons.settings_ethernet),
+                    tooltip: '后端地址',
+                  ),
+                  IconButton(
+                    onPressed: _logout,
+                    icon: const Icon(Icons.logout),
+                    tooltip: '退出登录',
+                  ),
+                ],
               ],
             ),
       body: tabs[_tabIndex],
@@ -758,9 +765,27 @@ class _CityLingHomePageState extends State<CityLingHomePage> {
             icon: Icon(Icons.summarize),
             label: '报告',
           ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: '我的',
+          ),
         ],
       ),
     );
+  }
+
+  String _titleForTab(AuthSession session) {
+    switch (_tabIndex) {
+      case 1:
+        return '图鉴';
+      case 2:
+        return '报告';
+      case 3:
+        return session.isDebug ? '我的（调试）' : '我的';
+      default:
+        return session.isDebug ? '城市灵（调试模式）' : '城市灵';
+    }
   }
 }
 
@@ -2682,6 +2707,396 @@ class _SpiritOverlay extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class ProfilePage extends StatefulWidget {
+  const ProfilePage({
+    required this.api,
+    required this.refreshSignal,
+    required this.session,
+    required this.onOpenApiSettings,
+    required this.onLogout,
+    super.key,
+  });
+
+  final ApiClient api;
+  final ValueNotifier<int> refreshSignal;
+  final AuthSession session;
+  final Future<void> Function() onOpenApiSettings;
+  final Future<void> Function() onLogout;
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  bool _loading = false;
+  String _error = '';
+  int _totalSpirits = 0;
+  int _totalCaptures = 0;
+  int _todayCaptures = 0;
+  int _todayKnowledgePoints = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.refreshSignal.addListener(_refreshSummary);
+    _refreshSummary();
+  }
+
+  @override
+  void dispose() {
+    widget.refreshSignal.removeListener(_refreshSummary);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final session = widget.session;
+    final avatarText = session.displayName.isEmpty
+        ? '?'
+        : session.displayName.substring(0, 1).toUpperCase();
+    return RefreshIndicator(
+      onRefresh: _refreshSummary,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF0D7E78),
+                  Color(0xFF1B8F87),
+                  Color(0xFF6EBBAA)
+                ],
+              ),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: Colors.white.withValues(alpha: 0.92),
+                    foregroundColor: const Color(0xFF0D7E78),
+                    child: Text(
+                      avatarText,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          session.displayName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            _buildTag(
+                              session.isDebug ? '调试模式' : '正式账号',
+                              session.isDebug
+                                  ? const Color(0xFFFFD9A8)
+                                  : const Color(0xFFCBF4EA),
+                              const Color(0xFF124F4B),
+                            ),
+                            _buildTag(
+                              '孩子ID: ${session.preferredChildId}',
+                              Colors.white.withValues(alpha: 0.24),
+                              Colors.white,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '账号：${session.accountId}',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.88),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+              child: Row(
+                children: [
+                  _buildStatItem('图鉴精灵', _totalSpirits.toString()),
+                  _buildStatItem('累计收集', _totalCaptures.toString()),
+                  _buildStatItem('今日收集', _todayCaptures.toString()),
+                  _buildStatItem('今日知识点', _todayKnowledgePoints.toString()),
+                ],
+              ),
+            ),
+          ),
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: LinearProgressIndicator(),
+            ),
+          if (_error.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(_error, style: const TextStyle(color: Colors.red)),
+            ),
+          const SizedBox(height: 14),
+          const Text(
+            '常用功能',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _buildQuickAction(
+                icon: Icons.favorite_outline,
+                label: '我的收藏',
+                onTap: () => _showFeatureComingSoon('我的收藏'),
+              ),
+              _buildQuickAction(
+                icon: Icons.chat_bubble_outline,
+                label: '消息中心',
+                onTap: () => _showFeatureComingSoon('消息中心'),
+              ),
+              _buildQuickAction(
+                icon: Icons.auto_stories_outlined,
+                label: '学习记录',
+                onTap: () => _showFeatureComingSoon('学习记录'),
+              ),
+              _buildQuickAction(
+                icon: Icons.card_giftcard,
+                label: '成长勋章',
+                onTap: () => _showFeatureComingSoon('成长勋章'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Card(
+            child: Column(
+              children: [
+                _buildMenuTile(
+                  icon: Icons.person_outline,
+                  title: '个人资料',
+                  subtitle: '管理头像、昵称与展示信息',
+                  onTap: () => _showFeatureComingSoon('个人资料'),
+                ),
+                _buildMenuTile(
+                  icon: Icons.notifications_none,
+                  title: '消息通知',
+                  subtitle: '配置提醒与通知偏好',
+                  onTap: () => _showFeatureComingSoon('消息通知'),
+                ),
+                _buildMenuTile(
+                  icon: Icons.verified_user_outlined,
+                  title: '隐私与安全',
+                  subtitle: '账号安全、权限与隐私设置',
+                  onTap: () => _showFeatureComingSoon('隐私与安全'),
+                ),
+                _buildMenuTile(
+                  icon: Icons.settings_ethernet,
+                  title: '后端地址',
+                  subtitle: '联调环境切换入口',
+                  onTap: widget.onOpenApiSettings,
+                ),
+                _buildMenuTile(
+                  icon: Icons.help_outline,
+                  title: '帮助与反馈',
+                  subtitle: '常见问题与问题反馈',
+                  onTap: () => _showFeatureComingSoon('帮助与反馈'),
+                  showDivider: false,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          FilledButton.icon(
+            onPressed: widget.onLogout,
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFB23A3A),
+            ),
+            icon: const Icon(Icons.logout),
+            label: const Text('退出登录'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTag(String text, Color background, Color foreground) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: foreground,
+          fontWeight: FontWeight.w700,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF0C7E78),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF5A6D6A),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickAction({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Ink(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE9F5F3),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              children: [
+                Icon(icon, color: const Color(0xFF0C7E78)),
+                const SizedBox(height: 6),
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF355250),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required FutureOr<void> Function() onTap,
+    bool showDivider = true,
+  }) {
+    return Column(
+      children: [
+        ListTile(
+          leading: Icon(icon, color: const Color(0xFF0C7E78)),
+          title: Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          subtitle: Text(subtitle),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => unawaited(Future<void>.value(onTap())),
+        ),
+        if (showDivider) const Divider(height: 1, indent: 56, endIndent: 14),
+      ],
+    );
+  }
+
+  Future<void> _refreshSummary() async {
+    setState(() {
+      _loading = true;
+      _error = '';
+    });
+    try {
+      final childId = widget.session.preferredChildId;
+      final pokedexFuture = widget.api.fetchPokedex(childId);
+      final reportFuture = widget.api.fetchDailyReport(
+        childId: childId,
+        date: DateTime.now(),
+      );
+      final results = await Future.wait<dynamic>([pokedexFuture, reportFuture]);
+      final entries = results[0] as List<PokedexEntry>;
+      final report = results[1] as DailyReport;
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _totalSpirits = entries.length;
+        _totalCaptures = entries.fold<int>(
+          0,
+          (sum, item) => sum + item.captures,
+        );
+        _todayCaptures = report.totalCaptured;
+        _todayKnowledgePoints = report.knowledgePoints.length;
+      });
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _error = '加载统计失败：$e');
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  void _showFeatureComingSoon(String name) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$name 即将上线')),
     );
   }
 }
