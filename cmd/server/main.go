@@ -139,6 +139,7 @@ func firstNonEmpty(values ...string) string {
 func initLLMClientFromEnv() *llm.Client {
 	apiKey := strings.TrimSpace(os.Getenv("CITYLING_DASHSCOPE_API_KEY"))
 	if apiKey == "" {
+		log.Printf("llm key missing: CITYLING_DASHSCOPE_API_KEY is empty")
 		return nil
 	}
 	legacyVoiceKey := strings.TrimSpace(os.Getenv("CITYLING_LLM_API_KEY"))
@@ -166,6 +167,16 @@ func initLLMClientFromEnv() *llm.Client {
 		COSBucketName:       os.Getenv("CITYLING_COS_BUCKET_NAME"),
 		COSPublicDomain:     envOrDefault("CITYLING_COS_PUBLIC_DOMAIN", ""),
 	}
+	log.Printf(
+		"llm init config: base=%s model=%s key_meta={%s} image_base=%s image_key_meta={%s} voice_base=%s voice_key_meta={%s}",
+		cfg.BaseURL,
+		cfg.ChatModel,
+		safeKeyMeta(cfg.APIKey),
+		cfg.ImageBaseURL,
+		safeKeyMeta(cfg.ImageAPIKey),
+		cfg.VoiceBaseURL,
+		safeKeyMeta(cfg.VoiceAPIKey),
+	)
 
 	client, err := llm.NewClient(cfg)
 	if err != nil {
@@ -189,6 +200,24 @@ func parseEnvIntValue(raw string, fallback int) int {
 		return fallback
 	}
 	return value
+}
+
+func safeKeyMeta(key string) string {
+	trimmed := strings.TrimSpace(key)
+	if trimmed == "" {
+		return "empty=true"
+	}
+	lower := strings.ToLower(trimmed)
+	hasQuotes := (strings.HasPrefix(trimmed, "\"") && strings.HasSuffix(trimmed, "\"")) ||
+		(strings.HasPrefix(trimmed, "'") && strings.HasSuffix(trimmed, "'"))
+	return fmt.Sprintf(
+		"empty=false,len=%d,starts_with_sk=%t,has_bearer_prefix=%t,has_quotes=%t,has_whitespace=%t",
+		len(trimmed),
+		strings.HasPrefix(trimmed, "sk-"),
+		strings.HasPrefix(lower, "bearer "),
+		hasQuotes,
+		strings.Contains(trimmed, " "),
+	)
 }
 
 func loadConfigFile(path string) error {

@@ -378,7 +378,14 @@ func (c *Client) doJSON(ctx context.Context, path string, payload any) ([]byte, 
 		return nil, err
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("llm request failed, status=%d body=%s", resp.StatusCode, strings.TrimSpace(string(respBody)))
+		return nil, fmt.Errorf(
+			"llm request failed, status=%d url=%s model=%s key_meta={%s} body=%s",
+			resp.StatusCode,
+			requestURL,
+			c.chatModel,
+			safeKeyMeta(c.apiKey),
+			truncateText(string(respBody), 320),
+		)
 	}
 	return respBody, nil
 }
@@ -681,6 +688,24 @@ func truncateText(s string, n int) string {
 		return s
 	}
 	return s[:n] + "..."
+}
+
+func safeKeyMeta(key string) string {
+	trimmed := strings.TrimSpace(key)
+	if trimmed == "" {
+		return "empty=true"
+	}
+	lower := strings.ToLower(trimmed)
+	hasQuotes := (strings.HasPrefix(trimmed, "\"") && strings.HasSuffix(trimmed, "\"")) ||
+		(strings.HasPrefix(trimmed, "'") && strings.HasSuffix(trimmed, "'"))
+	return fmt.Sprintf(
+		"empty=false,len=%d,starts_with_sk=%t,has_bearer_prefix=%t,has_quotes=%t,has_whitespace=%t",
+		len(trimmed),
+		strings.HasPrefix(trimmed, "sk-"),
+		strings.HasPrefix(lower, "bearer "),
+		hasQuotes,
+		strings.Contains(trimmed, " "),
+	)
 }
 
 func normalizeObjectType(v string) string {

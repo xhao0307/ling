@@ -1454,3 +1454,22 @@
 - 下一步建议:
   - 线上环境变量统一替换完成后执行一次 `POST /api/v1/media/upload` 与 `POST /api/v1/scan/image` 回归。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-25 18:31] F019 增强 DashScope key 诊断日志（脱敏）
+- 会话目标: 提升线上排障效率，在不泄露密钥明文前提下输出关键诊断信息。
+- 选择功能: `F019`
+- 实际改动:
+  - `cmd/server/main.go`：
+    - LLM 初始化时若 `CITYLING_DASHSCOPE_API_KEY` 为空，明确打日志；
+    - 启动时输出 LLM/图生图/TTS 的配置摘要与 key 元信息（长度、是否 `sk-`、是否误带 `Bearer`、是否含引号/空格）。
+  - `internal/llm/client.go`：
+    - LLM 请求非 2xx 时错误信息追加 `url/model/key_meta` 脱敏诊断字段，便于定位 401 key 格式问题。
+- 验证结果:
+  - `go test ./...` 通过。
+- 风险与遗留:
+  - 日志虽已脱敏，但会增加少量配置元信息输出；生产环境请按需控制日志级别与采样。
+- 下一步建议:
+  - 重启后观察启动日志与 401 日志中的 `key_meta` 字段，优先检查 `has_bearer_prefix/has_quotes/has_whitespace`。
+- 对应提交: （本次提交）
