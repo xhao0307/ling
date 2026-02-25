@@ -143,11 +143,19 @@ func initLLMClientFromEnv() *llm.Client {
 		return nil
 	}
 	legacyVoiceKey := strings.TrimSpace(os.Getenv("CITYLING_LLM_API_KEY"))
+	forcedChatBaseURL := "https://dashscope.aliyuncs.com"
+	forcedChatModel := "qwen3.5-flash"
+	if raw := strings.TrimSpace(os.Getenv("CITYLING_LLM_BASE_URL")); raw != "" && !strings.EqualFold(strings.TrimRight(raw, "/"), forcedChatBaseURL) {
+		log.Printf("llm chat base forced to %s, ignored CITYLING_LLM_BASE_URL=%s", forcedChatBaseURL, raw)
+	}
+	if raw := strings.TrimSpace(os.Getenv("CITYLING_LLM_MODEL")); raw != "" && !strings.EqualFold(raw, forcedChatModel) {
+		log.Printf("llm chat model forced to %s, ignored CITYLING_LLM_MODEL=%s", forcedChatModel, raw)
+	}
 
 	cfg := llm.Config{
-		BaseURL:             envOrDefault("CITYLING_LLM_BASE_URL", "https://dashscope.aliyuncs.com"),
+		BaseURL:             forcedChatBaseURL,
 		APIKey:              apiKey,
-		ChatModel:           firstNonEmpty(envOrDefault("CITYLING_LLM_MODEL", ""), envOrDefault("CITYLING_DASHSCOPE_MODEL", ""), "qwen3.5-flash"),
+		ChatModel:           forcedChatModel,
 		AppID:               envOrDefault("CITYLING_LLM_APP_ID", "4"),
 		PlatformID:          envOrDefault("CITYLING_LLM_PLATFORM_ID", "5"),
 		Timeout:             time.Duration(parseEnvInt("CITYLING_LLM_TIMEOUT_SECONDS", 20)) * time.Second,

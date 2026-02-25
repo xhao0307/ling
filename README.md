@@ -32,8 +32,8 @@ Optional environment variables:
 - `CITYLING_STORE` (`sqlite` or `json`, default `sqlite`)
 - `CITYLING_DATA_FILE` (default `data/cityling.db` for sqlite, `data/cityling.json` for json)
 - `CITYLING_DASHSCOPE_API_KEY` (用于文本/视觉大模型，enable LLM integration when set)
-- `CITYLING_LLM_BASE_URL` (default `https://dashscope.aliyuncs.com`)
-- `CITYLING_LLM_MODEL` (default `qwen3.5-flash`)
+- 聊天识别链路固定使用 `https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions`
+- 聊天识别模型固定使用 `qwen3.5-flash`
 - `CITYLING_LLM_APP_ID` (default `4`)
 - `CITYLING_LLM_PLATFORM_ID` (default `5`)
 - `CITYLING_LLM_TIMEOUT_SECONDS` (default `20`)

@@ -1473,3 +1473,25 @@
 - 下一步建议:
   - 重启后观察启动日志与 401 日志中的 `key_meta` 字段，优先检查 `has_bearer_prefix/has_quotes/has_whitespace`。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-25 18:39] F019 强制识别链路使用 DashScope compatible-mode + qwen3.5-flash
+- 会话目标: 防止旧配置误将主体识别请求发到 charaboard，固定识别链路目标与模型。
+- 选择功能: `F019`
+- 实际改动:
+  - `cmd/server/main.go`：
+    - 聊天/识别基础地址固定为 `https://dashscope.aliyuncs.com`；
+    - 聊天/识别模型固定为 `qwen3.5-flash`；
+    - 若环境变量仍设置 `CITYLING_LLM_BASE_URL/CITYLING_LLM_MODEL` 为其它值，启动时打印“已强制覆盖”日志。
+  - `README.md`：
+    - 更新说明为“聊天识别链路固定使用 DashScope compatible-mode + qwen3.5-flash”。
+  - `ling.ini.example`、`ecosystem.config.cjs`：
+    - 移除 `CITYLING_LLM_BASE_URL/CITYLING_LLM_MODEL` 配置注入，避免误导。
+- 验证结果:
+  - `go test ./...` 通过。
+- 风险与遗留:
+  - 若后续确需切换其它聊天模型，需要重新开放可配置项。
+- 下一步建议:
+  - 发布后观察启动日志是否出现 `llm chat base/model forced`，若出现说明线上还留有旧环境变量，可清理。
+- 对应提交: （本次提交）

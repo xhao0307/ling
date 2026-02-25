@@ -21,10 +21,6 @@ module.exports = {
         CITYLING_DASHSCOPE_API_KEY:
           process.env.CITYLING_DASHSCOPE_API_KEY || "",
         CITYLING_LLM_API_KEY: process.env.CITYLING_LLM_API_KEY || "",
-        CITYLING_LLM_BASE_URL:
-          process.env.CITYLING_LLM_BASE_URL || "https://dashscope.aliyuncs.com",
-        CITYLING_LLM_MODEL:
-          process.env.CITYLING_LLM_MODEL || process.env.CITYLING_DASHSCOPE_MODEL || "qwen3.5-flash",
         CITYLING_LLM_APP_ID: process.env.CITYLING_LLM_APP_ID || "4",
         CITYLING_LLM_PLATFORM_ID: process.env.CITYLING_LLM_PLATFORM_ID || "5",
         CITYLING_LLM_TIMEOUT_SECONDS:
