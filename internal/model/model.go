@@ -71,6 +71,7 @@ type PokedexBadge struct {
 	Progress    int      `json:"progress"`
 	Target      int      `json:"target"`
 	Examples    []string `json:"examples,omitempty"`
+	Collected   []string `json:"collected_examples,omitempty"`
 }
 
 type DailyReport struct {

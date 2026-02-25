@@ -23,6 +23,28 @@ const Color kFairySky = Color(0xFFA7D8FF);
 const Color kFairyMint = Color(0xFF9EE6D2);
 const Color kFairyButter = Color(0xFFFFE7A7);
 const Color kFairyInk = Color(0xFF5F4B74);
+const List<double> _kGrayScaleMatrix = <double>[
+  0.2126,
+  0.7152,
+  0.0722,
+  0,
+  0,
+  0.2126,
+  0.7152,
+  0.0722,
+  0,
+  0,
+  0.2126,
+  0.7152,
+  0.0722,
+  0,
+  0,
+  0,
+  0,
+  0,
+  1,
+  0,
+];
 
 void main() {
   runApp(const CityLingApp());
@@ -2697,7 +2719,10 @@ class _ProfilePageState extends State<ProfilePage> {
                   icon: Icons.card_giftcard,
                   label: '成长勋章',
                   onTap: () => _openPage(
-                    AchievementBadgesPage(totalCaptures: _totalCaptures),
+                    AchievementBadgesPage(
+                      api: widget.api,
+                      childId: widget.session.preferredChildId,
+                    ),
                   ),
                 ),
               ],
@@ -3154,69 +3179,190 @@ class LearningRecordPage extends StatelessWidget {
   }
 }
 
-class AchievementBadgesPage extends StatelessWidget {
+class AchievementBadgesPage extends StatefulWidget {
   const AchievementBadgesPage({
-    required this.totalCaptures,
+    required this.api,
+    required this.childId,
     super.key,
   });
 
-  final int totalCaptures;
+  final ApiClient api;
+  final String childId;
+
+  @override
+  State<AchievementBadgesPage> createState() => _AchievementBadgesPageState();
+}
+
+class _AchievementBadgesPageState extends State<AchievementBadgesPage> {
+  bool _loading = false;
+  String _error = '';
+  List<PokedexBadge> _badges = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final unlocked = totalCaptures >= 3;
-    final badges = <(String, IconData, bool)>[
-      ('晨光探索者', Icons.wb_sunny_outlined, unlocked),
-      ('知识小达人', Icons.lightbulb_outline, totalCaptures >= 5),
-      ('连续学习王', Icons.local_fire_department_outlined, false),
-      ('城市观察家', Icons.travel_explore, totalCaptures >= 1),
-    ];
     return Scaffold(
-      appBar: AppBar(title: const Text('成长勋章')),
-      body: GridView.builder(
-        padding: const EdgeInsets.all(16),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 1.05,
-        ),
-        itemCount: badges.length,
-        itemBuilder: (context, i) {
-          final badge = badges[i];
-          return Card(
-            color: badge.$3 ? const Color(0xFFFFF2C7) : const Color(0xFFF3F1F7),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  badge.$2,
-                  size: 42,
-                  color: badge.$3
-                      ? const Color(0xFFE3A622)
-                      : const Color(0xFFA294B3),
+      appBar: AppBar(title: const Text('成长勋章墙')),
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFFF4D7), Color(0xFFEDE6FF)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  badge.$1,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: badge.$3
-                        ? const Color(0xFF7C5D12)
-                        : const Color(0xFF7A6D88),
-                  ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Text(
+                '把勋章挂在展示墙上吧。灰色代表未获得，彩色代表已点亮，点击任意勋章查看要收集的物品与进度。',
+                style: TextStyle(
+                  color: Color(0xFF5F5673),
+                  fontWeight: FontWeight.w600,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  badge.$3 ? '已点亮' : '待解锁',
-                  style: const TextStyle(fontSize: 12),
-                ),
-              ],
+              ),
             ),
-          );
-        },
+            const SizedBox(height: 12),
+            if (_loading) const LinearProgressIndicator(),
+            if (_error.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(_error, style: const TextStyle(color: Colors.red)),
+              ),
+            const SizedBox(height: 10),
+            if (_badges.isEmpty && !_loading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(child: Text('暂无勋章数据')),
+              )
+            else
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 0.95,
+                ),
+                itemCount: _badges.length,
+                itemBuilder: (context, i) {
+                  final badge = _badges[i];
+                  return Card(
+                    color: badge.unlocked
+                        ? const Color(0xFFFFF2C7)
+                        : const Color(0xFFF3F1F7),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => _showBadgeDetailSheet(context, badge),
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Center(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: _buildBadgeImage(badge),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '${badge.categoryId}. ${badge.name}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                color: badge.unlocked
+                                    ? const Color(0xFF6F4D0B)
+                                    : const Color(0xFF7A6D88),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '进度 ${badge.progress}/${badge.target}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF6E6581),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
       ),
     );
+  }
+
+  Widget _buildBadgeImage(PokedexBadge badge) {
+    if (badge.imageUrl.trim().isEmpty) {
+      return _buildBadgeFallbackIcon(badge);
+    }
+    final image = Image.network(
+      badge.imageUrl.trim(),
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) =>
+          _buildBadgeFallbackIcon(badge),
+    );
+    if (badge.unlocked) {
+      return image;
+    }
+    return ColorFiltered(
+      colorFilter: const ColorFilter.matrix(_kGrayScaleMatrix),
+      child: Opacity(opacity: 0.72, child: image),
+    );
+  }
+
+  Widget _buildBadgeFallbackIcon(PokedexBadge badge) {
+    return Container(
+      color: badge.unlocked ? const Color(0xFFFFE8A8) : const Color(0xFFE0DCE7),
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.workspace_premium,
+        size: 42,
+        color:
+            badge.unlocked ? const Color(0xFFE3A622) : const Color(0xFFA294B3),
+      ),
+    );
+  }
+
+  Future<void> _refresh() async {
+    setState(() {
+      _loading = true;
+      _error = '';
+    });
+    try {
+      final badges = await widget.api.fetchPokedexBadges(widget.childId);
+      if (!mounted) {
+        return;
+      }
+      setState(() => _badges = badges);
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _error = '加载勋章失败：$e');
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
   }
 }
 
@@ -3468,51 +3614,46 @@ class _PokedexPageState extends State<PokedexPage> {
                   color: badge.unlocked
                       ? const Color(0xFFFFF2C7)
                       : const Color(0xFFF3F1F7),
-                  child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Center(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: image.isNotEmpty
-                                  ? Opacity(
-                                      opacity: badge.unlocked ? 1 : 0.42,
-                                      child: Image.network(
-                                        image,
-                                        fit: BoxFit.cover,
-                                        errorBuilder:
-                                            (context, error, stackTrace) =>
-                                                _buildBadgeFallbackIcon(badge),
-                                      ),
-                                    )
-                                  : _buildBadgeFallbackIcon(badge),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => _showBadgeDetailSheet(context, badge),
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Center(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: image.isNotEmpty
+                                    ? _buildBadgeImage(badge)
+                                    : _buildBadgeFallbackIcon(badge),
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          '${badge.categoryId}. ${badge.name}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            color: badge.unlocked
-                                ? const Color(0xFF6F4D0B)
-                                : const Color(0xFF7A6D88),
+                          const SizedBox(height: 6),
+                          Text(
+                            '${badge.categoryId}. ${badge.name}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: badge.unlocked
+                                  ? const Color(0xFF6F4D0B)
+                                  : const Color(0xFF7A6D88),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '进度 ${badge.progress}/${badge.target}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF6E6581),
+                          const SizedBox(height: 2),
+                          Text(
+                            '进度 ${badge.progress}/${badge.target}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF6E6581),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -3571,6 +3712,22 @@ class _PokedexPageState extends State<PokedexPage> {
         color:
             badge.unlocked ? const Color(0xFFE3A622) : const Color(0xFFA294B3),
       ),
+    );
+  }
+
+  Widget _buildBadgeImage(PokedexBadge badge) {
+    final image = Image.network(
+      badge.imageUrl.trim(),
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) =>
+          _buildBadgeFallbackIcon(badge),
+    );
+    if (badge.unlocked) {
+      return image;
+    }
+    return ColorFiltered(
+      colorFilter: const ColorFilter.matrix(_kGrayScaleMatrix),
+      child: Opacity(opacity: 0.72, child: image),
     );
   }
 }
@@ -4090,6 +4247,8 @@ class PokedexBadge {
     required this.unlocked,
     required this.progress,
     required this.target,
+    required this.examples,
+    required this.collectedExamples,
   });
 
   final String id;
@@ -4103,8 +4262,13 @@ class PokedexBadge {
   final bool unlocked;
   final int progress;
   final int target;
+  final List<String> examples;
+  final List<String> collectedExamples;
 
   factory PokedexBadge.fromJson(Map<String, dynamic> json) {
+    final examples = (json['examples'] as List<dynamic>? ?? const []);
+    final collected =
+        (json['collected_examples'] as List<dynamic>? ?? const []);
     return PokedexBadge(
       id: json['id'] as String? ?? '',
       categoryId: json['category_id'] as String? ?? '',
@@ -4117,6 +4281,8 @@ class PokedexBadge {
       unlocked: json['unlocked'] as bool? ?? false,
       progress: json['progress'] as int? ?? 0,
       target: json['target'] as int? ?? 1,
+      examples: examples.map((item) => item.toString()).toList(),
+      collectedExamples: collected.map((item) => item.toString()).toList(),
     );
   }
 }
@@ -4252,4 +4418,97 @@ String _fmtDate(DateTime dateTime) {
   final h = dateTime.hour.toString().padLeft(2, '0');
   final m = dateTime.minute.toString().padLeft(2, '0');
   return '$date $h:$m';
+}
+
+void _showBadgeDetailSheet(BuildContext context, PokedexBadge badge) {
+  final collectedSet = badge.collectedExamples.toSet();
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (context) {
+      final progress = badge.target <= 0
+          ? 0.0
+          : (badge.progress / badge.target).clamp(0, 1).toDouble();
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${badge.categoryId}. ${badge.name}',
+                style:
+                    const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                badge.unlocked ? '已点亮' : '未点亮',
+                style: TextStyle(
+                  color: badge.unlocked
+                      ? const Color(0xFFAF7A00)
+                      : const Color(0xFF6E6581),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                badge.description,
+                style: const TextStyle(color: Color(0xFF5F5673)),
+              ),
+              const SizedBox(height: 10),
+              Text('进度 ${badge.progress}/${badge.target}'),
+              const SizedBox(height: 6),
+              LinearProgressIndicator(
+                value: progress,
+                minHeight: 8,
+                borderRadius: BorderRadius.circular(999),
+                backgroundColor: const Color(0xFFE6E1EC),
+                color: badge.unlocked
+                    ? const Color(0xFFE4AE2F)
+                    : const Color(0xFF9D94AA),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                '收集规则：${badge.rule}',
+                style: const TextStyle(fontSize: 12, color: Color(0xFF6E6581)),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                '要收集的物品',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 8),
+              if (badge.examples.isEmpty)
+                const Text('暂无示例物品。')
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: badge.examples.map((item) {
+                    final matched = collectedSet.contains(item);
+                    return Chip(
+                      avatar: Icon(
+                        matched
+                            ? Icons.check_circle
+                            : Icons.radio_button_unchecked,
+                        size: 16,
+                        color: matched
+                            ? const Color(0xFF4E9A52)
+                            : const Color(0xFF8C829B),
+                      ),
+                      backgroundColor: matched
+                          ? const Color(0xFFE7F7DF)
+                          : const Color(0xFFF2EEF6),
+                      label: Text(item),
+                    );
+                  }).toList(),
+                ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }

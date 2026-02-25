@@ -130,7 +130,12 @@ func (s *Service) PokedexBadges(childID string) ([]model.PokedexBadge, error) {
 				matchedObjects[normalizeBadgeToken(objectType)] = struct{}{}
 			}
 		}
-		progress := len(matchedObjects)
+
+		collectedExamples := collectMatchedExamples(rule, captures)
+		progress := len(collectedExamples)
+		if progress == 0 && len(rule.Examples) == 0 {
+			progress = len(matchedObjects)
+		}
 		target := rule.Target
 		if target <= 0 {
 			target = 1
@@ -157,6 +162,7 @@ func (s *Service) PokedexBadges(childID string) ([]model.PokedexBadge, error) {
 			Progress:    progress,
 			Target:      target,
 			Examples:    append([]string(nil), rule.Examples...),
+			Collected:   collectedExamples,
 		})
 	}
 
@@ -164,6 +170,30 @@ func (s *Service) PokedexBadges(childID string) ([]model.PokedexBadge, error) {
 		return badges[i].CategoryID < badges[j].CategoryID
 	})
 	return badges, nil
+}
+
+func collectMatchedExamples(rule badgeRule, captures []model.Capture) []string {
+	if len(rule.Examples) == 0 || len(captures) == 0 {
+		return nil
+	}
+	collected := make([]string, 0, len(rule.Examples))
+	seen := make(map[string]struct{}, len(rule.Examples))
+	for _, example := range rule.Examples {
+		exampleToken := normalizeBadgeToken(example)
+		if exampleToken == "" {
+			continue
+		}
+		for _, capture := range captures {
+			if objectMatchesKeyword(capture.ObjectType, example) {
+				if _, exists := seen[example]; !exists {
+					seen[example] = struct{}{}
+					collected = append(collected, example)
+				}
+				break
+			}
+		}
+	}
+	return collected
 }
 
 func (s *Service) isObjectTrackedByBadge(objectType string) bool {
@@ -211,6 +241,26 @@ func matchBadgeRule(rule badgeRule, objectType string) bool {
 			if strings.Contains(objectToken, token) || strings.Contains(token, objectToken) {
 				return true
 			}
+		}
+	}
+	return false
+}
+
+func objectMatchesKeyword(objectType string, keyword string) bool {
+	objectTokens := uniqueNormalizedBadgeTokens(
+		objectType,
+		objectTypeToChinese(objectType),
+	)
+	if len(objectTokens) == 0 {
+		return false
+	}
+	token := normalizeBadgeToken(keyword)
+	if token == "" {
+		return false
+	}
+	for _, objectToken := range objectTokens {
+		if strings.Contains(objectToken, token) || strings.Contains(token, objectToken) {
+			return true
 		}
 	}
 	return false

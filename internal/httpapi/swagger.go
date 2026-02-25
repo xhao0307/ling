@@ -544,6 +544,10 @@ func openAPISpec(serverURL string) map[string]any {
 							"type":  "array",
 							"items": map[string]any{"type": "string"},
 						},
+						"collected_examples": map[string]any{
+							"type":  "array",
+							"items": map[string]any{"type": "string"},
+						},
 					},
 				},
 				"PokedexBadgeResponse": map[string]any{
