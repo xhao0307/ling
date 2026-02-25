@@ -1192,3 +1192,32 @@
 - 下一步建议:
   - 部署后先调用一次 `/api/v1/media/upload` 验证 COS 配置，再走前端整链路回归。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-25 16:16] F019 新增图生图接口响应速度测速脚本并实测
+- 会话目标: 提供可复用的 `v1/byteplus/images/generations` 响应速度测试脚本，并对指定猫图 URL 进行实测。
+- 选择功能: `F019`
+- 实际改动:
+  - 新增 `scripts/bench-image-i2i-latency.sh`：
+    - 支持传入图片 URL/data URL；
+    - 支持多次请求压测（默认 5 次，可通过 `CITYLING_IMAGE_BENCH_REQUESTS` 配置）；
+    - 输出每次 `HTTP code/total/ttfb/下载体积/url是否返回`；
+    - 统计 `success_rate/avg/min/p50/p95/max`；
+    - 自动读取项目 `.env` 中 API 配置；
+    - 明细落盘到 `test_screenshots/image_i2i_bench_*.csv`。
+  - 修复脚本兼容性：
+    - 移除 `awk asort` 依赖，改为 `sort -n` 方案，兼容 macOS 默认 awk。
+- 验证结果:
+  - 实测命令：
+    - `scripts/bench-image-i2i-latency.sh "https://media-1406176426.cos.ap-hongkong.myqcloud.com/1772003944_cat.png"`
+  - 结果摘要：
+    - `requests=5 success=5 success_rate=100.00%`
+    - `avg=21.052s min=16.137693s p50=22.895916s p95=24.581602s max=24.581602s`
+  - 结果文件：
+    - `test_screenshots/image_i2i_bench_20260225_161436.csv`
+- 风险与遗留:
+  - 当前接口单次耗时在 16~25 秒区间，前端交互需继续保留加载态与超时文案。
+- 下一步建议:
+  - 若要进一步压测稳定性，可把 `CITYLING_IMAGE_BENCH_REQUESTS` 提升到 10/20 并分时段对比。
+- 对应提交: （本次提交）
