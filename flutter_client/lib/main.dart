@@ -18,6 +18,12 @@ const List<(String, String)> kObjectOptions = [
   ('traffic_light', '红绿灯'),
 ];
 
+const Color kFairyRose = Color(0xFFF08CB7);
+const Color kFairySky = Color(0xFFA7D8FF);
+const Color kFairyMint = Color(0xFF9EE6D2);
+const Color kFairyButter = Color(0xFFFFE7A7);
+const Color kFairyInk = Color(0xFF5F4B74);
+
 void main() {
   runApp(const CityLingApp());
 }
@@ -31,49 +37,66 @@ class CityLingApp extends StatelessWidget {
       title: '城市灵',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF0C7E78),
+          seedColor: kFairyRose,
           brightness: Brightness.light,
         ),
-        scaffoldBackgroundColor: const Color(0xFFF2F6F4),
+        scaffoldBackgroundColor: const Color(0xFFFFF8FE),
         inputDecorationTheme: const InputDecorationTheme(
           filled: true,
-          fillColor: Colors.white,
+          fillColor: Color(0xFFFFFDFF),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(14)),
+            borderRadius: BorderRadius.all(Radius.circular(18)),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(14)),
-            borderSide: BorderSide(color: Color(0xFFCEE3E0)),
+            borderRadius: BorderRadius.all(Radius.circular(18)),
+            borderSide: BorderSide(color: Color(0xFFE7D6F2)),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(14)),
-            borderSide: BorderSide(color: Color(0xFF0C7E78), width: 1.4),
+            borderRadius: BorderRadius.all(Radius.circular(18)),
+            borderSide: BorderSide(color: Color(0xFFF08CB7), width: 1.6),
           ),
         ),
         cardTheme: const CardThemeData(
           surfaceTintColor: Colors.transparent,
+          color: Color(0xFFFFFDFF),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(24)),
+          ),
         ),
         navigationBarTheme: const NavigationBarThemeData(
-          indicatorColor: Color(0xFFD9EEE9),
+          backgroundColor: Color(0xFFFFF4FB),
+          indicatorColor: Color(0xFFFFD8EA),
           labelTextStyle: WidgetStatePropertyAll(
-            TextStyle(fontWeight: FontWeight.w700),
+            TextStyle(
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF5F4B74),
+            ),
           ),
         ),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
+            backgroundColor: kFairyRose,
+            foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(999),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
+            foregroundColor: kFairyInk,
+            side: const BorderSide(color: Color(0xFFE8C4DA)),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(999),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           ),
+        ),
+        snackBarTheme: const SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Color(0xFF6E5A86),
+          contentTextStyle: TextStyle(fontWeight: FontWeight.w600),
         ),
         useMaterial3: true,
       ),
@@ -370,26 +393,44 @@ class _AuthEntryPageState extends State<AuthEntryPage> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFE3F5F2), Color(0xFFF4F8FF), Color(0xFFFFF5E8)],
+            colors: [Color(0xFFFFEAF6), Color(0xFFEAF4FF), Color(0xFFFFF8D8)],
           ),
         ),
         child: Stack(
           children: [
             Positioned(
-              top: -80,
-              right: -40,
+              top: -76,
+              right: -30,
               child: _buildGlowCircle(
-                color: const Color(0xFF9CDDD4).withValues(alpha: 0.8),
-                size: 220,
+                color: const Color(0xFFFFA5CD).withValues(alpha: 0.78),
+                size: 200,
               ),
             ),
             Positioned(
-              bottom: -90,
-              left: -20,
+              top: 80,
+              left: -24,
               child: _buildGlowCircle(
-                color: const Color(0xFFFFCF9E).withValues(alpha: 0.75),
+                color: const Color(0xFFA8DBFF).withValues(alpha: 0.75),
+                size: 160,
+              ),
+            ),
+            Positioned(
+              bottom: -80,
+              left: -10,
+              child: _buildGlowCircle(
+                color: const Color(0xFFFFDC99).withValues(alpha: 0.7),
                 size: 210,
               ),
+            ),
+            Positioned(
+              top: 96,
+              right: 50,
+              child: _buildFairyStar(const Color(0xFFFFCE57), 22),
+            ),
+            Positioned(
+              bottom: 140,
+              left: 28,
+              child: _buildFairyStar(const Color(0xFFA7D8FF), 18),
             ),
             SafeArea(
               child: Center(
@@ -402,13 +443,17 @@ class _AuthEntryPageState extends State<AuthEntryPage> {
                     constraints: const BoxConstraints(maxWidth: 420),
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.94),
-                        borderRadius: BorderRadius.circular(28),
+                        color: Colors.white.withValues(alpha: 0.9),
+                        border: Border.all(
+                          color: const Color(0xFFFFD4EA),
+                          width: 1.2,
+                        ),
+                        borderRadius: BorderRadius.circular(34),
                         boxShadow: const [
                           BoxShadow(
-                            color: Color(0x22000000),
-                            blurRadius: 28,
-                            offset: Offset(0, 12),
+                            color: Color(0x22A35B87),
+                            blurRadius: 30,
+                            offset: Offset(0, 16),
                           ),
                         ],
                       ),
@@ -417,21 +462,27 @@ class _AuthEntryPageState extends State<AuthEntryPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const Text(
-                              '城市灵探索台',
-                              style: TextStyle(
-                                fontSize: 30,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFF0A5F5A),
-                                height: 1.1,
-                              ),
+                            const Row(
+                              children: [
+                                Icon(Icons.auto_awesome, color: kFairyRose),
+                                SizedBox(width: 6),
+                                Text(
+                                  '城市灵童话站',
+                                  style: TextStyle(
+                                    fontSize: 31,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFF7B4E9F),
+                                    height: 1.1,
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 8),
                             const Text(
-                              '先登录，再开始移动端识别与剧情探索。',
+                              '欢迎来到童话小镇，登录后开始奇妙识别冒险。',
                               style: TextStyle(
-                                color: Color(0xFF4C6360),
-                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF6E5A86),
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                             const SizedBox(height: 18),
@@ -563,9 +614,20 @@ class _AuthEntryPageState extends State<AuthEntryPage> {
         gradient: RadialGradient(
           colors: [
             color,
-            color.withValues(alpha: 0),
+            color.withValues(alpha: 0.02),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildFairyStar(Color color, double size) {
+    return Transform.rotate(
+      angle: 0.28,
+      child: Icon(
+        Icons.auto_awesome,
+        color: color,
+        size: size,
       ),
     );
   }
@@ -925,9 +987,9 @@ class _ExplorePageState extends State<ExplorePage> {
           begin: Alignment.topLeft,
           end: Alignment.bottomCenter,
           colors: [
-            const Color(0xFFE6F6F2),
-            const Color(0xFFF3FAF8),
-            const Color(0xFFFFF8EE).withValues(alpha: 0.95),
+            const Color(0xFFFFECF7),
+            const Color(0xFFEEF5FF),
+            const Color(0xFFFFF8DB).withValues(alpha: 0.96),
           ],
         ),
       ),
@@ -939,29 +1001,29 @@ class _ExplorePageState extends State<ExplorePage> {
               constraints: const BoxConstraints(maxWidth: 520),
               child: Card(
                 elevation: 0,
-                color: Colors.white.withValues(alpha: 0.92),
+                color: Colors.white.withValues(alpha: 0.9),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(30),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(22),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        '开始探索',
+                        '梦幻探索',
                         style: TextStyle(
                           fontSize: 30,
                           fontWeight: FontWeight.w900,
-                          color: Color(0xFF0A5F5A),
+                          color: Color(0xFF7A4C9D),
                         ),
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        isDebug ? '当前为调试测试模式，可快速验证流程。' : '先输入孩子信息，然后进入全屏识别模式。',
+                        isDebug ? '当前为调试测试模式，可快速验证流程。' : '先输入孩子信息，然后进入奇妙识别模式。',
                         style: const TextStyle(
-                          color: Color(0xFF4E6360),
+                          color: Color(0xFF665C7D),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -986,6 +1048,9 @@ class _ExplorePageState extends State<ExplorePage> {
                             onPressed: () => unawaited(widget.onLogout()),
                             icon: const Icon(Icons.logout, size: 16),
                             label: const Text('切换账号'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: const Color(0xFF7A4C9D),
+                            ),
                           ),
                         ],
                       ),
@@ -2788,192 +2853,202 @@ class _ProfilePageState extends State<ProfilePage> {
     final avatarText = session.displayName.isEmpty
         ? '?'
         : session.displayName.substring(0, 1).toUpperCase();
-    return RefreshIndicator(
-      onRefresh: _refreshSummary,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF0D7E78),
-                  Color(0xFF1B8F87),
-                  Color(0xFF6EBBAA)
-                ],
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFFFF0F9), Color(0xFFF2F6FF), Color(0xFFFFFCE8)],
+        ),
+      ),
+      child: RefreshIndicator(
+        onRefresh: _refreshSummary,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFFF39AC2),
+                    Color(0xFFB3DAFF),
+                    Color(0xFFAEE8D7),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(24),
               ),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.white.withValues(alpha: 0.92),
-                    foregroundColor: const Color(0xFF0D7E78),
-                    child: Text(
-                      avatarText,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundColor: Colors.white.withValues(alpha: 0.92),
+                      foregroundColor: const Color(0xFF8D5FAF),
+                      child: Text(
+                        avatarText,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          session.displayName,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 6,
-                          children: [
-                            _buildTag(
-                              session.isDebug ? '调试模式' : '正式账号',
-                              session.isDebug
-                                  ? const Color(0xFFFFD9A8)
-                                  : const Color(0xFFCBF4EA),
-                              const Color(0xFF124F4B),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            session.displayName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
                             ),
-                            _buildTag(
-                              '孩子ID: ${session.preferredChildId}',
-                              Colors.white.withValues(alpha: 0.24),
-                              Colors.white,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          '账号：${session.accountId}',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.88),
-                            fontWeight: FontWeight.w500,
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: [
+                              _buildTag(
+                                session.isDebug ? '调试模式' : '正式账号',
+                                session.isDebug
+                                    ? const Color(0xFFFFE3A8)
+                                    : const Color(0xFFFFD6EA),
+                                const Color(0xFF6A4E86),
+                              ),
+                              _buildTag(
+                                '孩子ID: ${session.preferredChildId}',
+                                Colors.white.withValues(alpha: 0.24),
+                                Colors.white,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            '账号：${session.accountId}',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.88),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 14),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-              child: Row(
-                children: [
-                  _buildStatItem('图鉴精灵', _totalSpirits.toString()),
-                  _buildStatItem('累计收集', _totalCaptures.toString()),
-                  _buildStatItem('今日收集', _todayCaptures.toString()),
-                  _buildStatItem('今日知识点', _todayKnowledgePoints.toString()),
-                ],
+            const SizedBox(height: 14),
+            Card(
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+                child: Row(
+                  children: [
+                    _buildStatItem('图鉴精灵', _totalSpirits.toString()),
+                    _buildStatItem('累计收集', _totalCaptures.toString()),
+                    _buildStatItem('今日收集', _todayCaptures.toString()),
+                    _buildStatItem('今日知识点', _todayKnowledgePoints.toString()),
+                  ],
+                ),
               ),
             ),
-          ),
-          if (_loading)
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: LinearProgressIndicator(),
+            if (_loading)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: LinearProgressIndicator(),
+              ),
+            if (_error.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(_error, style: const TextStyle(color: Colors.red)),
+              ),
+            const SizedBox(height: 14),
+            const Text(
+              '常用功能',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
             ),
-          if (_error.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(_error, style: const TextStyle(color: Colors.red)),
-            ),
-          const SizedBox(height: 14),
-          const Text(
-            '常用功能',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              _buildQuickAction(
-                icon: Icons.favorite_outline,
-                label: '我的收藏',
-                onTap: () => _showFeatureComingSoon('我的收藏'),
-              ),
-              _buildQuickAction(
-                icon: Icons.chat_bubble_outline,
-                label: '消息中心',
-                onTap: () => _showFeatureComingSoon('消息中心'),
-              ),
-              _buildQuickAction(
-                icon: Icons.auto_stories_outlined,
-                label: '学习记录',
-                onTap: () => _showFeatureComingSoon('学习记录'),
-              ),
-              _buildQuickAction(
-                icon: Icons.card_giftcard,
-                label: '成长勋章',
-                onTap: () => _showFeatureComingSoon('成长勋章'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Card(
-            child: Column(
+            const SizedBox(height: 10),
+            Row(
               children: [
-                _buildMenuTile(
-                  icon: Icons.person_outline,
-                  title: '个人资料',
-                  subtitle: '管理头像、昵称与展示信息',
-                  onTap: () => _showFeatureComingSoon('个人资料'),
+                _buildQuickAction(
+                  icon: Icons.favorite_outline,
+                  label: '我的收藏',
+                  onTap: () => _showFeatureComingSoon('我的收藏'),
                 ),
-                _buildMenuTile(
-                  icon: Icons.notifications_none,
-                  title: '消息通知',
-                  subtitle: '配置提醒与通知偏好',
-                  onTap: () => _showFeatureComingSoon('消息通知'),
+                _buildQuickAction(
+                  icon: Icons.chat_bubble_outline,
+                  label: '消息中心',
+                  onTap: () => _showFeatureComingSoon('消息中心'),
                 ),
-                _buildMenuTile(
-                  icon: Icons.verified_user_outlined,
-                  title: '隐私与安全',
-                  subtitle: '账号安全、权限与隐私设置',
-                  onTap: () => _showFeatureComingSoon('隐私与安全'),
+                _buildQuickAction(
+                  icon: Icons.auto_stories_outlined,
+                  label: '学习记录',
+                  onTap: () => _showFeatureComingSoon('学习记录'),
                 ),
-                _buildMenuTile(
-                  icon: Icons.settings_ethernet,
-                  title: '后端地址',
-                  subtitle: '联调环境切换入口',
-                  onTap: widget.onOpenApiSettings,
-                ),
-                _buildMenuTile(
-                  icon: Icons.help_outline,
-                  title: '帮助与反馈',
-                  subtitle: '常见问题与问题反馈',
-                  onTap: () => _showFeatureComingSoon('帮助与反馈'),
-                  showDivider: false,
+                _buildQuickAction(
+                  icon: Icons.card_giftcard,
+                  label: '成长勋章',
+                  onTap: () => _showFeatureComingSoon('成长勋章'),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 14),
-          FilledButton.icon(
-            onPressed: widget.onLogout,
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFB23A3A),
+            const SizedBox(height: 14),
+            Card(
+              child: Column(
+                children: [
+                  _buildMenuTile(
+                    icon: Icons.person_outline,
+                    title: '个人资料',
+                    subtitle: '管理头像、昵称与展示信息',
+                    onTap: () => _showFeatureComingSoon('个人资料'),
+                  ),
+                  _buildMenuTile(
+                    icon: Icons.notifications_none,
+                    title: '消息通知',
+                    subtitle: '配置提醒与通知偏好',
+                    onTap: () => _showFeatureComingSoon('消息通知'),
+                  ),
+                  _buildMenuTile(
+                    icon: Icons.verified_user_outlined,
+                    title: '隐私与安全',
+                    subtitle: '账号安全、权限与隐私设置',
+                    onTap: () => _showFeatureComingSoon('隐私与安全'),
+                  ),
+                  _buildMenuTile(
+                    icon: Icons.settings_ethernet,
+                    title: '后端地址',
+                    subtitle: '联调环境切换入口',
+                    onTap: widget.onOpenApiSettings,
+                  ),
+                  _buildMenuTile(
+                    icon: Icons.help_outline,
+                    title: '帮助与反馈',
+                    subtitle: '常见问题与问题反馈',
+                    onTap: () => _showFeatureComingSoon('帮助与反馈'),
+                    showDivider: false,
+                  ),
+                ],
+              ),
             ),
-            icon: const Icon(Icons.logout),
-            label: const Text('退出登录'),
-          ),
-        ],
+            const SizedBox(height: 14),
+            FilledButton.icon(
+              onPressed: widget.onLogout,
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFC7637F),
+              ),
+              icon: const Icon(Icons.logout),
+              label: const Text('退出登录'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -3005,7 +3080,7 @@ class _ProfilePageState extends State<ProfilePage> {
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w800,
-              color: Color(0xFF0C7E78),
+              color: Color(0xFF8D5FAF),
             ),
           ),
           const SizedBox(height: 4),
@@ -3037,12 +3112,12 @@ class _ProfilePageState extends State<ProfilePage> {
           child: Ink(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFFE9F5F3),
+              color: const Color(0xFFF8EAFE),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Column(
               children: [
-                Icon(icon, color: const Color(0xFF0C7E78)),
+                Icon(icon, color: const Color(0xFF8D5FAF)),
                 const SizedBox(height: 6),
                 Text(
                   label,
@@ -3050,7 +3125,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF355250),
+                    color: Color(0xFF6B5A7F),
                   ),
                 ),
               ],
@@ -3071,7 +3146,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return Column(
       children: [
         ListTile(
-          leading: Icon(icon, color: const Color(0xFF0C7E78)),
+          leading: Icon(icon, color: const Color(0xFF8D5FAF)),
           title: Text(
             title,
             style: const TextStyle(fontWeight: FontWeight.w700),
