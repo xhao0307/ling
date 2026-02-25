@@ -1430,3 +1430,27 @@
 - 下一步建议:
   - 部署时同时检查两组 key：`DASHSCOPE_API_KEY`（文本/视觉）与 `CITYLING_LLM_API_KEY`（TTS）。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-25 18:23] F019 DashScope key 统一为 CITYLING_DASHSCOPE_API_KEY
+- 会话目标: 按要求统一 DashScope 接口 key 命名，只使用 `CITYLING_DASHSCOPE_API_KEY`。
+- 选择功能: `F019`
+- 实际改动:
+  - `cmd/server/main.go`：
+    - LLM 初始化 key 改为仅读取 `CITYLING_DASHSCOPE_API_KEY`；
+    - 图生图 key 回退链改为 `CITYLING_DASHSCOPE_API_KEY -> CITYLING_IMAGE_API_KEY`。
+  - `ecosystem.config.cjs`：
+    - PM2 环境变量改为注入 `CITYLING_DASHSCOPE_API_KEY`。
+  - `README.md`、`ling.ini.example`：
+    - 统一文档与示例配置为 `CITYLING_DASHSCOPE_API_KEY`。
+  - `scripts/test-image-dashscope.sh`：
+    - 连通脚本只读取 `CITYLING_DASHSCOPE_API_KEY`，并更新缺失提示。
+- 验证结果:
+  - `go test ./...` 通过；
+  - `bash -n scripts/test-image-dashscope.sh` 通过。
+- 风险与遗留:
+  - 旧环境若仍只设置 `DASHSCOPE_API_KEY`，升级后将不再生效，需要改为 `CITYLING_DASHSCOPE_API_KEY`。
+- 下一步建议:
+  - 线上环境变量统一替换完成后执行一次 `POST /api/v1/media/upload` 与 `POST /api/v1/scan/image` 回归。
+- 对应提交: （本次提交）

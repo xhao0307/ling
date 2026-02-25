@@ -137,7 +137,7 @@ func firstNonEmpty(values ...string) string {
 }
 
 func initLLMClientFromEnv() *llm.Client {
-	apiKey := strings.TrimSpace(os.Getenv("DASHSCOPE_API_KEY"))
+	apiKey := strings.TrimSpace(os.Getenv("CITYLING_DASHSCOPE_API_KEY"))
 	if apiKey == "" {
 		return nil
 	}
@@ -151,7 +151,7 @@ func initLLMClientFromEnv() *llm.Client {
 		PlatformID:          envOrDefault("CITYLING_LLM_PLATFORM_ID", "5"),
 		Timeout:             time.Duration(parseEnvInt("CITYLING_LLM_TIMEOUT_SECONDS", 20)) * time.Second,
 		ImageBaseURL:        firstNonEmpty(envOrDefault("CITYLING_DASHSCOPE_API_URL", ""), envOrDefault("CITYLING_IMAGE_API_BASE_URL", "https://dashscope.aliyuncs.com")),
-		ImageAPIKey:         firstNonEmpty(os.Getenv("CITYLING_DASHSCOPE_API_KEY"), os.Getenv("DASHSCOPE_API_KEY"), os.Getenv("CITYLING_IMAGE_API_KEY")),
+		ImageAPIKey:         firstNonEmpty(os.Getenv("CITYLING_DASHSCOPE_API_KEY"), os.Getenv("CITYLING_IMAGE_API_KEY")),
 		ImageModel:          firstNonEmpty(envOrDefault("CITYLING_DASHSCOPE_MODEL", ""), envOrDefault("CITYLING_IMAGE_MODEL", "wan2.6-image")),
 		ImageResponseFormat: envOrDefault("CITYLING_IMAGE_RESPONSE_FORMAT", "url"),
 		VoiceBaseURL:        envOrDefault("CITYLING_TTS_API_BASE_URL", "https://api-voice.charaboard.com"),
