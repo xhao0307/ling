@@ -121,6 +121,60 @@ func TestGenerateCharacterImageWithB64JSON(t *testing.T) {
 	}
 }
 
+func TestGenerateCharacterImageRetriesWithoutImageOnInvalidURL(t *testing.T) {
+	var callCount int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/byteplus/images/generations" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		callCount++
+		var req struct {
+			Image string `json:"image"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request body: %v", err)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		if callCount == 1 {
+			if strings.TrimSpace(req.Image) == "" {
+				t.Fatalf("first call should carry image param")
+			}
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"error":"The parameter image specified in the request is not valid: invalid url specified.","code":400}`))
+			return
+		}
+
+		if strings.TrimSpace(req.Image) != "" {
+			t.Fatalf("retry should remove image param, got %q", req.Image)
+		}
+		_, _ = w.Write([]byte(`{"data":[{"url":"https://img.example.com/retry.png"}]}`))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(Config{
+		APIKey:       "test-key",
+		BaseURL:      server.URL,
+		ImageBaseURL: server.URL,
+		VoiceBaseURL: server.URL,
+	})
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+	client.httpClient = server.Client()
+
+	got, err := client.GenerateCharacterImage(context.Background(), "儿童绘本风猫咪", "base64-cat-source")
+	if err != nil {
+		t.Fatalf("GenerateCharacterImage() error = %v", err)
+	}
+	if got != "https://img.example.com/retry.png" {
+		t.Fatalf("unexpected image url: %s", got)
+	}
+	if callCount != 2 {
+		t.Fatalf("expected 2 calls (initial+retry), got %d", callCount)
+	}
+}
+
 func TestNormalizeSourceImageInput(t *testing.T) {
 	t.Parallel()
 

@@ -1056,3 +1056,25 @@
 - 下一步建议:
   - 用真实上传图跑一轮 Web 端 e2e，确认“背景图即对话背景 + 点击推进 + 输入回答”交互观感，再决定是否置 `F019=true`。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-25 14:20] F019 修复 companion 生图 image 参数被上游判定无效
+- 会话目标: 修复线上日志 `invalid url specified` 导致 `/api/v1/companion/scene` 返回 500 的问题。
+- 选择功能: `F019`
+- 实际改动:
+  - `internal/llm/companion.go`：
+    - 在 `GenerateCharacterImage` 中新增自动重试逻辑；
+    - 当首次请求携带 `image` 参数且返回“image 参数无效 URL”错误时，自动移除 `image` 参数并重试一次纯 prompt 生图，避免直接失败；
+    - 保持 `watermark=false`。
+  - `internal/llm/companion_test.go`：
+    - 新增 `TestGenerateCharacterImageRetriesWithoutImageOnInvalidURL`，覆盖“首请求 400 invalid url -> 重试成功”路径。
+- 验证结果:
+  - `go test ./internal/llm ./internal/service` 通过。
+- 风险与遗留:
+  - 当前上游接口对本地 `base64/data:image` 作为 `image` 入参兼容性不稳定，重试后可保证接口可用，但严格 i2i 语义会退化为纯 prompt 生图；
+  - `F019.passes` 仍保持 `false`（尚未完成完整 Web e2e 验证）。
+- 下一步建议:
+  - 部署后复测 `/api/v1/companion/scene`，确认不再出现 500；
+  - 若必须“强 i2i”，后续需接入可公网访问的临时图上传链路后再把 URL 传给上游生图。
+- 对应提交: （本次提交）

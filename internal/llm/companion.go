@@ -114,10 +114,16 @@ func (c *Client) GenerateCharacterImage(ctx context.Context, imagePrompt string,
 		"stream":          false,
 		"watermark":       false,
 	}
-	if trimmedSourceImage := strings.TrimSpace(sourceImage); trimmedSourceImage != "" {
+	trimmedSourceImage := strings.TrimSpace(sourceImage)
+	if trimmedSourceImage != "" {
 		body["image"] = normalizeSourceImageInput(trimmedSourceImage)
 	}
 	respBody, _, err := c.doMediaJSON(ctx, c.imageBaseURL+"/v1/byteplus/images/generations", c.imageAPIKey, body)
+	if err != nil && trimmedSourceImage != "" && isInvalidImageParamError(err) {
+		// 某些上游实现只接受公网 URL 作为 image 参数。遇到该错误时，自动降级为纯 prompt 生图重试一次。
+		delete(body, "image")
+		respBody, _, err = c.doMediaJSON(ctx, c.imageBaseURL+"/v1/byteplus/images/generations", c.imageAPIKey, body)
+	}
 	if err != nil {
 		return "", err
 	}
@@ -154,6 +160,16 @@ func (c *Client) GenerateCharacterImage(ctx context.Context, imagePrompt string,
 		}
 	}
 	return "", ErrInvalidResponse
+}
+
+func isInvalidImageParamError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "invalid url specified") ||
+		strings.Contains(msg, "parameter `image`") ||
+		strings.Contains(msg, "parameter \"image\"")
 }
 
 func normalizeSourceImageInput(sourceImage string) string {
