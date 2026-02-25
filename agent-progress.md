@@ -1004,3 +1004,25 @@
 - 下一步建议:
   - 在可联网环境执行同一命令，或将 `CITYLING_IMAGE_API_BASE_URL` 指向可访问域名后重试。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-25 14:05] F024 补充 Prompt 风格指导手册并固化生成基调
+- 会话目标: 将“童话儿童绘本风”写成统一指导手册，约束后续所有生图 Prompt 基调和禁用项。
+- 选择功能: `F024`
+- 实际改动:
+  - 新增 `design/illustration/prompt_style_guide.md`，定义固定风格定位、Prompt 四段模板、主角多样化规则、页面构图基线、硬禁用项与质检清单；
+  - 更新 `design/README.md`，补充该手册入口；
+  - 更新 `design/illustration/asset_generation_plan.json`：
+    - 新增 `prompt_policy_ref` 指向指导手册；
+    - 强化全局 `base_prompt/style_anchor/negative_prompt`，纳入“无文字无水印、避免同角色重复、避免同构图”等约束。
+- 验证结果:
+  - `./init.sh` 通过（`smoke 通过: http://127.0.0.1:39028`）；
+  - `jq . design/illustration/asset_generation_plan.json` 通过，JSON 结构有效；
+  - 文档内容检查通过，可直接作为后续生图计划编写标准。
+- 风险与遗留:
+  - 本次主要是规范固化，未完成整包插画“最终抽检通过”闭环，`F024.passes` 仍保持 `false`；
+  - 已有部分生成图仍可能带角标污染，需按新规范继续重采样筛选。
+- 下一步建议:
+  - 按 `prompt_style_guide.md` 重跑 `scripts/gen-fairy-asset-pack.sh` 并对 `v3` 结果做抽检，确认无文字污染后再将 `F024` 置为 `true`。
+- 对应提交: （本次提交）

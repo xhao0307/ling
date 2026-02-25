@@ -1,42 +1,69 @@
 {
-  "style_name": "fairy_children_storybook_v1",
-  "base_prompt": "儿童绘本手绘风，柔和粉蓝薄荷配色，蜡笔+水彩笔触，角色可爱，留白呼吸感，禁止写实照片感。",
+  "style_name": "fairy_children_storybook_v3_diverse_cast",
+  "prompt_policy_ref": "design/illustration/prompt_style_guide.md",
+  "base_prompt": "儿童绘本手绘风，统一柔和粉蓝薄荷配色，水彩+蜡笔混合笔触，轻留白，温暖童话光感，避免高饱和霓虹色。",
+  "style_anchor": "保持同一童话世界观与笔触，但每张图片主角身份必须不同，构图和动作必须不同，至少覆盖人类/动物/幻想生物三类主角。",
+  "negative_prompt": "no text, no letters, no words, no watermark, no logo, no signature, no subtitle, 禁止任何文字与水印，禁止出现同一个小女孩反复作为主角，禁止重复相同姿势，禁止重复同一构图，禁止写实照片感。",
   "assets": [
     {
-      "id": "login_scene_daydream",
+      "id": "login_boy_with_kite",
       "category": "login",
       "size": "2K",
-      "prompt": "登录页主插画：小女孩与小动物在花草中探索，画面温暖，适配移动端纵向裁切。"
+      "prompt": "主角是短发小男孩，手拿风筝在花海奔跑，身旁一只小鹿跟随。右侧留白适配登录按钮。"
     },
     {
-      "id": "empty_pokedex",
+      "id": "login_twin_sisters_treehouse",
+      "category": "login",
+      "size": "2K",
+      "prompt": "主角是双胞胎姐妹和一只浣熊，在树屋前展开宝藏地图。顶部留白，画面活泼。"
+    },
+    {
+      "id": "empty_pokedex_owl_librarian",
       "category": "empty_state",
       "size": "2K",
-      "prompt": "空状态插画：图鉴书页打开，星星微光，鼓励孩子去探索第一只精灵。"
+      "prompt": "主角是猫头鹰图书管理员，打开会发光的图鉴书，书页飞出精灵剪影，表现“等待收集”。"
     },
     {
-      "id": "empty_report",
+      "id": "empty_report_turtle_postman",
       "category": "empty_state",
       "size": "2K",
-      "prompt": "空状态插画：小角色拿放大镜寻找知识点，文字区域留白。"
+      "prompt": "主角是小乌龟邮差，整理今日学习信件和星星贴纸，左下角角色，右侧文字留白。"
     },
     {
-      "id": "onboarding_explore",
+      "id": "onboarding_sprite_camera",
       "category": "onboarding",
       "size": "2K",
-      "prompt": "新手引导插画：孩子举着小地图与精灵伙伴前进，动线清晰。"
+      "prompt": "主角是发光小精灵（非人类），举着迷你相机观察路牌，周围漂浮知识点图标。"
     },
     {
-      "id": "badge_morning_explorer",
+      "id": "onboarding_brother_sister_bridge",
+      "category": "onboarding",
+      "size": "2K",
+      "prompt": "主角是兄妹组合，牵手走过公园小桥，一只狐狸在前方引路，动线从左下到右上。"
+    },
+    {
+      "id": "badge_fox_guardian",
       "category": "achievement",
       "size": "1024x1024",
-      "prompt": "勋章图标：晨光探索者，太阳+小书+星星元素，圆形徽章，透明背景优先。"
+      "prompt": "勋章主角是狐狸守护者，元素有花环、小星星、钥匙，圆形徽章，系列化风格。"
     },
     {
-      "id": "scene_suburb_road",
+      "id": "badge_whale_dreamer",
+      "category": "achievement",
+      "size": "1024x1024",
+      "prompt": "勋章主角是梦游小鲸，元素有云朵、月亮、书本，和狐狸勋章保持同系列视觉。"
+    },
+    {
+      "id": "scene_city_corner_rainbow",
       "category": "background",
       "size": "2K",
-      "prompt": "场景背景：社区道路与树木，童话感，低干扰细节，适合叠加前景角色。"
+      "prompt": "场景是城市街角雨后彩虹，路面有反光和花坛，低干扰细节，适合叠加前景角色。"
+    },
+    {
+      "id": "scene_forest_path_twilight",
+      "category": "background",
+      "size": "2K",
+      "prompt": "场景是森林小径的黄昏时刻，萤火虫和蘑菇灯点缀，整体安静梦幻。"
     }
   ]
 }

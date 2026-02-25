@@ -6,6 +6,7 @@
 - `design/brand/`：品牌视觉资产规范、色板、字体策略
 - `design/tokens/`：design tokens
 - `design/illustration/`：插画/角色素材批量生成计划
+  - `design/illustration/prompt_style_guide.md`：全局 Prompt 基调与禁用项规范
 - `design/motion/`：动效资源规范（Lottie/Rive产出目标）
 - `design/pages/`：核心页面高保真落地规范
 - `design/copy/`：儿童化文案资源
