@@ -328,8 +328,8 @@ func TestGenerateCompanionSceneImageToImageIgnoresEnvironmentFields(t *testing.T
 	if strings.Contains(imagePrompt, "旧的天气环境提示") {
 		t.Fatalf("expected llm image prompt to be overridden in i2i mode, got %q", imagePrompt)
 	}
-	if imageInput != "data:image/jpeg;base64,Y2F0LWJhc2U2NA==" {
-		t.Fatalf("expected normalized data url image input, got %q", imageInput)
+	if imageInput != "Y2F0LWJhc2U2NA==" {
+		t.Fatalf("expected base64 image input, got %q", imageInput)
 	}
 }
 

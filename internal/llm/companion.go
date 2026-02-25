@@ -115,13 +115,28 @@ func (c *Client) GenerateCharacterImage(ctx context.Context, imagePrompt string,
 		"watermark":       false,
 	}
 	trimmedSourceImage := strings.TrimSpace(sourceImage)
-	if trimmedSourceImage != "" {
-		body["image"] = normalizeSourceImageInput(trimmedSourceImage)
-	}
-	respBody, _, err := c.doMediaJSON(ctx, c.imageBaseURL+"/v1/byteplus/images/generations", c.imageAPIKey, body)
-	if err != nil && trimmedSourceImage != "" && isInvalidImageParamError(err) {
-		// 某些上游实现只接受公网 URL 作为 image 参数。遇到该错误时，自动降级为纯 prompt 生图重试一次。
-		delete(body, "image")
+	candidates := normalizeSourceImageInputCandidates(trimmedSourceImage)
+	var (
+		respBody []byte
+		err      error
+	)
+	if len(candidates) > 0 {
+		for _, candidate := range candidates {
+			body["image"] = candidate
+			respBody, _, err = c.doMediaJSON(ctx, c.imageBaseURL+"/v1/byteplus/images/generations", c.imageAPIKey, body)
+			if err == nil {
+				break
+			}
+			if !isInvalidImageParamError(err) {
+				return "", err
+			}
+		}
+		if err != nil {
+			// 某些上游实现只接受公网 URL 作为 image 参数。候选格式均失败时，自动降级为纯 prompt 生图重试一次。
+			delete(body, "image")
+			respBody, _, err = c.doMediaJSON(ctx, c.imageBaseURL+"/v1/byteplus/images/generations", c.imageAPIKey, body)
+		}
+	} else {
 		respBody, _, err = c.doMediaJSON(ctx, c.imageBaseURL+"/v1/byteplus/images/generations", c.imageAPIKey, body)
 	}
 	if err != nil {
@@ -172,19 +187,37 @@ func isInvalidImageParamError(err error) bool {
 		strings.Contains(msg, "parameter \"image\"")
 }
 
-func normalizeSourceImageInput(sourceImage string) string {
+func normalizeSourceImageInputCandidates(sourceImage string) []string {
 	trimmed := strings.TrimSpace(sourceImage)
 	if trimmed == "" {
-		return ""
+		return nil
 	}
 	lower := strings.ToLower(trimmed)
 	if strings.HasPrefix(lower, "http://") ||
-		strings.HasPrefix(lower, "https://") ||
-		strings.HasPrefix(lower, "data:image/") {
-		return trimmed
+		strings.HasPrefix(lower, "https://") {
+		return []string{trimmed}
 	}
-	// image 参数在部分上游实现中按 URL 校验，这里统一转成 data URL 兼容 base64 入参。
-	return "data:image/jpeg;base64," + trimmed
+	if strings.HasPrefix(lower, "data:image/") {
+		payload := extractDataURLBase64Payload(trimmed)
+		if payload != "" {
+			return []string{payload, trimmed}
+		}
+		return []string{trimmed}
+	}
+	return []string{trimmed, "data:image/jpeg;base64," + trimmed}
+}
+
+func extractDataURLBase64Payload(dataURL string) string {
+	trimmed := strings.TrimSpace(dataURL)
+	comma := strings.Index(trimmed, ",")
+	if comma <= 0 || comma >= len(trimmed)-1 {
+		return ""
+	}
+	header := strings.ToLower(trimmed[:comma])
+	if !strings.HasPrefix(header, "data:image/") || !strings.Contains(header, ";base64") {
+		return ""
+	}
+	return strings.TrimSpace(trimmed[comma+1:])
 }
 
 func (c *Client) GenerateCompanionReply(ctx context.Context, req CompanionReplyRequest) (CompanionReply, error) {

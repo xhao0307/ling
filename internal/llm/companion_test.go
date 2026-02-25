@@ -77,7 +77,7 @@ func TestGenerateCharacterImage(t *testing.T) {
 	if got != "https://img.example.com/companion.png" {
 		t.Fatalf("unexpected image url: %s", got)
 	}
-	if receivedImage != "data:image/jpeg;base64,base64-cat-source" {
+	if receivedImage != "base64-cat-source" {
 		t.Fatalf("expected source image to be forwarded, got %q", receivedImage)
 	}
 }
@@ -136,9 +136,9 @@ func TestGenerateCharacterImageRetriesWithoutImageOnInvalidURL(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		if callCount == 1 {
+		if callCount <= 2 {
 			if strings.TrimSpace(req.Image) == "" {
-				t.Fatalf("first call should carry image param")
+				t.Fatalf("image candidate call should carry image param")
 			}
 			w.WriteHeader(http.StatusBadRequest)
 			_, _ = w.Write([]byte(`{"error":"The parameter image specified in the request is not valid: invalid url specified.","code":400}`))
@@ -170,43 +170,46 @@ func TestGenerateCharacterImageRetriesWithoutImageOnInvalidURL(t *testing.T) {
 	if got != "https://img.example.com/retry.png" {
 		t.Fatalf("unexpected image url: %s", got)
 	}
-	if callCount != 2 {
-		t.Fatalf("expected 2 calls (initial+retry), got %d", callCount)
+	if callCount != 3 {
+		t.Fatalf("expected 3 calls (2 candidates + prompt retry), got %d", callCount)
 	}
 }
 
-func TestNormalizeSourceImageInput(t *testing.T) {
+func TestNormalizeSourceImageInputCandidates(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name   string
-		input  string
-		output string
+		name    string
+		input   string
+		outputs []string
 	}{
 		{
 			name:   "raw base64",
 			input:  "YWJjMTIz",
-			output: "data:image/jpeg;base64,YWJjMTIz",
+			outputs: []string{
+				"YWJjMTIz",
+				"data:image/jpeg;base64,YWJjMTIz",
+			},
 		},
 		{
 			name:   "http url",
 			input:  "http://example.com/cat.png",
-			output: "http://example.com/cat.png",
+			outputs: []string{"http://example.com/cat.png"},
 		},
 		{
 			name:   "data url",
 			input:  "data:image/png;base64,abcd",
-			output: "data:image/png;base64,abcd",
+			outputs: []string{"abcd", "data:image/png;base64,abcd"},
 		},
 		{
 			name:   "trim spaces",
 			input:  "  dGVzdA==  ",
-			output: "data:image/jpeg;base64,dGVzdA==",
+			outputs: []string{"dGVzdA==", "data:image/jpeg;base64,dGVzdA=="},
 		},
 		{
 			name:   "empty",
 			input:  "   ",
-			output: "",
+			outputs: nil,
 		},
 	}
 
@@ -214,9 +217,14 @@ func TestNormalizeSourceImageInput(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := normalizeSourceImageInput(tt.input)
-			if got != tt.output {
-				t.Fatalf("normalizeSourceImageInput() got %q, want %q", got, tt.output)
+			got := normalizeSourceImageInputCandidates(tt.input)
+			if len(got) != len(tt.outputs) {
+				t.Fatalf("normalizeSourceImageInputCandidates() len=%d, want=%d (%v)", len(got), len(tt.outputs), got)
+			}
+			for i := range got {
+				if got[i] != tt.outputs[i] {
+					t.Fatalf("normalizeSourceImageInputCandidates()[%d] got %q, want %q", i, got[i], tt.outputs[i])
+				}
 			}
 		})
 	}

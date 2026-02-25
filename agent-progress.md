@@ -1078,3 +1078,28 @@
   - 部署后复测 `/api/v1/companion/scene`，确认不再出现 500；
   - 若必须“强 i2i”，后续需接入可公网访问的临时图上传链路后再把 URL 传给上游生图。
 - 对应提交: （本次提交）
+
+---
+
+### [2026-02-25 14:23] F019 对齐文档：兼容 base64 与 data-url 双形态 image 入参
+- 会话目标: 回应“文档写明支持 base64”，把 companion 生图请求改为更严格按文档兼容，减少 `invalid url specified`。
+- 选择功能: `F019`
+- 实际改动:
+  - `internal/llm/companion.go`：
+    - 新增 `normalizeSourceImageInputCandidates`，对 `image` 入参按候选序列尝试：
+      - 纯 base64
+      - data URL（`data:image/...;base64,...`）
+      - 失败后再降级纯 prompt 生图
+    - 新增 `extractDataURLBase64Payload`，从 data URL 提取 base64 payload；
+    - `GenerateCharacterImage` 按候选顺序请求，遇到 `invalid url specified` 自动切换下一候选。
+  - 测试更新：
+    - `internal/llm/companion_test.go` 更新 image 入参断言，并新增候选重试行为校验；
+    - `internal/service/service_test.go` 更新 i2i 场景对 image 入参期望（改为纯 base64）。
+- 验证结果:
+  - `go test ./internal/llm ./internal/service` 通过。
+- 风险与遗留:
+  - 若上游在当前租户下彻底禁用 base64/data-url image，仍会降级为纯 prompt 生图（可用但非强 i2i）；
+  - `F019.passes` 仍保持 `false`（待真实 Web e2e 验证）。
+- 下一步建议:
+  - 部署后抓一次 `/api/v1/companion/scene` 请求日志，确认优先候选已命中成功（不再出现 500）。
+- 对应提交: （本次提交）
