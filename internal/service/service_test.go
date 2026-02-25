@@ -327,6 +327,15 @@ func TestGenerateCompanionSceneImageToImageIgnoresEnvironmentFields(t *testing.T
 	if !strings.Contains(imagePrompt, "日常生活场景背景") {
 		t.Fatalf("expected i2i prompt to add daily scene background, got %q", imagePrompt)
 	}
+	if !strings.Contains(imagePrompt, "可视面积约占1/5") {
+		t.Fatalf("expected i2i prompt to constrain subject size, got %q", imagePrompt)
+	}
+	if !strings.Contains(imagePrompt, "位置居中或微偏中景") {
+		t.Fatalf("expected i2i prompt to constrain centered composition, got %q", imagePrompt)
+	}
+	if !strings.Contains(imagePrompt, "现实生活中的常见出现环境") {
+		t.Fatalf("expected i2i prompt to require realistic scene, got %q", imagePrompt)
+	}
 	if strings.Contains(imagePrompt, "旧的天气环境提示") {
 		t.Fatalf("expected llm image prompt to be overridden in i2i mode, got %q", imagePrompt)
 	}
