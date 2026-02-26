@@ -1751,3 +1751,21 @@
 - 下一步建议:
   - 可继续把“个人资料/消息中心/隐私与安全”等子页 `Card` 统一换为同一套 `_GlassPanel` 风格。
 - 对应提交: （本次提交）
+
+### [2026-02-26 14:14] F022 全量清理子页面灰黑卡片（图鉴/报告/个人资料及其子页）
+- 会话目标: 按最新反馈把“仍然发灰发黑”的所有页面卡片统一修掉，不只首页。
+- 选择功能: `F022`
+- 实际改动:
+  - `flutter_client/lib/main.dart`：
+    - 图鉴页 `PokedexPage`：输入区、勋章展开容器、勋章网格项、精灵列表项全部改为浅色玻璃卡；
+    - 报告页 `DailyReportPage`：输入筛选区与报告正文卡统一改为玻璃卡，知识点 Chip 也改为浅色；
+    - 个人资料与子页面：`ProfileDetailPage`、`MessageCenterPage`、`LearningRecordPage`、`AchievementBadgesPage`、`FavoritesPage`、`PrivacySecurityPage`、`HelpFeedbackPage` 中残留 `Card` 全部替换为统一玻璃卡样式；
+    - 新增全局复用函数 `_buildAppGlassCard`，统一玻璃卡参数（背景透明度/边框/阴影/圆角）。
+- 验证结果:
+  - `cd flutter_client && flutter analyze` 通过（No issues found）；
+  - `./init.sh` 通过（`smoke 通过: http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 本次为全量样式替换，尚未逐页补新截图基线（建议下一轮补一组图鉴/报告/个人资料子页截图）。
+- 下一步建议:
+  - 补 UI 回归截图并做一次“深浅模式/不同窗口宽度”对齐检查，防止玻璃层在窄屏出现重叠感。
+- 对应提交: （本次提交）

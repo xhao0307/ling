@@ -3560,7 +3560,7 @@ class _ProfileDetailPageState extends State<ProfileDetailPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Card(
+          _buildAppGlassCard(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -3658,7 +3658,7 @@ class MessageCenterPage extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         itemBuilder: (context, i) {
           final item = messages[i];
-          return Card(
+          return _buildAppGlassCard(
             child: ListTile(
               leading: CircleAvatar(
                 backgroundColor:
@@ -3705,7 +3705,7 @@ class LearningRecordPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Card(
+          _buildAppGlassCard(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -3723,15 +3723,15 @@ class LearningRecordPage extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
-          const Card(
-            child: ListTile(
+          _buildAppGlassCard(
+            child: const ListTile(
               leading: Icon(Icons.auto_stories),
               title: Text('认识了路边“井盖”'),
               subtitle: Text('获得新知识：井盖图案代表地下管网信息。'),
             ),
           ),
-          const Card(
-            child: ListTile(
+          _buildAppGlassCard(
+            child: const ListTile(
               leading: Icon(Icons.emoji_nature),
               title: Text('识别了小区里的树'),
               subtitle: Text('获得新知识：树叶形状可帮助辨别树种。'),
@@ -3840,10 +3840,21 @@ class _AchievementBadgesPageState extends State<AchievementBadgesPage> {
                 itemCount: _badges.length,
                 itemBuilder: (context, i) {
                   final badge = _badges[i];
-                  return Card(
-                    color: badge.unlocked
-                        ? const Color(0xFFFFF2C7)
-                        : const Color(0xFFF3F1F7),
+                  return _GlassPanel(
+                    radius: 14,
+                    blurSigma: 10,
+                    backgroundColor: badge.unlocked
+                        ? const Color(0xB8FFF2C7)
+                        : Colors.white.withValues(alpha: 0.76),
+                    borderColor: Colors.white.withValues(alpha: 0.58),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x112D2A38),
+                        blurRadius: 12,
+                        offset: Offset(0, 6),
+                      ),
+                    ],
+                    padding: const EdgeInsets.all(0),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(12),
                       onTap: () => _showBadgeDetailSheet(context, badge),
@@ -4036,7 +4047,7 @@ class FavoritesPage extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         itemCount: favorites.length,
         separatorBuilder: (_, __) => const SizedBox(height: 8),
-        itemBuilder: (context, i) => Card(
+        itemBuilder: (context, i) => _buildAppGlassCard(
           child: ListTile(
             leading: const Icon(Icons.favorite, color: Color(0xFFE46FA3)),
             title: Text(favorites[i]),
@@ -4067,7 +4078,7 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Card(
+          _buildAppGlassCard(
             child: Column(
               children: [
                 SwitchListTile(
@@ -4120,22 +4131,22 @@ class _HelpFeedbackPageState extends State<HelpFeedbackPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Card(
-            child: ListTile(
+          _buildAppGlassCard(
+            child: const ListTile(
               leading: Icon(Icons.help_outline),
               title: Text('为什么有时候识别会失败？'),
               subtitle: Text('可尝试在光线更稳定的环境下重新拍摄。'),
             ),
           ),
-          const Card(
-            child: ListTile(
+          _buildAppGlassCard(
+            child: const ListTile(
               leading: Icon(Icons.help_outline),
               title: Text('如何切换孩子账号？'),
               subtitle: Text('在“我的”页点击退出登录后重新登录即可。'),
             ),
           ),
           const SizedBox(height: 12),
-          Card(
+          _buildAppGlassCard(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -4215,169 +4226,219 @@ class _PokedexPageState extends State<PokedexPage> {
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: _refresh,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Text(
-            '图鉴',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _childIdCtrl,
-            decoration: const InputDecoration(
-              labelText: '孩子 ID',
-              border: OutlineInputBorder(),
+    return _AtmosphericBackground(
+      showStars: false,
+      child: RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const Text(
+              '图鉴',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
             ),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: _loading ? null : _refresh,
-            icon: const Icon(Icons.refresh),
-            label: const Text('刷新'),
-          ),
-          if (_loading) const LinearProgressIndicator(),
-          if (_error.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Text(_error, style: const TextStyle(color: Colors.red)),
-            ),
-          if (_badges.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Card(
-              margin: EdgeInsets.zero,
-              color: const Color(0xFFF8F4FB),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+            const SizedBox(height: 12),
+            _GlassPanel(
+              radius: 22,
+              blurSigma: 14,
+              backgroundColor: Colors.white.withValues(alpha: 0.67),
+              borderColor: Colors.white.withValues(alpha: 0.52),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x142D2A38),
+                  blurRadius: 18,
+                  offset: Offset(0, 8),
+                ),
+              ],
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _childIdCtrl,
+                    decoration: const InputDecoration(labelText: '孩子 ID'),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _loading ? null : _refresh,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('刷新'),
+                  ),
+                ],
               ),
-              child: Theme(
-                data: Theme.of(context)
-                    .copyWith(dividerColor: Colors.transparent),
-                child: ExpansionTile(
-                  initiallyExpanded: _badgeExpanded,
-                  onExpansionChanged: (expanded) {
-                    setState(() => _badgeExpanded = expanded);
-                  },
-                  tilePadding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 4,
+            ),
+            if (_loading) const LinearProgressIndicator(),
+            if (_error.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(_error, style: const TextStyle(color: Colors.red)),
+              ),
+            if (_badges.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              _GlassPanel(
+                radius: 18,
+                blurSigma: 14,
+                backgroundColor: Colors.white.withValues(alpha: 0.67),
+                borderColor: Colors.white.withValues(alpha: 0.52),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x142D2A38),
+                    blurRadius: 18,
+                    offset: Offset(0, 8),
                   ),
-                  title: const Text(
-                    '勋章 Tab',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                  ),
-                  subtitle: Text(
-                    _badgeExpanded ? '点击收起勋章墙' : '点击展开查看勋章墙',
-                    style: const TextStyle(
-                      color: Color(0xFF6E6581),
-                      fontWeight: FontWeight.w600,
+                ],
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                child: Theme(
+                  data: Theme.of(context)
+                      .copyWith(dividerColor: Colors.transparent),
+                  child: ExpansionTile(
+                    initiallyExpanded: _badgeExpanded,
+                    onExpansionChanged: (expanded) {
+                      setState(() => _badgeExpanded = expanded);
+                    },
+                    tilePadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 4,
                     ),
-                  ),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            '规则：每个勋章需完成该类全部示例收集后才会点亮。',
-                            style: TextStyle(
-                              color: Color(0xFF6E6581),
-                              fontSize: 12,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 10,
-                              mainAxisSpacing: 10,
-                              childAspectRatio: 0.95,
-                            ),
-                            itemCount: _badges.length,
-                            itemBuilder: (context, i) {
-                              final badge = _badges[i];
-                              final image = badge.imageUrl.trim();
-                              return Card(
-                                color: badge.unlocked
-                                    ? const Color(0xFFFFF2C7)
-                                    : const Color(0xFFF3F1F7),
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(12),
-                                  onTap: () =>
-                                      _showBadgeDetailSheet(context, badge),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(10),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Expanded(
-                                          child: Center(
-                                            child: ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                              child: image.isNotEmpty
-                                                  ? _buildBadgeImage(badge)
-                                                  : _buildBadgeFallbackIcon(
-                                                      badge),
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          '${badge.categoryId}. ${badge.name}',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w800,
-                                            color: badge.unlocked
-                                                ? const Color(0xFF6F4D0B)
-                                                : const Color(0xFF7A6D88),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          '进度 ${badge.progress}/${badge.target}',
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: Color(0xFF6E6581),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ],
+                    title: const Text(
+                      '勋章 Tab',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                    ),
+                    subtitle: Text(
+                      _badgeExpanded ? '点击收起勋章墙' : '点击展开查看勋章墙',
+                      style: const TextStyle(
+                        color: Color(0xFF6E6581),
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ],
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              '规则：每个勋章需完成该类全部示例收集后才会点亮。',
+                              style: TextStyle(
+                                color: Color(0xFF6E6581),
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 10,
+                                mainAxisSpacing: 10,
+                                childAspectRatio: 0.95,
+                              ),
+                              itemCount: _badges.length,
+                              itemBuilder: (context, i) {
+                                final badge = _badges[i];
+                                final image = badge.imageUrl.trim();
+                                return _GlassPanel(
+                                  radius: 14,
+                                  blurSigma: 10,
+                                  backgroundColor: badge.unlocked
+                                      ? const Color(0xB8FFF2C7)
+                                      : Colors.white.withValues(alpha: 0.76),
+                                  borderColor:
+                                      Colors.white.withValues(alpha: 0.58),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color(0x112D2A38),
+                                      blurRadius: 12,
+                                      offset: Offset(0, 6),
+                                    ),
+                                  ],
+                                  padding: const EdgeInsets.all(0),
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(12),
+                                    onTap: () =>
+                                        _showBadgeDetailSheet(context, badge),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(10),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(
+                                            child: Center(
+                                              child: ClipRRect(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                child: image.isNotEmpty
+                                                    ? _buildBadgeImage(badge)
+                                                    : _buildBadgeFallbackIcon(
+                                                        badge),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            '${badge.categoryId}. ${badge.name}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w800,
+                                              color: badge.unlocked
+                                                  ? const Color(0xFF6F4D0B)
+                                                  : const Color(0xFF7A6D88),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '进度 ${badge.progress}/${badge.target}',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Color(0xFF6E6581),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            if (_entries.isEmpty && !_loading) const Text('还没有收集到精灵。'),
+            ..._entries.map(
+              (entry) => _GlassPanel(
+                radius: 999,
+                blurSigma: 12,
+                backgroundColor: Colors.white.withValues(alpha: 0.7),
+                borderColor: Colors.white.withValues(alpha: 0.56),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x112D2A38),
+                    blurRadius: 12,
+                    offset: Offset(0, 6),
+                  ),
+                ],
+                padding: EdgeInsets.zero,
+                child: ListTile(
+                  title: Text(entry.spiritName),
+                  subtitle: Text(
+                    '${_labelToChinese(entry.objectType)} · 收集 ${entry.captures} 次',
+                  ),
+                  trailing: Text(_fmtDate(entry.lastSeenAt)),
                 ),
               ),
             ),
           ],
-          const SizedBox(height: 12),
-          if (_entries.isEmpty && !_loading) const Text('还没有收集到精灵。'),
-          ..._entries.map(
-            (entry) => Card(
-              child: ListTile(
-                title: Text(entry.spiritName),
-                subtitle: Text(
-                  '${_labelToChinese(entry.objectType)} · 收集 ${entry.captures} 次',
-                ),
-                trailing: Text(_fmtDate(entry.lastSeenAt)),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -4551,75 +4612,110 @@ class _DailyReportPageState extends State<DailyReportPage> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Text(
-          '每日报告',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _childIdCtrl,
-          decoration: const InputDecoration(
-            labelText: '孩子 ID',
-            border: OutlineInputBorder(),
+    return _AtmosphericBackground(
+      showStars: false,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text(
+            '每日报告',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
           ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(child: Text('日期：${_fmtDay(_date)}')),
-            OutlinedButton(
-              onPressed: _loading ? null : _pickDate,
-              child: const Text('选择日期'),
+          const SizedBox(height: 12),
+          _GlassPanel(
+            radius: 22,
+            blurSigma: 14,
+            backgroundColor: Colors.white.withValues(alpha: 0.67),
+            borderColor: Colors.white.withValues(alpha: 0.52),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x142D2A38),
+                blurRadius: 18,
+                offset: Offset(0, 8),
+              ),
+            ],
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+            child: Column(
+              children: [
+                TextField(
+                  controller: _childIdCtrl,
+                  decoration: const InputDecoration(labelText: '孩子 ID'),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(child: Text('日期：${_fmtDay(_date)}')),
+                    OutlinedButton(
+                      onPressed: _loading ? null : _pickDate,
+                      child: const Text('选择日期'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _loading ? null : _refresh,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('刷新报告'),
+                ),
+              ],
             ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        OutlinedButton.icon(
-          onPressed: _loading ? null : _refresh,
-          icon: const Icon(Icons.refresh),
-          label: const Text('刷新报告'),
-        ),
-        if (_loading) const LinearProgressIndicator(),
-        if (_error.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: Text(_error, style: const TextStyle(color: Colors.red)),
           ),
-        const SizedBox(height: 12),
-        if (_report != null) _buildReport(_report!),
-      ],
+          if (_loading) const LinearProgressIndicator(),
+          if (_error.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(_error, style: const TextStyle(color: Colors.red)),
+            ),
+          const SizedBox(height: 12),
+          if (_report != null) _buildReport(_report!),
+        ],
+      ),
     );
   }
 
   Widget _buildReport(DailyReport report) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              report.generatedText,
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 8),
-            Text('总收集数：${report.totalCaptured}'),
-            const SizedBox(height: 8),
-            const Text('知识点：'),
-            const SizedBox(height: 6),
-            if (report.knowledgePoints.isEmpty) const Text('今天还没有知识点。'),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: report.knowledgePoints
-                  .map((point) => Chip(label: Text(point)))
-                  .toList(),
-            ),
-          ],
+    return _GlassPanel(
+      radius: 24,
+      blurSigma: 14,
+      backgroundColor: Colors.white.withValues(alpha: 0.7),
+      borderColor: Colors.white.withValues(alpha: 0.56),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x142D2A38),
+          blurRadius: 18,
+          offset: Offset(0, 8),
         ),
+      ],
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            report.generatedText,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          Text('总收集数：${report.totalCaptured}'),
+          const SizedBox(height: 8),
+          const Text('知识点：'),
+          const SizedBox(height: 6),
+          if (report.knowledgePoints.isEmpty) const Text('今天还没有知识点。'),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: report.knowledgePoints
+                .map(
+                  (point) => Chip(
+                    backgroundColor: Colors.white.withValues(alpha: 0.75),
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.62),
+                    ),
+                    label: Text(point),
+                  ),
+                )
+                .toList(),
+          ),
+        ],
       ),
     );
   }
@@ -5235,6 +5331,29 @@ String _fmtDate(DateTime dateTime) {
   final h = dateTime.hour.toString().padLeft(2, '0');
   final m = dateTime.minute.toString().padLeft(2, '0');
   return '$date $h:$m';
+}
+
+Widget _buildAppGlassCard({
+  required Widget child,
+  EdgeInsetsGeometry padding = EdgeInsets.zero,
+  double radius = 20,
+  Color? backgroundColor,
+}) {
+  return _GlassPanel(
+    radius: radius,
+    blurSigma: 14,
+    backgroundColor: backgroundColor ?? Colors.white.withValues(alpha: 0.7),
+    borderColor: Colors.white.withValues(alpha: 0.56),
+    boxShadow: const [
+      BoxShadow(
+        color: Color(0x142D2A38),
+        blurRadius: 18,
+        offset: Offset(0, 8),
+      ),
+    ],
+    padding: padding,
+    child: child,
+  );
 }
 
 void _showBadgeDetailSheet(BuildContext context, PokedexBadge badge) {
