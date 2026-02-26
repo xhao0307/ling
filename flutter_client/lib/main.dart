@@ -2354,7 +2354,7 @@ class _ExplorePageState extends State<ExplorePage> {
                               _quizSolved
                                   ? '你已经完成本轮问答，可以退出剧情继续探索。'
                                   : (canTapDialogToAdvance
-                                      ? '点击聊天框或右侧按钮推进剧情，左侧可回看。'
+                                      ? '点击聊天框或右侧竖排按钮推进剧情，左侧可回看。'
                                       : (canRetreatStory
                                           ? '已到当前末句，可用左箭头回看。'
                                           : '等待剧情加载或角色回应。')),
@@ -2367,53 +2367,63 @@ class _ExplorePageState extends State<ExplorePage> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        _buildStoryActionButton(
-                          icon: Icons.chevron_left,
-                          label: '上一句',
-                          onTap: canRetreatStory
-                              ? () {
-                                  unawaited(_retreatStoryLine());
-                                }
-                              : null,
-                        ),
-                        _buildStoryActionButton(
-                          icon: Icons.volume_up,
-                          label: '播放',
-                          onTap: _busy
-                              ? null
-                              : () {
-                                  unawaited(_playCurrentStoryVoice());
-                                },
-                        ),
-                        _buildStoryActionButton(
-                          icon: Icons.chevron_right,
-                          label: '下一句',
-                          primary: true,
-                          onTap: canTapDialogToAdvance
-                              ? () {
-                                  unawaited(_advanceStoryLine());
-                                }
-                              : null,
-                        ),
-                        if (_busy) ...[
-                          const SizedBox(width: 10),
-                          const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ],
-                      ],
-                    ),
                   ],
                 ),
               ),
+            ),
+          ),
+        ),
+        Positioned(
+          right: 14,
+          bottom: viewInsetsBottom + safeBottom + 20,
+          child: _GlassPanel(
+            radius: 18,
+            backgroundColor: const Color(0x3A303649),
+            borderColor: const Color(0x59FFFFFF),
+            blurSigma: 14,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildStoryActionButton(
+                  icon: Icons.chevron_left,
+                  label: '上一句',
+                  onTap: canRetreatStory
+                      ? () {
+                          unawaited(_retreatStoryLine());
+                        }
+                      : null,
+                ),
+                const SizedBox(height: 8),
+                _buildStoryActionButton(
+                  icon: Icons.volume_up,
+                  label: '播放',
+                  onTap: _busy
+                      ? null
+                      : () {
+                          unawaited(_playCurrentStoryVoice());
+                        },
+                ),
+                const SizedBox(height: 8),
+                _buildStoryActionButton(
+                  icon: Icons.chevron_right,
+                  label: '下一句',
+                  primary: true,
+                  onTap: canTapDialogToAdvance
+                      ? () {
+                          unawaited(_advanceStoryLine());
+                        }
+                      : null,
+                ),
+                if (_busy) ...[
+                  const SizedBox(height: 8),
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ],
+              ],
             ),
           ),
         ),
