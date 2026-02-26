@@ -225,6 +225,33 @@ func openAPISpec(serverURL string) map[string]any {
 					},
 				},
 			},
+			"/api/v1/companion/voice": map[string]any{
+				"post": map[string]any{
+					"summary":     "为单句剧情文本生成语音",
+					"operationId": "companionVoice",
+					"requestBody": map[string]any{
+						"required": true,
+						"content": map[string]any{
+							"application/json": map[string]any{
+								"schema": map[string]any{"$ref": "#/components/schemas/CompanionVoiceRequest"},
+							},
+						},
+					},
+					"responses": map[string]any{
+						"200": map[string]any{
+							"description": "成功",
+							"content": map[string]any{
+								"application/json": map[string]any{
+									"schema": map[string]any{"$ref": "#/components/schemas/CompanionVoiceResponse"},
+								},
+							},
+						},
+						"400": map[string]any{"description": "请求错误"},
+						"503": map[string]any{"description": "未配置TTS能力"},
+						"500": map[string]any{"description": "服务错误"},
+					},
+				},
+			},
 			"/api/v1/answer": map[string]any{
 				"post": map[string]any{
 					"summary":     "提交答案",
@@ -421,6 +448,16 @@ func openAPISpec(serverURL string) map[string]any {
 						"child_message": map[string]any{"type": "string"},
 					},
 				},
+				"CompanionVoiceRequest": map[string]any{
+					"type":     "object",
+					"required": []string{"child_age", "object_type", "text"},
+					"properties": map[string]any{
+						"child_id":    map[string]any{"type": "string"},
+						"child_age":   map[string]any{"type": "integer"},
+						"object_type": map[string]any{"type": "string"},
+						"text":        map[string]any{"type": "string"},
+					},
+				},
 				"Spirit": map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -477,6 +514,13 @@ func openAPISpec(serverURL string) map[string]any {
 					"type": "object",
 					"properties": map[string]any{
 						"reply_text":         map[string]any{"type": "string"},
+						"voice_audio_base64": map[string]any{"type": "string"},
+						"voice_mime_type":    map[string]any{"type": "string"},
+					},
+				},
+				"CompanionVoiceResponse": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
 						"voice_audio_base64": map[string]any{"type": "string"},
 						"voice_mime_type":    map[string]any{"type": "string"},
 					},

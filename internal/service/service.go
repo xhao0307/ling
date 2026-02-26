@@ -28,6 +28,7 @@ var (
 	ErrInvalidChildAge   = errors.New("child_age 必须在 3 到 15 之间")
 	ErrObjectTypeMissing = errors.New("请提供 object_type")
 	ErrChildMessageEmpty = errors.New("请提供 child_message")
+	ErrStoryTextMissing  = errors.New("请提供 text")
 	ErrMediaUnavailable  = errors.New("角色形象或语音能力暂不可用")
 	ErrImageUpload       = errors.New("图片上传失败")
 )
@@ -115,6 +116,18 @@ type CompanionChatRequest struct {
 
 type CompanionChatResponse struct {
 	ReplyText        string `json:"reply_text"`
+	VoiceAudioBase64 string `json:"voice_audio_base64"`
+	VoiceMimeType    string `json:"voice_mime_type"`
+}
+
+type CompanionVoiceRequest struct {
+	ChildID    string `json:"child_id"`
+	ChildAge   int    `json:"child_age"`
+	ObjectType string `json:"object_type"`
+	Text       string `json:"text"`
+}
+
+type CompanionVoiceResponse struct {
 	VoiceAudioBase64 string `json:"voice_audio_base64"`
 	VoiceMimeType    string `json:"voice_mime_type"`
 }
@@ -357,10 +370,10 @@ func (s *Service) GenerateCompanionScene(req CompanionSceneRequest) (CompanionSc
 		)
 	}
 
-	imagePrompt := scene.ImagePrompt
+	imagePrompt := ensureInteractiveGazePrompt(scene.ImagePrompt)
 	if sourceImageURL != "" || sourceImageBase64 != "" {
 		imagePrompt = fmt.Sprintf(
-			"基于参考图进行图生图，将图中主体“%s”绘本化，保留主体外形与配色特征；如果原图只有主体或背景单调，请自动补充自然的日常生活场景背景（如公园、小区、街角、校园一角），形成前中后景层次；主体在画面中的可视面积约占1/5，位置居中或微偏中景，不能过大也不能过小；场景必须符合该主体在现实生活中的常见出现环境；整体保持童话儿童绘本风，柔和光线，画面适合作为剧情对话背景；禁止文字、水印、logo。",
+			"基于参考图进行图生图，将图中主体“%s”绘本化，保留主体外形与配色特征；如果原图只有主体或背景单调，请自动补充自然的日常生活场景背景（如公园、小区、街角、校园一角），形成前中后景层次；主体在画面中的可视面积约占1/5，位置居中或微偏中景，不能过大也不能过小；主体视线看向镜头（看向屏幕中的小朋友），增强对话互动感；场景必须符合该主体在现实生活中的常见出现环境；整体保持童话儿童绘本风，柔和光线，画面适合作为剧情对话背景；禁止文字、水印、logo。",
 			strings.TrimSpace(objectTypeToChinese(objectType)),
 		)
 	}
@@ -371,24 +384,44 @@ func (s *Service) GenerateCompanionScene(req CompanionSceneRequest) (CompanionSc
 		sourceImageRef = sourceImageBase64
 	}
 
-	imageURL, err := s.llm.GenerateCharacterImage(
-		context.Background(),
-		imagePrompt,
-		sourceImageRef,
+	var (
+		imageURL   string
+		imageErr   error
+		audioBytes []byte
+		mimeType   string
+		voiceErr   error
 	)
-	if err != nil {
-		if errors.Is(err, llm.ErrImageCapabilityUnavailable) {
-			return CompanionSceneResponse{}, ErrMediaUnavailable
-		}
-		return CompanionSceneResponse{}, err
-	}
+	var mediaWG sync.WaitGroup
+	mediaWG.Add(2)
+	go func() {
+		defer mediaWG.Done()
+		imageURL, imageErr = s.llm.GenerateCharacterImage(
+			context.Background(),
+			imagePrompt,
+			sourceImageRef,
+		)
+	}()
+	go func() {
+		defer mediaWG.Done()
+		audioBytes, mimeType, voiceErr = s.llm.SynthesizeSpeech(
+			context.Background(),
+			scene.DialogText,
+			objectType,
+		)
+	}()
+	mediaWG.Wait()
 
-	audioBytes, mimeType, err := s.llm.SynthesizeSpeech(context.Background(), scene.DialogText, objectType)
-	if err != nil {
-		if errors.Is(err, llm.ErrVoiceCapabilityUnavailable) {
+	if imageErr != nil {
+		if errors.Is(imageErr, llm.ErrImageCapabilityUnavailable) {
 			return CompanionSceneResponse{}, ErrMediaUnavailable
 		}
-		return CompanionSceneResponse{}, err
+		return CompanionSceneResponse{}, imageErr
+	}
+	if voiceErr != nil {
+		if errors.Is(voiceErr, llm.ErrVoiceCapabilityUnavailable) {
+			return CompanionSceneResponse{}, ErrMediaUnavailable
+		}
+		return CompanionSceneResponse{}, voiceErr
 	}
 
 	imageBytes, imageMIME, err := s.llm.DownloadImage(context.Background(), imageURL)
@@ -499,6 +532,35 @@ func (s *Service) ChatCompanion(req CompanionChatRequest) (CompanionChatResponse
 
 	return CompanionChatResponse{
 		ReplyText:        reply.ReplyText,
+		VoiceAudioBase64: base64.StdEncoding.EncodeToString(audioBytes),
+		VoiceMimeType:    mimeType,
+	}, nil
+}
+
+func (s *Service) SynthesizeCompanionVoice(req CompanionVoiceRequest) (CompanionVoiceResponse, error) {
+	if req.ChildAge < 3 || req.ChildAge > 15 {
+		return CompanionVoiceResponse{}, ErrInvalidChildAge
+	}
+	objectType := strings.TrimSpace(req.ObjectType)
+	if objectType == "" {
+		return CompanionVoiceResponse{}, ErrObjectTypeMissing
+	}
+	text := strings.TrimSpace(req.Text)
+	if text == "" {
+		return CompanionVoiceResponse{}, ErrStoryTextMissing
+	}
+	if s.llm == nil {
+		return CompanionVoiceResponse{}, ErrLLMUnavailable
+	}
+
+	audioBytes, mimeType, err := s.llm.SynthesizeSpeech(context.Background(), text, objectType)
+	if err != nil {
+		if errors.Is(err, llm.ErrVoiceCapabilityUnavailable) {
+			return CompanionVoiceResponse{}, ErrMediaUnavailable
+		}
+		return CompanionVoiceResponse{}, err
+	}
+	return CompanionVoiceResponse{
 		VoiceAudioBase64: base64.StdEncoding.EncodeToString(audioBytes),
 		VoiceMimeType:    mimeType,
 	}, nil
@@ -848,7 +910,7 @@ func (s *Service) defaultCompanionScene(objectType string, age int, weather stri
 
 	dialogText := fmt.Sprintf("你好呀，我是%s！今天我们一起认识%s吧。", characterName, objectName)
 	imagePrompt := fmt.Sprintf(
-		"儿童向二次元卡通插画，拟人化%s角色，性格%s，场景为%s的%s，物体特征%s，柔和光线，主角清晰，适合儿童",
+		"儿童向二次元卡通插画，拟人化%s角色，性格%s，场景为%s的%s，物体特征%s，柔和光线，主角清晰，角色视线看向镜头，适合儿童",
 		objectName,
 		personality,
 		weather,
@@ -862,6 +924,22 @@ func (s *Service) defaultCompanionScene(objectType string, age int, weather stri
 		DialogText:           dialogText,
 		ImagePrompt:          imagePrompt,
 	}
+}
+
+func ensureInteractiveGazePrompt(prompt string) string {
+	trimmed := strings.TrimSpace(prompt)
+	if trimmed == "" {
+		return "儿童绘本风插画，角色视线看向镜头（看向屏幕中的小朋友），有互动感。"
+	}
+	lower := strings.ToLower(trimmed)
+	if strings.Contains(trimmed, "看向镜头") ||
+		strings.Contains(trimmed, "看向屏幕") ||
+		strings.Contains(trimmed, "眼神交流") ||
+		strings.Contains(lower, "eye contact") ||
+		strings.Contains(lower, "gaze") {
+		return trimmed
+	}
+	return trimmed + "，角色视线看向镜头（看向屏幕中的小朋友），营造互动感。"
 }
 
 func (s *Service) defaultLearningContent(objectType string) (string, model.QuizItem) {

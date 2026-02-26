@@ -1583,3 +1583,33 @@
 - 下一步建议:
   - 可继续补一条“题目输入阶段（键盘弹起）按钮可见性”的移动端真机截图基线。
 - 对应提交: （本次提交）
+
+### [2026-02-26 11:47] F019 剧情语音补全与并发生成优化（含看向屏幕构图约束）
+- 会话目标: 解决“只有首句有语音”，并让剧情首屏尽早并发完成图像与语音；同时强化角色看向屏幕的互动感。
+- 选择功能: `F019`
+- 实际改动:
+  - 后端 `internal/service/service.go`：
+    - `GenerateCompanionScene` 改为并发执行“角色图生成 + 首句语音生成”；
+    - 新增 `SynthesizeCompanionVoice` 服务方法（单句语音生成）；
+    - i2i prompt 增加“主体视线看向镜头（看向屏幕中的小朋友）”；
+    - 新增 `ensureInteractiveGazePrompt`，即使模型漏写也会把“看向镜头”约束拼进 prompt。
+  - 后端 API：
+    - 新增 `POST /api/v1/companion/voice`（`internal/httpapi/router.go`、`internal/httpapi/handlers.go`）；
+    - `swagger` 增加 CompanionVoice request/response 定义与路径。
+  - 前端 `flutter_client/lib/main.dart`：
+    - 新增 `ApiClient.synthesizeCompanionVoice`；
+    - 剧情启动后对后续台词并发预取语音；
+    - 切换到无语音台词时自动补生成并缓存；
+    - 聊天新回合追加台词后，也会对未带语音的句子并发补生成。
+- 验证结果:
+  - `go test ./...` 通过；
+  - `cd flutter_client && flutter analyze` 通过；
+  - 浏览器 E2E（本地后端）已验证：
+    - 将前端后端地址切到 `http://127.0.0.1:3026`；
+    - 上传图片进入剧情后，后续句可触发 `/api/v1/companion/voice` 并返回 200；
+    - 后端日志确认 `POST /api/v1/companion/voice -> 200` 连续成功。
+- 风险与遗留:
+  - 若前端仍连旧远端（例如 `121.43.118.53:3026`）且未部署本次后端，`/api/v1/companion/voice` 会 404，后续句仍可能无语音。
+- 下一步建议:
+  - 先部署本次后端改动，再刷新前端缓存；部署后可用网络面板确认 `companion/voice` 返回 200。
+- 对应提交: （本次提交）

@@ -151,3 +151,52 @@ func TestCompanionChatMissingMessageReturns400(t *testing.T) {
 		t.Fatalf("expected status %d, got %d, body=%s", http.StatusBadRequest, rec.Code, rec.Body.String())
 	}
 }
+
+func TestCompanionVoiceUnavailableReturns503(t *testing.T) {
+	st, err := store.NewJSONStore(filepath.Join(t.TempDir(), "state.json"))
+	if err != nil {
+		t.Fatalf("NewJSONStore() error = %v", err)
+	}
+	svc := service.New(st, knowledge.BaseKnowledge)
+	h := NewHandler(svc)
+
+	body := map[string]any{
+		"child_id":    "kid_httpapi_6",
+		"child_age":   8,
+		"object_type": "路灯",
+		"text":        "你好",
+	}
+	payload, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/companion/voice", bytes.NewReader(payload))
+	rec := httptest.NewRecorder()
+	h.companionVoice(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected status %d, got %d, body=%s", http.StatusServiceUnavailable, rec.Code, rec.Body.String())
+	}
+}
+
+func TestCompanionVoiceMissingTextReturns400(t *testing.T) {
+	st, err := store.NewJSONStore(filepath.Join(t.TempDir(), "state.json"))
+	if err != nil {
+		t.Fatalf("NewJSONStore() error = %v", err)
+	}
+	svc := service.New(st, knowledge.BaseKnowledge)
+	h := NewHandler(svc)
+
+	body := map[string]any{
+		"child_id":    "kid_httpapi_7",
+		"child_age":   8,
+		"object_type": "路灯",
+	}
+	payload, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/companion/voice", bytes.NewReader(payload))
+	rec := httptest.NewRecorder()
+	h.companionVoice(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d, body=%s", http.StatusBadRequest, rec.Code, rec.Body.String())
+	}
+}

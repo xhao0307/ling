@@ -431,6 +431,9 @@ func TestGenerateCompanionSceneImageToImageIgnoresEnvironmentFields(t *testing.T
 	if !strings.Contains(imagePrompt, "可视面积约占1/5") {
 		t.Fatalf("expected i2i prompt to constrain subject size, got %q", imagePrompt)
 	}
+	if !strings.Contains(imagePrompt, "看向镜头") {
+		t.Fatalf("expected i2i prompt to require looking at screen, got %q", imagePrompt)
+	}
 	if !strings.Contains(imagePrompt, "位置居中或微偏中景") {
 		t.Fatalf("expected i2i prompt to constrain centered composition, got %q", imagePrompt)
 	}

@@ -21,6 +21,7 @@ func NewRouter(handler *Handler) http.Handler {
 	mux.HandleFunc("POST /api/v1/media/upload", handler.uploadImage)
 	mux.HandleFunc("POST /api/v1/companion/scene", handler.companionScene)
 	mux.HandleFunc("POST /api/v1/companion/chat", handler.companionChat)
+	mux.HandleFunc("POST /api/v1/companion/voice", handler.companionVoice)
 	mux.HandleFunc("POST /api/v1/answer", handler.answer)
 	mux.HandleFunc("GET /api/v1/pokedex", handler.pokedex)
 	mux.HandleFunc("GET /api/v1/pokedex/badges", handler.pokedexBadges)

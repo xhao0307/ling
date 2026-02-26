@@ -212,6 +212,36 @@ func (h *Handler) companionChat(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+func (h *Handler) companionVoice(w http.ResponseWriter, r *http.Request) {
+	var req service.CompanionVoiceRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("companionVoice decode error: %v", err)
+		writeError(w, http.StatusBadRequest, "请求体格式不正确")
+		return
+	}
+
+	resp, err := h.svc.SynthesizeCompanionVoice(req)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrObjectTypeMissing),
+			errors.Is(err, service.ErrInvalidChildAge),
+			errors.Is(err, service.ErrStoryTextMissing):
+			log.Printf("companionVoice bad request: child_id=%s object_type=%s err=%v", req.ChildID, req.ObjectType, err)
+			writeError(w, http.StatusBadRequest, err.Error())
+		case errors.Is(err, service.ErrLLMUnavailable),
+			errors.Is(err, service.ErrMediaUnavailable):
+			log.Printf("companionVoice unavailable: child_id=%s err=%v", req.ChildID, err)
+			writeError(w, http.StatusServiceUnavailable, err.Error())
+		default:
+			log.Printf("companionVoice internal error: child_id=%s object_type=%s err=%v", req.ChildID, req.ObjectType, err)
+			writeError(w, http.StatusInternalServerError, err.Error())
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, resp)
+}
+
 func (h *Handler) pokedex(w http.ResponseWriter, r *http.Request) {
 	childID := strings.TrimSpace(r.URL.Query().Get("child_id"))
 	entries, err := h.svc.Pokedex(childID)

@@ -954,6 +954,7 @@ class _ExplorePageState extends State<ExplorePage> {
       <_CompanionChatMessage>[];
   final List<_StoryLine> _storyLines = <_StoryLine>[];
   final Set<int> _recordedStoryIndexes = <int>{};
+  final Set<int> _storyVoiceGeneratingIndexes = <int>{};
   int _currentStoryIndex = -1;
   bool _waitingForAnswerInput = false;
   bool _quizSolved = false;
@@ -2000,6 +2001,7 @@ class _ExplorePageState extends State<ExplorePage> {
         ]);
       });
 
+      unawaited(_prefetchStoryVoices(scan, startIndex: 1));
       await _playCurrentStoryVoice();
     } catch (e) {
       if (!mounted) {
@@ -2024,19 +2026,35 @@ class _ExplorePageState extends State<ExplorePage> {
           ),
         ]);
       });
+      unawaited(_prefetchStoryVoices(scan, startIndex: 0));
       _showSnack('剧情自动生成失败，已切换基础对话模式。');
     }
   }
 
   Future<void> _playCurrentStoryVoice() async {
-    final line = _currentStoryLine;
+    var line = _currentStoryLine;
     if (line == null) {
       _showSnack('剧情还在准备中，请稍候。');
       return;
     }
-    final audio = line.voiceAudioBase64.trim();
+    var audio = line.voiceAudioBase64.trim();
     if (audio.isEmpty) {
-      _showSnack('当前句暂无语音。');
+      final scan = _scanResult;
+      final currentIndex = _currentStoryIndex;
+      if (scan != null && currentIndex >= 0) {
+        await _ensureStoryLineVoice(scan, currentIndex, silent: true);
+        line = _currentStoryLine;
+        if (line != null) {
+          audio = line.voiceAudioBase64.trim();
+        }
+      }
+      if (audio.isEmpty) {
+        _showSnack('当前句暂无语音。');
+        return;
+      }
+    }
+    if (line == null) {
+      _showSnack('剧情还在准备中，请稍候。');
       return;
     }
     await _playCompanionVoiceData(
@@ -2174,6 +2192,7 @@ class _ExplorePageState extends State<ExplorePage> {
         _currentStoryIndex = firstNewIndex;
         _syncCurrentStoryToHistory();
       });
+      unawaited(_prefetchStoryVoices(scan, startIndex: _currentStoryIndex));
       if (answerCorrectNow) {
         _showSnack('回答正确，已成功收集精灵。');
       }
@@ -2224,6 +2243,72 @@ class _ExplorePageState extends State<ExplorePage> {
     await _playCurrentStoryVoice();
   }
 
+  Future<void> _prefetchStoryVoices(
+    ScanResult scan, {
+    int startIndex = 0,
+  }) async {
+    final normalizedStart = startIndex < 0 ? 0 : startIndex;
+    final futures = <Future<void>>[];
+    for (var i = normalizedStart; i < _storyLines.length; i++) {
+      if (_storyLines[i].voiceAudioBase64.trim().isNotEmpty) {
+        continue;
+      }
+      futures.add(_ensureStoryLineVoice(scan, i, silent: true));
+    }
+    if (futures.isEmpty) {
+      return;
+    }
+    await Future.wait(futures);
+  }
+
+  Future<void> _ensureStoryLineVoice(
+    ScanResult scan,
+    int index, {
+    bool silent = false,
+  }) async {
+    if (!mounted || index < 0 || index >= _storyLines.length) {
+      return;
+    }
+    final line = _storyLines[index];
+    if (line.voiceAudioBase64.trim().isNotEmpty) {
+      return;
+    }
+    if (_storyVoiceGeneratingIndexes.contains(index)) {
+      return;
+    }
+    _storyVoiceGeneratingIndexes.add(index);
+    try {
+      final voice = await widget.api.synthesizeCompanionVoice(
+        childId: _childId,
+        childAge: _childAge,
+        objectType: scan.objectType,
+        text: line.text,
+      );
+      if (!mounted || index < 0 || index >= _storyLines.length) {
+        return;
+      }
+      final current = _storyLines[index];
+      if (current.voiceAudioBase64.trim().isNotEmpty) {
+        return;
+      }
+      if (current.text != line.text || current.speaker != line.speaker) {
+        return;
+      }
+      setState(() {
+        _storyLines[index] = current.copyWith(
+          voiceAudioBase64: voice.voiceAudioBase64,
+          voiceMimeType: voice.voiceMimeType,
+        );
+      });
+    } catch (e) {
+      if (!silent) {
+        _showSnack('语音生成失败：$e');
+      }
+    } finally {
+      _storyVoiceGeneratingIndexes.remove(index);
+    }
+  }
+
   List<String> _buildCompanionHistory({
     List<String> extraSystemHints = const [],
   }) {
@@ -2266,6 +2351,7 @@ class _ExplorePageState extends State<ExplorePage> {
 
   void _resetStoryLines(List<_StoryLine> lines) {
     _companionMessages.clear();
+    _storyVoiceGeneratingIndexes.clear();
     _storyLines
       ..clear()
       ..addAll(
@@ -2315,6 +2401,7 @@ class _ExplorePageState extends State<ExplorePage> {
     _companionScene = null;
     _quizSolved = false;
     _companionMessages.clear();
+    _storyVoiceGeneratingIndexes.clear();
     _storyLines.clear();
     _recordedStoryIndexes.clear();
     _currentStoryIndex = -1;
@@ -2517,6 +2604,22 @@ class _StoryLine {
   final String voiceAudioBase64;
   final String voiceMimeType;
   final bool requiresAnswerAfter;
+
+  _StoryLine copyWith({
+    String? speaker,
+    String? text,
+    String? voiceAudioBase64,
+    String? voiceMimeType,
+    bool? requiresAnswerAfter,
+  }) {
+    return _StoryLine(
+      speaker: speaker ?? this.speaker,
+      text: text ?? this.text,
+      voiceAudioBase64: voiceAudioBase64 ?? this.voiceAudioBase64,
+      voiceMimeType: voiceMimeType ?? this.voiceMimeType,
+      requiresAnswerAfter: requiresAnswerAfter ?? this.requiresAnswerAfter,
+    );
+  }
 }
 
 class _SpiritOverlay extends StatelessWidget {
@@ -4350,6 +4453,27 @@ class ApiClient {
     return CompanionChatResult.fromJson(body);
   }
 
+  Future<CompanionVoiceResult> synthesizeCompanionVoice({
+    required String childId,
+    required int childAge,
+    required String objectType,
+    required String text,
+  }) async {
+    final base = baseUrl;
+    final response = await http.post(
+      Uri.parse('$base/api/v1/companion/voice'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'child_id': childId,
+        'child_age': childAge,
+        'object_type': objectType,
+        'text': text,
+      }),
+    );
+    final body = _decode(response);
+    return CompanionVoiceResult.fromJson(body);
+  }
+
   static Map<String, dynamic> _decode(http.Response response) {
     final payload = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -4633,6 +4757,23 @@ class CompanionChatResult {
   factory CompanionChatResult.fromJson(Map<String, dynamic> json) {
     return CompanionChatResult(
       replyText: json['reply_text'] as String? ?? '',
+      voiceAudioBase64: json['voice_audio_base64'] as String? ?? '',
+      voiceMimeType: json['voice_mime_type'] as String? ?? 'audio/mpeg',
+    );
+  }
+}
+
+class CompanionVoiceResult {
+  CompanionVoiceResult({
+    required this.voiceAudioBase64,
+    required this.voiceMimeType,
+  });
+
+  final String voiceAudioBase64;
+  final String voiceMimeType;
+
+  factory CompanionVoiceResult.fromJson(Map<String, dynamic> json) {
+    return CompanionVoiceResult(
       voiceAudioBase64: json['voice_audio_base64'] as String? ?? '',
       voiceMimeType: json['voice_mime_type'] as String? ?? 'audio/mpeg',
     );

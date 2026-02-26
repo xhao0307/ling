@@ -96,3 +96,23 @@ func TestCompanionChatRouteRegistered(t *testing.T) {
 		t.Fatalf("expected companion chat route to be registered, got 404")
 	}
 }
+
+func TestCompanionVoiceRouteRegistered(t *testing.T) {
+	st, err := store.NewJSONStore(filepath.Join(t.TempDir(), "state.json"))
+	if err != nil {
+		t.Fatalf("NewJSONStore() error = %v", err)
+	}
+	svc := service.New(st, knowledge.BaseKnowledge)
+	router := NewRouter(NewHandler(svc))
+
+	body := []byte(`{"child_id":"kid","child_age":8,"object_type":"路灯","text":"你好"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/companion/voice", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code == http.StatusNotFound {
+		t.Fatalf("expected companion voice route to be registered, got 404")
+	}
+}

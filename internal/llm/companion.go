@@ -72,7 +72,7 @@ func (c *Client) GenerateCompanionScene(ctx context.Context, req CompanionSceneR
 			{
 				"role": "user",
 				"content": fmt.Sprintf(
-					"孩子年龄:%d\n物体:%s\n天气:%s\n环境:%s\n物体形态:%s\n请输出 JSON 字段：character_name, personality, dialog_text, image_prompt。要求：1) 角色为拟人卡通形象，适合儿童；2) dialog_text 1-2 句，口吻友好；3) image_prompt 用于文生图，描述卡通角色、场景与光线，中文。",
+					"孩子年龄:%d\n物体:%s\n天气:%s\n环境:%s\n物体形态:%s\n请输出 JSON 字段：character_name, personality, dialog_text, image_prompt。要求：1) 角色为拟人卡通形象，适合儿童；2) dialog_text 1-2 句，口吻友好；3) image_prompt 用于文生图，描述卡通角色、场景与光线，中文；4) image_prompt 必须明确“角色看向镜头/看向屏幕中的小朋友”，增强互动感。",
 					req.ChildAge,
 					strings.TrimSpace(req.ObjectType),
 					defaultText(req.Weather, "晴朗"),
