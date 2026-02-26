@@ -1432,18 +1432,19 @@ class _ExplorePageState extends State<ExplorePage> {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            const Color(0xCC4A2E72),
-                            const Color(0xAA243A66),
+                            Colors.white.withValues(alpha: 0.74),
+                            const Color(0xE6EEF4FF),
                           ],
                         ),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.34),
+                          color: Colors.white.withValues(alpha: 0.76),
                         ),
-                        boxShadow: const [
+                        boxShadow: [
                           BoxShadow(
-                            color: Color(0x4417122A),
-                            blurRadius: 16,
-                            offset: Offset(0, 8),
+                            color:
+                                const Color(0x262D2A38).withValues(alpha: 0.2),
+                            blurRadius: 14,
+                            offset: const Offset(0, 8),
                           ),
                         ],
                       ),
@@ -1462,8 +1463,7 @@ class _ExplorePageState extends State<ExplorePage> {
                                         ? '调试模式 · ${widget.session.displayName}'
                                         : '账号：${widget.session.displayName}',
                                     style: TextStyle(
-                                      color:
-                                          Colors.white.withValues(alpha: 0.8),
+                                      color: kFairyInkSubtle,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -1472,7 +1472,7 @@ class _ExplorePageState extends State<ExplorePage> {
                                   Text(
                                     '孩子：$_childId · 年龄：$_childAge',
                                     style: const TextStyle(
-                                      color: Colors.white,
+                                      color: kFairyInk,
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
@@ -1484,9 +1484,8 @@ class _ExplorePageState extends State<ExplorePage> {
                                   actionDisabled ? null : _pickPhotoAndGenerate,
                               style: FilledButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
-                                foregroundColor: Colors.white,
-                                backgroundColor:
-                                    Colors.white.withValues(alpha: 0.14),
+                                foregroundColor: kFairyRoseDeep,
+                                backgroundColor: const Color(0xFFF9F4FF),
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 10,
                                   vertical: 8,
@@ -1505,9 +1504,8 @@ class _ExplorePageState extends State<ExplorePage> {
                                   : () => unawaited(widget.onOpenApiSettings()),
                               icon: const Icon(Icons.settings_ethernet),
                               style: IconButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                backgroundColor:
-                                    Colors.white.withValues(alpha: 0.14),
+                                foregroundColor: kFairyRoseDeep,
+                                backgroundColor: const Color(0xFFF9F4FF),
                               ),
                               tooltip: '后端地址',
                             ),
@@ -1518,9 +1516,8 @@ class _ExplorePageState extends State<ExplorePage> {
                                   : () => unawaited(widget.onLogout()),
                               icon: const Icon(Icons.logout),
                               style: IconButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                backgroundColor:
-                                    Colors.white.withValues(alpha: 0.14),
+                                foregroundColor: kFairyRoseDeep,
+                                backgroundColor: const Color(0xFFF9F4FF),
                               ),
                               tooltip: '退出登录',
                             ),
@@ -1588,8 +1585,8 @@ class _ExplorePageState extends State<ExplorePage> {
                                 const Color(0x806A657A),
                               ]
                             : [
-                                const Color(0xFFB58AF7),
-                                const Color(0xFF6F92F8),
+                                const Color(0xFFF4A8CE),
+                                const Color(0xFFBFC9FF),
                               ],
                       ),
                       boxShadow: actionDisabled
@@ -1625,7 +1622,7 @@ class _ExplorePageState extends State<ExplorePage> {
                         ),
                         child: Icon(
                           _detecting ? Icons.hourglass_top : Icons.auto_awesome,
-                          color: const Color(0xFF5E4AAF),
+                          color: kFairyRoseDeep,
                           size: 36,
                         ),
                       ),
@@ -1634,10 +1631,10 @@ class _ExplorePageState extends State<ExplorePage> {
                   const SizedBox(height: 8),
                   DecoratedBox(
                     decoration: BoxDecoration(
-                      color: const Color(0xCC2D2550),
+                      color: Colors.white.withValues(alpha: 0.82),
                       borderRadius: BorderRadius.circular(999),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.24),
+                        color: Colors.white.withValues(alpha: 0.88),
                       ),
                     ),
                     child: Padding(
@@ -1646,7 +1643,7 @@ class _ExplorePageState extends State<ExplorePage> {
                       child: Text(
                         _detecting ? '魔镜识别中...' : '对镜识别',
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: kFairyInk,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -1669,7 +1666,7 @@ class _ExplorePageState extends State<ExplorePage> {
             child: Text(
               '当前平台不支持相机取景，请使用手机设备进行识别。',
               style: TextStyle(
-                color: Colors.white,
+                color: kFairyInk,
                 height: 1.5,
                 fontWeight: FontWeight.w600,
               ),
@@ -1683,7 +1680,7 @@ class _ExplorePageState extends State<ExplorePage> {
     if (_cameraInitializing) {
       return _buildMagicMirrorStage(
         mirrorChild: const Center(
-          child: CircularProgressIndicator(color: Colors.white),
+          child: CircularProgressIndicator(color: kFairyRoseDeep),
         ),
       );
     }
@@ -1696,12 +1693,12 @@ class _ExplorePageState extends State<ExplorePage> {
             children: [
               const Text(
                 '相机初始化失败',
-                style: TextStyle(color: Colors.white, fontSize: 16),
+                style: TextStyle(color: kFairyInk, fontSize: 16),
               ),
               const SizedBox(height: 8),
               Text(
                 _cameraError,
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.8)),
+                style: const TextStyle(color: kFairyInkSubtle),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
@@ -1760,11 +1757,11 @@ class _ExplorePageState extends State<ExplorePage> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Color(0xFF2B2048),
-                    Color(0xFF1A2544),
-                    Color(0xFF241A3F),
+                    Color(0xFFF7DCF1),
+                    Color(0xFFE0ECFF),
+                    Color(0xFFF5F2FA),
                   ],
-                  stops: [0, 0.5, 1],
+                  stops: [0, 0.52, 1],
                 ),
               ),
             ),
@@ -1775,8 +1772,8 @@ class _ExplorePageState extends State<ExplorePage> {
                     center: const Alignment(0, -0.25),
                     radius: 0.95,
                     colors: [
-                      const Color(0x996589F0),
-                      const Color(0x552E3A6D),
+                      const Color(0xAAFFD7EE),
+                      const Color(0x66D9E5FF),
                       Colors.transparent,
                     ],
                   ),
@@ -1788,7 +1785,7 @@ class _ExplorePageState extends State<ExplorePage> {
               top: 168,
               child: Icon(
                 Icons.auto_awesome,
-                color: Color(0xDDFFE5A8),
+                color: Color(0xEED9B35B),
                 size: 20,
               ),
             ),
@@ -1797,7 +1794,7 @@ class _ExplorePageState extends State<ExplorePage> {
               top: 248,
               child: Icon(
                 Icons.auto_awesome,
-                color: Color(0xCCBFD8FF),
+                color: Color(0xCCB7C8F1),
                 size: 16,
               ),
             ),
@@ -1806,7 +1803,7 @@ class _ExplorePageState extends State<ExplorePage> {
               bottom: 170,
               child: Icon(
                 Icons.auto_awesome,
-                color: Color(0xCCCEC1FF),
+                color: Color(0xCCA3BAEA),
                 size: 14,
               ),
             ),
@@ -1840,20 +1837,20 @@ class _ExplorePageState extends State<ExplorePage> {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Color(0xFFE4D4FF),
-                Color(0xFFA385E8),
-                Color(0xFF6F5CB9),
+                Color(0xFFF6E8FF),
+                Color(0xFFE4CCFF),
+                Color(0xFFD7B7F4),
               ],
             ),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.62),
+              color: Colors.white.withValues(alpha: 0.84),
               width: 2.2,
             ),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
-                color: Color(0x8A423E73),
+                color: const Color(0x22526689).withValues(alpha: 0.22),
                 blurRadius: 26,
-                offset: Offset(0, 12),
+                offset: const Offset(0, 12),
               ),
             ],
           ),
@@ -1874,7 +1871,7 @@ class _ExplorePageState extends State<ExplorePage> {
                           colors: [
                             Colors.white.withValues(alpha: 0.22),
                             Colors.transparent,
-                            const Color(0xAA1A2044),
+                            const Color(0x664A4663),
                           ],
                           stops: const [0.0, 0.4, 1.0],
                         ),
@@ -1917,16 +1914,16 @@ class _ExplorePageState extends State<ExplorePage> {
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFFF9E6FF), Color(0xFFA19AEF)],
+                  colors: [Color(0xFFFFEFF9), Color(0xFFD8DEFF)],
                 ),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.72),
+                  color: Colors.white.withValues(alpha: 0.9),
                 ),
-                boxShadow: const [
+                boxShadow: [
                   BoxShadow(
-                    color: Color(0x4A4E3A84),
+                    color: const Color(0x3A8D88B0).withValues(alpha: 0.22),
                     blurRadius: 12,
-                    offset: Offset(0, 6),
+                    offset: const Offset(0, 6),
                   ),
                 ],
               ),
@@ -1938,13 +1935,13 @@ class _ExplorePageState extends State<ExplorePage> {
                     Icon(
                       Icons.auto_awesome,
                       size: 14,
-                      color: Color(0xFF5D4F98),
+                      color: kFairyRoseDeep,
                     ),
                     SizedBox(width: 4),
                     Text(
                       '万物魔镜',
                       style: TextStyle(
-                        color: Color(0xFF4A3F7A),
+                        color: kFairyInk,
                         fontWeight: FontWeight.w700,
                         fontSize: 12,
                       ),
@@ -1987,8 +1984,7 @@ class _ExplorePageState extends State<ExplorePage> {
         Text(
           text,
           style: TextStyle(
-            color:
-                compact ? Colors.white.withValues(alpha: 0.92) : Colors.white,
+            color: compact ? Colors.white.withValues(alpha: 0.92) : kFairyInk,
             fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
@@ -1999,7 +1995,7 @@ class _ExplorePageState extends State<ExplorePage> {
             style: TextStyle(
               color: compact
                   ? Colors.white.withValues(alpha: 0.78)
-                  : Colors.white70,
+                  : kFairyInkSubtle,
               fontSize: 11,
             ),
           ),
@@ -2012,13 +2008,16 @@ class _ExplorePageState extends State<ExplorePage> {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xCC35264F), Color(0xCC263E6A)],
+          colors: [
+            Colors.white.withValues(alpha: 0.82),
+            const Color(0xFFEAF0FF),
+          ],
         ),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.88)),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
