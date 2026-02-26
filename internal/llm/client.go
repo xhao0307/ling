@@ -33,6 +33,7 @@ type Config struct {
 	TextGPTType          int
 	Timeout              time.Duration
 	CompanionChatTimeout time.Duration
+	CompanionPromptFile  string
 	ImageBaseURL         string
 	ImageAPIKey          string
 	ImageModel           string
@@ -62,6 +63,7 @@ type Client struct {
 	textGPTType          int
 	timeout              time.Duration
 	companionChatTimeout time.Duration
+	companionPromptSpec  string
 	httpClient           *http.Client
 	imageBaseURL         string
 	imageAPIKey          string
@@ -189,6 +191,7 @@ func NewClient(cfg Config) (*Client, error) {
 	if platformID == "" {
 		platformID = "5"
 	}
+	companionPromptSpec := loadCompanionPromptSpec(strings.TrimSpace(cfg.CompanionPromptFile))
 
 	return &Client{
 		baseURL:              strings.TrimRight(baseURL, "/"),
@@ -201,6 +204,7 @@ func NewClient(cfg Config) (*Client, error) {
 		textGPTType:          cfg.TextGPTType,
 		timeout:              cfg.Timeout,
 		companionChatTimeout: cfg.CompanionChatTimeout,
+		companionPromptSpec:  companionPromptSpec,
 		httpClient:           &http.Client{},
 		imageBaseURL:         strings.TrimRight(imageBaseURL, "/"),
 		imageAPIKey:          imageAPIKey,

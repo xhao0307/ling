@@ -334,6 +334,12 @@ func TestGenerateCompanionSceneFallsBackWhenSceneLLMFailed(t *testing.T) {
 	if !strings.Contains(resp.DialogText, "我现在正开心") {
 		t.Fatalf("expected dialog first line to include emotion+state hook, got %q", resp.DialogText)
 	}
+	if !strings.Contains(resp.DialogText, "我是猫") {
+		t.Fatalf("expected fallback scene to use object identity, got %q", resp.DialogText)
+	}
+	if strings.Contains(resp.DialogText, "我是小冒险家") {
+		t.Fatalf("expected fallback scene not to use detached role, got %q", resp.DialogText)
+	}
 	if strings.TrimSpace(resp.CharacterImageURL) == "" {
 		t.Fatalf("expected image url")
 	}
@@ -423,8 +429,11 @@ func TestGenerateCompanionSceneImageToImageIgnoresEnvironmentFields(t *testing.T
 	if strings.TrimSpace(resp.DialogText) == "" {
 		t.Fatalf("expected dialog text")
 	}
-	if !strings.Contains(resp.DialogText, "我是喵喵星友") || !strings.Contains(resp.DialogText, "我现在正开心") {
+	if !strings.Contains(resp.DialogText, "我是猫") || !strings.Contains(resp.DialogText, "我现在正开心") {
 		t.Fatalf("expected dialog first line to include identity+emotion hook, got %q", resp.DialogText)
+	}
+	if strings.Contains(resp.DialogText, "我是小冒险家") {
+		t.Fatalf("expected object-centered identity, got %q", resp.DialogText)
 	}
 	if strings.Contains(chatRequestBody, "暴雨夜晚") || strings.Contains(chatRequestBody, "火山口") || strings.Contains(chatRequestBody, "金属刺甲") {
 		t.Fatalf("expected scene request to ignore env fields in image-to-image mode, got %s", chatRequestBody)
@@ -637,8 +646,11 @@ func TestChatCompanionAddsEmotionHookForReply(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ChatCompanion() error = %v", err)
 	}
-	if !strings.Contains(resp.ReplyText, "我是云朵灯灯") || !strings.Contains(resp.ReplyText, "我现在正开心") {
+	if !strings.Contains(resp.ReplyText, "我是路灯") || !strings.Contains(resp.ReplyText, "我现在正开心") {
 		t.Fatalf("expected reply to include identity+emotion hook, got %q", resp.ReplyText)
+	}
+	if strings.Contains(resp.ReplyText, "我是小冒险家") {
+		t.Fatalf("expected object-centered identity, got %q", resp.ReplyText)
 	}
 	if strings.TrimSpace(resp.VoiceAudioBase64) == "" {
 		t.Fatalf("expected non-empty voice base64")

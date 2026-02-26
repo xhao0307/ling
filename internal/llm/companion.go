@@ -62,17 +62,18 @@ const (
 func (c *Client) GenerateCompanionScene(ctx context.Context, req CompanionSceneRequest) (CompanionScene, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
+	promptSpec := renderCompanionPromptSpec(c.companionPromptSpec, req.ChildAge, req.ObjectType)
 
 	body := map[string]any{
 		"model": c.chatModel,
 		"messages": []map[string]any{
 			{
 				"role":    "system",
-				"content": buildCompanionSceneSystemPrompt(),
+				"content": buildCompanionSceneSystemPromptWithSpec(promptSpec),
 			},
 			{
 				"role":    "user",
-				"content": buildCompanionSceneUserPrompt(req),
+				"content": buildCompanionSceneUserPromptWithSpec(req, promptSpec),
 			},
 		},
 		"temperature": 0.8,
@@ -346,17 +347,18 @@ func (c *Client) GenerateCompanionReply(ctx context.Context, req CompanionReplyR
 	defer cancel()
 
 	historyBlock := buildCompanionHistoryBlock(req.History)
+	promptSpec := renderCompanionPromptSpec(c.companionPromptSpec, req.ChildAge, req.ObjectType)
 
 	body := map[string]any{
 		"model": c.chatModel,
 		"messages": []map[string]any{
 			{
 				"role":    "system",
-				"content": buildCompanionReplySystemPrompt(),
+				"content": buildCompanionReplySystemPromptWithSpec(promptSpec),
 			},
 			{
 				"role":    "user",
-				"content": buildCompanionReplyUserPrompt(req, historyBlock),
+				"content": buildCompanionReplyUserPromptWithSpec(req, historyBlock, promptSpec),
 			},
 		},
 		"temperature": 0.7,
@@ -771,10 +773,52 @@ func defaultText(v string, fallback string) string {
 }
 
 func buildCompanionSceneSystemPrompt() string {
+	return buildCompanionSceneSystemPromptWithSpec("")
+}
+
+func buildCompanionSceneSystemPromptWithSpec(promptSpec string) string {
+	if strings.TrimSpace(promptSpec) != "" {
+		return "你是儿童认知发展专家化身的“万物之灵”剧情伙伴。你必须完整遵循下方规则原文，不得删减、弱化或改写规则条款。只允许输出 JSON，不要 markdown，不要额外说明。\n\n[规则原文开始]\n" + promptSpec + "\n[规则原文结束]"
+	}
 	return "你是儿童认知发展专家化身的“万物之灵”剧情伙伴。只允许输出 JSON，不要 markdown，不要额外说明。"
 }
 
 func buildCompanionSceneUserPrompt(req CompanionSceneRequest) string {
+	return buildCompanionSceneUserPromptWithSpec(req, "")
+}
+
+func buildCompanionSceneUserPromptWithSpec(req CompanionSceneRequest, promptSpec string) string {
+	if strings.TrimSpace(promptSpec) != "" {
+		age := normalizeCompanionAge(req.ChildAge)
+		return fmt.Sprintf(
+			`请严格遵循系统消息中的《prompt.txt 规则原文》生成剧情开场。
+输入信息：
+- 孩子年龄: %d
+- 物体: %s
+- 天气: %s
+- 环境: %s
+- 物体形态: %s
+- 年龄认知层: %s
+
+输出 JSON 字段（缺一不可）：
+{"character_name":"", "personality":"", "dialog_text":"", "image_prompt":""}
+
+补充约束（用于工程解析，不得违反规则原文）：
+1) 只输出一个 JSON 对象，不要输出代码块。
+2) dialog_text 必须是完整可朗读的简体中文台词。
+3) 必须以“物体主体本体”第一人称叙述，禁止脱离物体身份扮演第三方角色（如“冒险家/老师/旁白”）。
+4) character_name 必须与物体主体强相关（例如“狗狗”“路灯小灯灯”），不能是通用人设称呼。
+5) dialog_text 第一段必须直接说“我是[该物体主体]”，不能只说抽象角色名。
+6) image_prompt 必须是可直接用于生图的一段完整提示词。`,
+			age,
+			strings.TrimSpace(req.ObjectType),
+			defaultText(req.Weather, "晴朗"),
+			defaultText(req.Environment, "户外"),
+			defaultText(req.ObjectTraits, "圆润可爱"),
+			companionAgeLayerInstruction(age),
+		)
+	}
+
 	age := normalizeCompanionAge(req.ChildAge)
 	return fmt.Sprintf(
 		`请基于以下输入生成剧情开场，并严格按 JSON 返回。
@@ -814,6 +858,13 @@ image_prompt 规则（必须满足）：
 }
 
 func buildCompanionReplySystemPrompt() string {
+	return buildCompanionReplySystemPromptWithSpec("")
+}
+
+func buildCompanionReplySystemPromptWithSpec(promptSpec string) string {
+	if strings.TrimSpace(promptSpec) != "" {
+		return "你是儿童剧情互动角色，持续用第一人称“我”与孩子多轮对话。你必须完整遵循下方规则原文，不得删减、弱化或改写规则条款。只输出 JSON，不要 markdown。\n\n[规则原文开始]\n" + promptSpec + "\n[规则原文结束]"
+	}
 	return "你是儿童剧情互动角色，持续用第一人称“我”与孩子多轮对话。只输出 JSON，不要 markdown。"
 }
 
@@ -839,6 +890,47 @@ func buildCompanionHistoryBlock(history []string) string {
 }
 
 func buildCompanionReplyUserPrompt(req CompanionReplyRequest, historyBlock string) string {
+	return buildCompanionReplyUserPromptWithSpec(req, historyBlock, "")
+}
+
+func buildCompanionReplyUserPromptWithSpec(req CompanionReplyRequest, historyBlock string, promptSpec string) string {
+	if strings.TrimSpace(promptSpec) != "" {
+		age := normalizeCompanionAge(req.ChildAge)
+		return fmt.Sprintf(
+			`请严格遵循系统消息中的《prompt.txt 规则原文》，并延续角色设定继续回复。
+输入信息：
+- 孩子年龄: %d
+- 物体: %s
+- 角色名: %s
+- 角色性格: %s
+- 天气: %s
+- 环境: %s
+- 物体形态: %s
+- 年龄认知层: %s
+- 历史对话:
+%s
+- 孩子最新输入: %s
+
+输出 JSON 字段：
+{"reply_text":""}
+
+补充约束（用于工程解析，不得违反规则原文）：
+1) 只输出一个 JSON 对象，不要输出代码块。
+2) reply_text 必须与历史上下文一致，并先回应孩子最新输入。
+3) reply_text 必须保持物体主体第一人称，不允许切换成第三方旁白或人类导师视角。`,
+			age,
+			strings.TrimSpace(req.ObjectType),
+			defaultText(req.CharacterName, "城市小精灵"),
+			defaultText(req.CharacterPersonality, "友好"),
+			defaultText(req.Weather, "晴朗"),
+			defaultText(req.Environment, "户外"),
+			defaultText(req.ObjectTraits, "可爱"),
+			companionAgeLayerInstruction(age),
+			historyBlock,
+			strings.TrimSpace(req.ChildMessage),
+		)
+	}
+
 	age := normalizeCompanionAge(req.ChildAge)
 	return fmt.Sprintf(
 		`请延续角色设定继续回复，严格按 JSON 输出。

@@ -38,6 +38,7 @@ Optional environment variables:
 - `CITYLING_LLM_PLATFORM_ID` (default `5`)
 - `CITYLING_LLM_TIMEOUT_SECONDS` (default `20`)
 - `CITYLING_COMPANION_CHAT_TIMEOUT_SECONDS` (`/api/v1/companion/chat` 专用超时，default `45`)
+- `CITYLING_COMPANION_PROMPT_FILE` (default `prompt.txt`，剧情场景/多轮对话将完整按该文件规则执行)
 - `CITYLING_IMAGE_API_BASE_URL` (default `https://api-image.charaboard.com`)
 - `CITYLING_IMAGE_API_KEY` (optional, fallback to `CITYLING_DASHSCOPE_API_KEY`)
 - `CITYLING_IMAGE_MODEL` (default `seedream-4-0-250828`)

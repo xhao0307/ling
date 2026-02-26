@@ -371,6 +371,7 @@ func (s *Service) GenerateCompanionScene(req CompanionSceneRequest) (CompanionSc
 			objectTraits,
 		)
 	}
+	scene.CharacterName = normalizeCompanionCharacterName(scene.CharacterName, objectType)
 	scene.DialogText = ensureCompanionEmotionHook(scene.DialogText, scene.CharacterName, objectType)
 
 	imagePrompt := ensureInteractiveGazePrompt(scene.ImagePrompt)
@@ -893,26 +894,17 @@ func (s *Service) generateLearningByLLM(objectType string, age int, spirit model
 }
 
 func (s *Service) defaultCompanionScene(objectType string, age int, weather string, environment string, traits string) llm.CompanionScene {
-	objectName := strings.TrimSpace(objectTypeToChinese(objectType))
-	if objectName == "" {
-		objectName = strings.TrimSpace(objectType)
-	}
-	if objectName == "" {
-		objectName = "这个小伙伴"
-	}
+	objectName := companionObjectName(objectType)
 
 	bucket := ageBucket(age)
-	characterName := "小圆"
+	characterName := objectName
 	personality := "活泼友好"
 	switch bucket {
 	case 1:
-		characterName = "小圆"
 		personality = "温柔可爱"
 	case 2:
-		characterName = "小冒险家"
 		personality = "活泼好奇"
 	default:
-		characterName = "观察官"
 		personality = "爱思考有创意"
 	}
 
@@ -926,7 +918,7 @@ func (s *Service) defaultCompanionScene(objectType string, age int, weather stri
 		traits = "圆润可爱"
 	}
 
-	dialogText := fmt.Sprintf("你好呀，我是%s！今天我们一起认识%s吧。", characterName, objectName)
+	dialogText := fmt.Sprintf("哎呀，你终于看到我啦，我是%s，我现在正开心地和你打招呼呢。今天我们一起从我身上的小细节开始观察吧！", characterName)
 	imagePrompt := fmt.Sprintf(
 		"儿童向二次元卡通插画，拟人化%s角色，性格%s，场景为%s的%s，物体特征%s，柔和光线，主角清晰，角色视线看向镜头，适合儿童",
 		objectName,
@@ -968,7 +960,7 @@ func ensureCompanionEmotionHook(dialogText string, characterName string, objectT
 	}
 
 	first, rest := splitFirstSentence(trimmed)
-	if firstHasEmotionAndState(first) && strings.Contains(first, "我是") {
+	if firstHasEmotionAndState(first) && strings.Contains(first, "我是") && firstHasObjectIdentity(first, objectType) {
 		return trimmed
 	}
 	if rest == "" {
@@ -978,14 +970,89 @@ func ensureCompanionEmotionHook(dialogText string, characterName string, objectT
 }
 
 func companionEmotionOpening(characterName string, objectType string) string {
+	identity := companionIdentity(characterName, objectType)
+	return fmt.Sprintf("哎呀，你终于看到我啦，我是%s，我现在正开心地和你打招呼呢。", identity)
+}
+
+func companionIdentity(characterName string, objectType string) string {
+	objectName := companionObjectName(objectType)
+	name := normalizeCompanionCharacterName(characterName, objectType)
+	if name == objectName || strings.TrimSpace(name) == "" {
+		return objectName
+	}
+	if strings.Contains(name, objectName) || strings.Contains(objectName, name) {
+		return name
+	}
+	return fmt.Sprintf("%s（你也可以叫我%s）", objectName, name)
+}
+
+func normalizeCompanionCharacterName(characterName string, objectType string) string {
+	objectName := companionObjectName(objectType)
 	name := strings.TrimSpace(characterName)
 	if name == "" {
-		name = strings.TrimSpace(objectTypeToChinese(objectType))
+		return objectName
 	}
+	if strings.Contains(name, objectName) || strings.Contains(objectName, name) {
+		return name
+	}
+	if isDetachedCompanionAlias(name) {
+		return objectName
+	}
+	return name
+}
+
+func companionObjectName(objectType string) string {
+	trimmed := strings.TrimSpace(objectType)
+	if trimmed == "" {
+		return "你的小伙伴"
+	}
+	switch strings.ToLower(trimmed) {
+	case "dog":
+		return "狗狗"
+	case "cat":
+		return "猫咪"
+	case "bird":
+		return "小鸟"
+	}
+	name := strings.TrimSpace(objectTypeToChinese(trimmed))
 	if name == "" {
-		name = "你的小伙伴"
+		return "你的小伙伴"
 	}
-	return fmt.Sprintf("哎呀，你终于看到我啦，我是%s，我现在正开心地和你打招呼呢。", name)
+	return name
+}
+
+func isDetachedCompanionAlias(name string) bool {
+	keywords := []string{
+		"小冒险家", "冒险家", "观察官", "小圆", "专家", "哲学家", "老师", "旁白", "讲解员", "城市小精灵",
+	}
+	return containsAnyKeyword(name, keywords)
+}
+
+func firstHasObjectIdentity(firstSentence string, objectType string) bool {
+	text := strings.TrimSpace(firstSentence)
+	if text == "" {
+		return false
+	}
+	objectName := companionObjectName(objectType)
+	if objectName != "" && strings.Contains(text, objectName) {
+		return true
+	}
+	raw := strings.TrimSpace(objectType)
+	if raw != "" && strings.Contains(text, raw) {
+		return true
+	}
+	normalized := strings.TrimSpace(objectTypeToChinese(objectType))
+	if normalized != "" && strings.Contains(text, normalized) {
+		return true
+	}
+	// 常见宠物口语别名兜底
+	if strings.Contains(text, "狗狗") && (objectName == "狗狗" || raw == "狗" || strings.EqualFold(raw, "dog")) {
+		return true
+	}
+	if strings.Contains(text, "猫咪") && (objectName == "猫咪" || raw == "猫" || strings.EqualFold(raw, "cat")) {
+		return true
+	}
+	return false
 }
 
 func firstHasEmotionAndState(text string) bool {

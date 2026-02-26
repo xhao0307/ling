@@ -1845,3 +1845,51 @@
 - 下一步建议:
   - 线上将 `CITYLING_COMPANION_CHAT_TIMEOUT_SECONDS` 调到 `45~60` 并重启服务，观察 `POST /api/v1/companion/chat` 的 p95 延迟与 504 比例。
 - 对应提交: （本次提交）
+
+### [2026-02-26 15:33] F019 按 prompt.txt 接管剧情 Prompt（场景+多轮）
+- 会话目标: 基于 `prompt.txt` 做 prompt 改动，并确保运行时严格按该文件内容执行。
+- 选择功能: `F019`
+- 实际改动:
+  - `internal/llm/companion_prompt.go`：新增 `loadCompanionPromptSpec` 与 `renderCompanionPromptSpec`，支持从文件读取并替换占位符（`kids_age`/`image_input`/`{{age}}`）；
+  - `internal/llm/companion.go`：`GenerateCompanionScene`、`GenerateCompanionReply` 接入文件化 prompt；当存在 `prompt.txt` 规则时，system/user prompt 均以该规则为最高约束，仅补充 JSON 输出字段要求；
+  - `cmd/server/main.go`：新增 `CITYLING_COMPANION_PROMPT_FILE`（默认 `prompt.txt`）；
+  - `ling.ini.example`、`ecosystem.config.cjs`、`README.md`：补充新配置说明；
+  - `internal/llm/companion_test.go`：补充 prompt 文件加载、占位符替换、场景 prompt 接管的回归测试。
+- 验证结果:
+  - `go test ./internal/llm ./internal/service ./internal/httpapi ./cmd/server` 通过；
+  - `./init.sh` 通过（`smoke 通过: http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - `prompt.txt` 规则较长，线上 token 与延迟会增加，需关注 `companion/scene` 与 `companion/chat` 响应时延；
+  - 本次为后端 prompt 接管，尚未补浏览器端剧情链路 e2e 抽检，因此 `F019.passes` 保持 `false`。
+- 下一步建议:
+  - 用真实链路执行一次“上传识别 -> 进入剧情 -> 多轮聊天”，确认首句/预警/单问题策略均按 `prompt.txt` 生效。
+- 对应提交: （本次提交）
+
+### [2026-02-26 15:52] F019 强化“物体主体第一人称”约束（禁用小冒险家叙述）
+- 会话目标: 按 `prompt.txt` 继续改造，避免剧情对白脱离识别主体（如狗被讲成“小冒险家”）。
+- 选择功能: `F019`
+- 实际改动:
+  - `prompt.txt`：
+    - 将角色设定改为“只能扮演识别物体本体”；
+    - 在两处核心规则新增“严禁脱离物体主体”；
+    - 新增“物体主体锚定（强制执行）”规则（首句必须“我是[物体本体]”、昵称规则、禁用身份词）；
+    - 在两处“质量熔断机制”新增“主体锚定检查”。
+  - `internal/llm/companion.go`：
+    - 在文件化 prompt 路径的补充约束中，新增“必须物体本体第一人称、禁止冒险家/老师/旁白”等硬约束；
+    - 多轮回复也新增同样约束，防止聊天阶段角色漂移。
+  - `internal/service/service.go`：
+    - 修复 fallback 文案：默认剧情不再用“`小冒险家/观察官`”，改为物体本体身份；
+    - 新增主体锚定兜底（`normalizeCompanionCharacterName`、`companionObjectName`、`firstHasObjectIdentity` 等）：
+      - 若首句缺少物体身份，自动改写为“我是[物体本体]...”开场；
+      - 过滤脱离物体的通用人设称呼。
+  - `internal/service/service_test.go`：
+    - 更新断言为“首句必须包含物体身份 + 情绪状态”，并新增“不得出现‘我是小冒险家’”保护。
+- 验证结果:
+  - `go test ./internal/llm ./internal/service ./internal/httpapi ./cmd/server` 通过；
+  - `./init.sh` 通过（`smoke 通过: http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 目前是“prompt + 服务端兜底”双重约束，线上效果仍建议做一轮真实图片 E2E 抽检（狗/猫/剪刀等）。
+  - 本轮未执行浏览器自动化剧情链路截图，`F019.passes` 继续保持 `false`。
+- 下一步建议:
+  - 进行一次“识别狗 -> 进入剧情 -> 首句校验”E2E，确认 UI 中首句稳定包含“我是狗/狗狗”。
+- 对应提交: （本次提交）
