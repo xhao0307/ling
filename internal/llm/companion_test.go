@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -20,6 +22,69 @@ func TestParseCompanionScene(t *testing.T) {
 	}
 	if scene.DialogText == "" || scene.ImagePrompt == "" {
 		t.Fatalf("expected non-empty dialog/image prompt")
+	}
+}
+
+func TestLoadTTSVoiceProfilesFromFile(t *testing.T) {
+	t.Parallel()
+
+	profilePath := filepath.Join(t.TempDir(), "tts_profiles.json")
+	content := `{
+	  "fallback_voices": ["BaseA", "BaseB"],
+	  "profiles": [
+		{
+		  "name": "animal",
+		  "keywords": ["猫", "狗"],
+		  "voices": ["CuteA", "CuteB"]
+		}
+	  ]
+	}`
+	if err := os.WriteFile(profilePath, []byte(content), 0o644); err != nil {
+		t.Fatalf("write profile file failed: %v", err)
+	}
+
+	profiles, fallback, err := loadTTSVoiceProfiles(profilePath)
+	if err != nil {
+		t.Fatalf("loadTTSVoiceProfiles() error = %v", err)
+	}
+	if len(profiles) != 1 {
+		t.Fatalf("expected 1 profile, got %d", len(profiles))
+	}
+	if profiles[0].Name != "animal" {
+		t.Fatalf("unexpected profile name: %q", profiles[0].Name)
+	}
+	if len(fallback) != 2 || fallback[0] != "BaseA" || fallback[1] != "BaseB" {
+		t.Fatalf("unexpected fallback voices: %#v", fallback)
+	}
+}
+
+func TestTTSVoiceCandidatesUsesProfileVoices(t *testing.T) {
+	t.Parallel()
+
+	client, err := NewClient(Config{
+		APIKey:         "test-key",
+		TTSProfilePath: filepath.Join(t.TempDir(), "missing.json"),
+	})
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+	// Inject deterministic profile for assertion.
+	client.ttsVoiceProfiles = []ttsVoiceProfile{
+		{
+			Name:     "animal",
+			Keywords: []string{"猫"},
+			Voices:   []string{"VoiceCatA", "VoiceCatB"},
+		},
+	}
+	client.ttsFallbackVoices = []string{"VoiceBaseA", "VoiceBaseB"}
+
+	candidates := client.ttsVoiceCandidates("小猫", "")
+	joined := strings.Join(candidates, ",")
+	if !strings.Contains(joined, "VoiceCatA") && !strings.Contains(joined, "VoiceCatB") {
+		t.Fatalf("expected profile voices in candidates, got %v", candidates)
+	}
+	if strings.Contains(joined, "VoiceBaseA") || strings.Contains(joined, "VoiceBaseB") {
+		t.Fatalf("expected profile match to avoid fallback pool, got %v", candidates)
 	}
 }
 

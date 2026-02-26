@@ -48,6 +48,7 @@ Optional environment variables:
 - `CITYLING_TTS_MODEL_ID` (default `qwen3-tts-flash`)
 - `CITYLING_TTS_LANGUAGE_CODE` (default `Chinese`)
 - `CITYLING_TTS_OUTPUT_FORMAT` (default `wav`)
+- `CITYLING_TTS_PROFILE_FILE` (default `config/tts_voice_profiles.json`，按识别物体匹配音色池并随机选音色)
 
 ## API
 

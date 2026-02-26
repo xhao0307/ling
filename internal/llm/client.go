@@ -42,6 +42,7 @@ type Config struct {
 	VoiceModelID        string
 	VoiceLangCode       string
 	VoiceFormat         string
+	TTSProfilePath      string
 	COSSecretID         string
 	COSSecretKey        string
 	COSRegion           string
@@ -70,6 +71,8 @@ type Client struct {
 	voiceModelID        string
 	voiceLangCode       string
 	voiceFormat         string
+	ttsVoiceProfiles    []ttsVoiceProfile
+	ttsFallbackVoices   []string
 	cosSecretID         string
 	cosSecretKey        string
 	cosRegion           string
@@ -161,6 +164,14 @@ func NewClient(cfg Config) (*Client, error) {
 	if voiceFormat == "" {
 		voiceFormat = "wav"
 	}
+	ttsProfilePath := strings.TrimSpace(cfg.TTSProfilePath)
+	if ttsProfilePath == "" {
+		ttsProfilePath = "config/tts_voice_profiles.json"
+	}
+	ttsProfiles, ttsFallbackVoices, err := loadTTSVoiceProfiles(ttsProfilePath)
+	if err != nil {
+		ttsProfiles, ttsFallbackVoices, _ = defaultTTSVoiceProfiles()
+	}
 	cosRegion := strings.TrimSpace(cfg.COSRegion)
 	if cosRegion == "" {
 		cosRegion = "ap-hongkong"
@@ -195,6 +206,8 @@ func NewClient(cfg Config) (*Client, error) {
 		voiceModelID:        voiceModelID,
 		voiceLangCode:       voiceLangCode,
 		voiceFormat:         voiceFormat,
+		ttsVoiceProfiles:    ttsProfiles,
+		ttsFallbackVoices:   ttsFallbackVoices,
 		cosSecretID:         strings.TrimSpace(cfg.COSSecretID),
 		cosSecretKey:        strings.TrimSpace(cfg.COSSecretKey),
 		cosRegion:           cosRegion,

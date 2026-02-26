@@ -1,0 +1,25 @@
+{
+  "fallback_voices": ["Cherry", "Serena", "Ethan"],
+  "profiles": [
+    {
+      "name": "animal_lively",
+      "keywords": ["猫", "狗", "兔", "熊", "鸟", "鱼", "鸭", "鸡", "动物", "宠物"],
+      "voices": ["Cherry", "Serena"]
+    },
+    {
+      "name": "vehicle_steady",
+      "keywords": ["车", "火车", "地铁", "飞机", "船", "机器人", "机械"],
+      "voices": ["Ethan", "Serena"]
+    },
+    {
+      "name": "plant_gentle",
+      "keywords": ["花", "树", "草", "叶", "水果", "蔬菜", "香蕉", "苹果", "西瓜", "植物"],
+      "voices": ["Serena", "Cherry"]
+    },
+    {
+      "name": "building_calm",
+      "keywords": ["路灯", "红绿灯", "邮筒", "桥", "楼", "建筑", "公园"],
+      "voices": ["Ethan", "Cherry"]
+    }
+  ]
+}

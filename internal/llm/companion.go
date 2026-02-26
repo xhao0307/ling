@@ -417,7 +417,7 @@ func (c *Client) SynthesizeSpeech(ctx context.Context, text string, objectType s
 	defer cancel()
 
 	requestURL := resolveTTSGenerationRequestURL(c.voiceBaseURL)
-	for _, voice := range ttsVoiceCandidates(objectType, c.voiceID) {
+	for _, voice := range c.ttsVoiceCandidates(objectType, c.voiceID) {
 		body := map[string]any{
 			"model": strings.TrimSpace(c.voiceModelID),
 			"input": map[string]any{
@@ -489,16 +489,14 @@ func normalizeTTSLanguageType(lang string) string {
 	}
 }
 
-func ttsVoiceCandidates(objectType string, preferred string) []string {
+func (c *Client) ttsVoiceCandidates(objectType string, preferred string) []string {
 	trimmedObjectType := strings.TrimSpace(objectType)
-	pool := []string{"Cherry", "Serena", "Ethan"}
-	switch {
-	case containsAny(trimmedObjectType, "猫", "狗", "兔", "熊", "鸟", "鱼", "鸭", "鸡", "动物", "宠物"):
-		pool = []string{"Cherry", "Serena"}
-	case containsAny(trimmedObjectType, "车", "火车", "地铁", "飞机", "船", "机器人", "机械"):
-		pool = []string{"Ethan", "Serena"}
-	case containsAny(trimmedObjectType, "花", "树", "草", "叶", "水果", "蔬菜", "香蕉", "苹果", "西瓜", "植物"):
-		pool = []string{"Serena", "Cherry"}
+	pool := append([]string(nil), c.ttsFallbackVoices...)
+	for _, profile := range c.ttsVoiceProfiles {
+		if containsAny(trimmedObjectType, profile.Keywords...) {
+			pool = append([]string(nil), profile.Voices...)
+			break
+		}
 	}
 	candidates := shuffleStrings(pool)
 	if v := strings.TrimSpace(preferred); v != "" {

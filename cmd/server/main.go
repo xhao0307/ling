@@ -169,6 +169,7 @@ func initLLMClientFromEnv() *llm.Client {
 		VoiceModelID:        envOrDefault("CITYLING_TTS_MODEL_ID", "qwen3-tts-flash"),
 		VoiceLangCode:       envOrDefault("CITYLING_TTS_LANGUAGE_CODE", "Chinese"),
 		VoiceFormat:         envOrDefault("CITYLING_TTS_OUTPUT_FORMAT", "wav"),
+		TTSProfilePath:      envOrDefault("CITYLING_TTS_PROFILE_FILE", "config/tts_voice_profiles.json"),
 		COSSecretID:         os.Getenv("CITYLING_COS_SECRET_ID"),
 		COSSecretKey:        os.Getenv("CITYLING_COS_SECRET_KEY"),
 		COSRegion:           envOrDefault("CITYLING_COS_REGION", "ap-hongkong"),

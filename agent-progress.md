@@ -1518,3 +1518,24 @@
 - 下一步建议:
   - 在线上真实 key 下跑一轮 `/api/v1/companion/scene` 和 `/api/v1/companion/chat`，对比不同 `object_type` 的音色差异与延迟。
 - 对应提交: （本次提交）
+
+### [2026-02-26 10:53] F019 增加可配置TTS音色规则表并按物体分类随机选音色
+- 会话目标: 让 TTS 音色差异更明显，并支持通过规则文件配置“物体类型 -> 音色池”。
+- 选择功能: `F019`
+- 实际改动:
+  - 新增 `config/tts_voice_profiles.json`：定义 `fallback_voices` 与分类 `profiles`（动物/交通/植物/建筑）。
+  - 新增 `internal/llm/tts_profiles.go`：实现规则文件加载与校验；文件缺失或非法时自动回退内置默认规则。
+  - `internal/llm/client.go`：新增 `TTSProfilePath` 配置项，默认读取 `config/tts_voice_profiles.json`。
+  - `internal/llm/companion.go`：音色候选改为读取规则表匹配 `object_type` 后随机选取；匹配失败走 fallback 音色池。
+  - `cmd/server/main.go`：新增环境变量 `CITYLING_TTS_PROFILE_FILE` 注入。
+  - `README.md`、`ling.ini.example`：补充 `CITYLING_TTS_PROFILE_FILE` 配置说明。
+  - `internal/llm/companion_test.go`：新增规则加载与候选匹配测试。
+- 验证结果:
+  - `go test ./internal/llm ./internal/service ./cmd/server` 通过；
+  - `go test ./...` 通过；
+  - `./init.sh` smoke 通过（`http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - DashScope可用音色名称与账户能力有关，若规则表里某音色不可用会触发自动重试并回退到可用候选。
+- 下一步建议:
+  - 线上根据实际可用音色清单微调 `config/tts_voice_profiles.json`，把每类音色池扩展到 3~4 个，提升随机多样性。
+- 对应提交: （本次提交）
