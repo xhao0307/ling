@@ -671,9 +671,7 @@ func (s *Service) judgeAnswerByLLM(session model.ScanSession, givenAnswer string
 	result, err := s.llm.JudgeAnswer(
 		context.Background(),
 		session.QuizQ,
-		session.QuizA,
 		givenAnswer,
-		session.ChildAge,
 	)
 	if err != nil {
 		return false, err

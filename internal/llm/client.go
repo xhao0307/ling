@@ -325,7 +325,7 @@ func (c *Client) GenerateLearningContent(ctx context.Context, objectType string,
 	return result, nil
 }
 
-func (c *Client) JudgeAnswer(ctx context.Context, question string, expectedAnswer string, givenAnswer string, childAge int) (AnswerJudgeResult, error) {
+func (c *Client) JudgeAnswer(ctx context.Context, question string, givenAnswer string) (AnswerJudgeResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
@@ -334,15 +334,13 @@ func (c *Client) JudgeAnswer(ctx context.Context, question string, expectedAnswe
 		"messages": []map[string]any{
 			{
 				"role":    "system",
-				"content": "你是儿童问答判题助手。请结合题目语义判断作答是否正确，允许同义表达、近义词和口语化表达。仅输出 JSON。",
+				"content": "你是儿童问答判题助手。仅根据题目与孩子回答判断对错，允许同义表达、近义词和口语化表达。仅输出 JSON。",
 			},
 			{
 				"role": "user",
 				"content": fmt.Sprintf(
-					"孩子年龄:%d\n题目:%s\n标准答案:%s\n孩子回答:%s\n请输出 JSON 字段: correct(boolean), reason(string，简体中文，20字以内)。",
-					childAge,
+					"题目:%s\n孩子回答:%s\n请输出 JSON 字段: correct(boolean), reason(string，简体中文，20字以内)。",
 					strings.TrimSpace(question),
-					strings.TrimSpace(expectedAnswer),
 					strings.TrimSpace(givenAnswer),
 				),
 			},

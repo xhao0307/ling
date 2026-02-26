@@ -1893,3 +1893,21 @@
 - 下一步建议:
   - 进行一次“识别狗 -> 进入剧情 -> 首句校验”E2E，确认 UI 中首句稳定包含“我是狗/狗狗”。
 - 对应提交: （本次提交）
+
+### [2026-02-26 16:09] F006 判题链路收敛为“仅题目+回答”
+- 会话目标: 按需求把答题判定输入收敛为最小集，只喂给模型“题目+孩子回答”，不再传年龄和标准答案。
+- 选择功能: `F006`
+- 实际改动:
+  - `internal/llm/client.go`：`JudgeAnswer` 签名改为 `JudgeAnswer(ctx, question, givenAnswer)`；
+  - 判题 user prompt 改为仅包含：`题目`、`孩子回答`；删除 `孩子年龄`、`标准答案` 字段；
+  - `internal/service/service.go`：`judgeAnswerByLLM` 调整调用参数，不再传 `session.QuizA` 与 `session.ChildAge`；
+  - `internal/llm/client_test.go`：新增 `TestJudgeAnswerOnlyUsesQuestionAndAnswer`，断言请求中仅出现题目和回答，且不包含“标准答案/孩子年龄”。
+- 验证结果:
+  - `go test ./internal/llm ./internal/service ./internal/httpapi ./cmd/server` 通过；
+  - `./init.sh` 通过（`smoke 通过: http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 因不再提供“标准答案”，判题结果将完全依赖模型语义判断，边界题（主观问法/歧义问法）一致性可能波动。
+  - 本轮为后端与单测验证，`F006.passes` 维持 `false`（尚未完成端到端链路验收）。
+- 下一步建议:
+  - 执行一次 `scan -> answer -> pokedex` 真实链路抽检，重点观察同义表达与错误答案的判定稳定性。
+- 对应提交: （本次提交）
