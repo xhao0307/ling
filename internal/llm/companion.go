@@ -67,18 +67,11 @@ func (c *Client) GenerateCompanionScene(ctx context.Context, req CompanionSceneR
 		"messages": []map[string]any{
 			{
 				"role":    "system",
-				"content": "你是儿童剧情互动编剧。仅输出 JSON，不要 markdown。",
+				"content": buildCompanionSceneSystemPrompt(),
 			},
 			{
-				"role": "user",
-				"content": fmt.Sprintf(
-					"孩子年龄:%d\n物体:%s\n天气:%s\n环境:%s\n物体形态:%s\n请输出 JSON 字段：character_name, personality, dialog_text, image_prompt。要求：1) 角色为拟人卡通形象，适合儿童；2) dialog_text 1-2 句，口吻友好；3) image_prompt 用于文生图，描述卡通角色、场景与光线，中文；4) image_prompt 必须明确“角色看向镜头/看向屏幕中的小朋友”，增强互动感。",
-					req.ChildAge,
-					strings.TrimSpace(req.ObjectType),
-					defaultText(req.Weather, "晴朗"),
-					defaultText(req.Environment, "户外"),
-					defaultText(req.ObjectTraits, "圆润可爱"),
-				),
+				"role":    "user",
+				"content": buildCompanionSceneUserPrompt(req),
 			},
 		},
 		"temperature": 0.8,
@@ -363,22 +356,11 @@ func (c *Client) GenerateCompanionReply(ctx context.Context, req CompanionReplyR
 		"messages": []map[string]any{
 			{
 				"role":    "system",
-				"content": "你是儿童剧情互动角色。请继续角色对话，语气友好、简洁。仅输出 JSON，禁止 markdown。",
+				"content": buildCompanionReplySystemPrompt(),
 			},
 			{
-				"role": "user",
-				"content": fmt.Sprintf(
-					"孩子年龄:%d\n物体:%s\n角色名:%s\n角色性格:%s\n天气:%s\n环境:%s\n物体形态:%s\n历史对话:\n%s\n孩子最新输入:%s\n请输出 JSON 字段: reply_text。要求：1) 只回复角色台词；2) 1-2 句，最多45字；3) 鼓励孩子观察和思考；4) 简体中文。",
-					req.ChildAge,
-					strings.TrimSpace(req.ObjectType),
-					defaultText(req.CharacterName, "城市小精灵"),
-					defaultText(req.CharacterPersonality, "友好"),
-					defaultText(req.Weather, "晴朗"),
-					defaultText(req.Environment, "户外"),
-					defaultText(req.ObjectTraits, "可爱"),
-					historyBlock,
-					strings.TrimSpace(req.ChildMessage),
-				),
+				"role":    "user",
+				"content": buildCompanionReplyUserPrompt(req, historyBlock),
 			},
 		},
 		"temperature": 0.7,
@@ -790,4 +772,111 @@ func defaultText(v string, fallback string) string {
 		return fallback
 	}
 	return v
+}
+
+func buildCompanionSceneSystemPrompt() string {
+	return "你是儿童认知发展专家化身的“万物之灵”剧情伙伴。只允许输出 JSON，不要 markdown，不要额外说明。"
+}
+
+func buildCompanionSceneUserPrompt(req CompanionSceneRequest) string {
+	age := normalizeCompanionAge(req.ChildAge)
+	return fmt.Sprintf(
+		`请基于以下输入生成剧情开场，并严格按 JSON 返回。
+输入信息：
+- 孩子年龄: %d
+- 物体: %s
+- 天气: %s
+- 环境: %s
+- 物体形态: %s
+- 年龄认知层: %s
+
+输出 JSON 字段（缺一不可）：
+{"character_name":"", "personality":"", "dialog_text":"", "image_prompt":""}
+
+写作规则（必须满足）：
+1) dialog_text 必须用第一人称“我”，并且第一句直接说明“我是谁”（例如“你好呀，我是……”）。
+2) 先做危险扫描：触电/烫伤/割伤/有毒/夹伤/坠落/动物攻击/过敏。若有风险，在开场后单独一段以“⚠️”开头预警；若无风险，不要输出预警。
+3) dialog_text 采用“观察细节 -> 小秘密科普 -> 身体互动 -> 只问一个问题 -> 邀请孩子继续提问”的节奏。
+4) 全文只能有一个问句，且语言要符合该年龄层认知与口语习惯，适合语音朗读。
+5) 比喻必须忠于事实，禁止编造危险结论或夸大能力。
+6) dialog_text 结尾固定追加：“你还有什么想知道的吗？随便问——我在这儿听着呢！”
+7) 使用简体中文，不要使用编号、标签词（如Step 1）或Markdown。
+
+image_prompt 规则（必须满足）：
+1) 童话儿童绘本风，柔和光线，适合作为剧情对话背景。
+2) 主体拟人化但保持原物体关键特征，主体视线看向镜头（看向屏幕中的小朋友）。
+3) 主体可视面积约占画面1/5，位置居中或微偏中景，构图有前中后景层次。
+4) 场景必须符合主体在现实生活中的常见出现环境。
+5) 禁止文字、水印、logo。`,
+		age,
+		strings.TrimSpace(req.ObjectType),
+		defaultText(req.Weather, "晴朗"),
+		defaultText(req.Environment, "户外"),
+		defaultText(req.ObjectTraits, "圆润可爱"),
+		companionAgeLayerInstruction(age),
+	)
+}
+
+func buildCompanionReplySystemPrompt() string {
+	return "你是儿童剧情互动角色，持续用第一人称“我”与孩子多轮对话。只输出 JSON，不要 markdown。"
+}
+
+func buildCompanionReplyUserPrompt(req CompanionReplyRequest, historyBlock string) string {
+	age := normalizeCompanionAge(req.ChildAge)
+	return fmt.Sprintf(
+		`请延续角色设定继续回复，严格按 JSON 输出。
+输入信息：
+- 孩子年龄: %d
+- 物体: %s
+- 角色名: %s
+- 角色性格: %s
+- 天气: %s
+- 环境: %s
+- 物体形态: %s
+- 年龄认知层: %s
+- 历史对话:
+%s
+- 孩子最新输入: %s
+
+输出 JSON 字段：
+{"reply_text":""}
+
+回复规则（必须满足）：
+1) 只输出角色台词，第一人称口吻，简体中文。
+2) 先回应孩子刚刚的话，再引导观察或思考。
+3) 一次只问一个问题；如果当前回复不需要提问，可以不问。
+4) 语气鼓励、自然、可朗读，不要说教，不要罗列编号。
+5) 保持与历史设定一致，不重复机械套话。`,
+		age,
+		strings.TrimSpace(req.ObjectType),
+		defaultText(req.CharacterName, "城市小精灵"),
+		defaultText(req.CharacterPersonality, "友好"),
+		defaultText(req.Weather, "晴朗"),
+		defaultText(req.Environment, "户外"),
+		defaultText(req.ObjectTraits, "可爱"),
+		companionAgeLayerInstruction(age),
+		historyBlock,
+		strings.TrimSpace(req.ChildMessage),
+	)
+}
+
+func normalizeCompanionAge(age int) int {
+	if age < 3 {
+		return 3
+	}
+	if age > 15 {
+		return 15
+	}
+	return age
+}
+
+func companionAgeLayerInstruction(age int) string {
+	switch {
+	case age <= 6:
+		return "3-6岁：短句、具象、像生活故事一样描述。"
+	case age <= 12:
+		return "7-12岁：强调因果与结构，口语化解释“为什么”。"
+	default:
+		return "13-15岁：可加入系统思维、成本与权衡，但保持易懂。"
+	}
 }

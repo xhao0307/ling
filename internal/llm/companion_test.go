@@ -99,6 +99,66 @@ func TestParseCompanionSceneWithTrailingJSON(t *testing.T) {
 	}
 }
 
+func TestBuildCompanionSceneUserPromptIncludesPolicy(t *testing.T) {
+	prompt := buildCompanionSceneUserPrompt(CompanionSceneRequest{
+		ObjectType:   "猫",
+		ChildAge:     5,
+		Weather:      "晴天",
+		Environment:  "小区",
+		ObjectTraits: "毛茸茸",
+	})
+
+	expectedSnippets := []string{
+		"第一句直接说明“我是谁”",
+		"触电/烫伤/割伤/有毒/夹伤/坠落/动物攻击/过敏",
+		"只能有一个问句",
+		"你还有什么想知道的吗？随便问——我在这儿听着呢！",
+		"主体可视面积约占画面1/5",
+	}
+	for _, snippet := range expectedSnippets {
+		if !strings.Contains(prompt, snippet) {
+			t.Fatalf("expected scene prompt to include %q, got: %s", snippet, prompt)
+		}
+	}
+}
+
+func TestBuildCompanionReplyUserPromptIncludesPolicy(t *testing.T) {
+	prompt := buildCompanionReplyUserPrompt(CompanionReplyRequest{
+		ObjectType:           "猫",
+		ChildAge:             9,
+		CharacterName:        "喵喵",
+		CharacterPersonality: "好奇",
+		Weather:              "晴天",
+		Environment:          "公园",
+		ObjectTraits:         "灵活",
+		ChildMessage:         "你为什么会抓老鼠？",
+	}, "角色：你好\n孩子：你好")
+
+	expectedSnippets := []string{
+		"先回应孩子刚刚的话",
+		"一次只问一个问题",
+		"保持与历史设定一致",
+		"年龄认知层",
+	}
+	for _, snippet := range expectedSnippets {
+		if !strings.Contains(prompt, snippet) {
+			t.Fatalf("expected reply prompt to include %q, got: %s", snippet, prompt)
+		}
+	}
+}
+
+func TestNormalizeCompanionAge(t *testing.T) {
+	if got := normalizeCompanionAge(1); got != 3 {
+		t.Fatalf("expected clamp to 3, got %d", got)
+	}
+	if got := normalizeCompanionAge(18); got != 15 {
+		t.Fatalf("expected clamp to 15, got %d", got)
+	}
+	if got := normalizeCompanionAge(8); got != 8 {
+		t.Fatalf("expected keep 8, got %d", got)
+	}
+}
+
 func TestGenerateCharacterImage(t *testing.T) {
 	var receivedImage string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
