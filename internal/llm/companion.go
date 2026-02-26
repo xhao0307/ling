@@ -65,7 +65,7 @@ func (c *Client) GenerateCompanionScene(ctx context.Context, req CompanionSceneR
 	promptSpec := renderCompanionPromptSpec(c.companionPromptSpec, req.ChildAge, req.ObjectType)
 
 	body := map[string]any{
-		"model": c.chatModel,
+		"model": c.companionModel,
 		"messages": []map[string]any{
 			{
 				"role":    "system",
@@ -350,7 +350,7 @@ func (c *Client) GenerateCompanionReply(ctx context.Context, req CompanionReplyR
 	promptSpec := renderCompanionPromptSpec(c.companionPromptSpec, req.ChildAge, req.ObjectType)
 
 	body := map[string]any{
-		"model": c.chatModel,
+		"model": c.companionModel,
 		"messages": []map[string]any{
 			{
 				"role":    "system",

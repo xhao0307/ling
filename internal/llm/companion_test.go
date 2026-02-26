@@ -667,6 +667,7 @@ func TestGenerateCompanionReply(t *testing.T) {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		var reqBody struct {
+			Model    string `json:"model"`
 			Messages []struct {
 				Role    string `json:"role"`
 				Content string `json:"content"`
@@ -679,6 +680,9 @@ func TestGenerateCompanionReply(t *testing.T) {
 		if len(reqBody.Messages) != 2 {
 			t.Fatalf("unexpected message count: %d", len(reqBody.Messages))
 		}
+		if reqBody.Model != "qwen-plus-test" {
+			t.Fatalf("expected companion model qwen-plus-test, got %q", reqBody.Model)
+		}
 		capturedUserPrompt = reqBody.Messages[1].Content
 		if reqBody.MaxTokens != 180 {
 			t.Fatalf("expected max_tokens=180, got %d", reqBody.MaxTokens)
@@ -689,8 +693,9 @@ func TestGenerateCompanionReply(t *testing.T) {
 	defer server.Close()
 
 	client, err := NewClient(Config{
-		APIKey:  "test-key",
-		BaseURL: server.URL,
+		APIKey:         "test-key",
+		BaseURL:        server.URL,
+		CompanionModel: "qwen-plus-test",
 	})
 	if err != nil {
 		t.Fatalf("NewClient() error = %v", err)

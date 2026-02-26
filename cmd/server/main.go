@@ -145,6 +145,7 @@ func initLLMClientFromEnv() *llm.Client {
 	legacyVoiceKey := strings.TrimSpace(os.Getenv("CITYLING_LLM_API_KEY"))
 	forcedChatBaseURL := "https://dashscope.aliyuncs.com"
 	forcedChatModel := "qwen3.5-flash"
+	companionModel := envOrDefault("CITYLING_COMPANION_MODEL", "qwen-plus")
 	if raw := strings.TrimSpace(os.Getenv("CITYLING_LLM_BASE_URL")); raw != "" && !strings.EqualFold(strings.TrimRight(raw, "/"), forcedChatBaseURL) {
 		log.Printf("llm chat base forced to %s, ignored CITYLING_LLM_BASE_URL=%s", forcedChatBaseURL, raw)
 	}
@@ -156,6 +157,7 @@ func initLLMClientFromEnv() *llm.Client {
 		BaseURL:              forcedChatBaseURL,
 		APIKey:               apiKey,
 		ChatModel:            forcedChatModel,
+		CompanionModel:       companionModel,
 		AppID:                envOrDefault("CITYLING_LLM_APP_ID", "4"),
 		PlatformID:           envOrDefault("CITYLING_LLM_PLATFORM_ID", "5"),
 		Timeout:              time.Duration(parseEnvInt("CITYLING_LLM_TIMEOUT_SECONDS", 20)) * time.Second,
@@ -179,9 +181,10 @@ func initLLMClientFromEnv() *llm.Client {
 		COSPublicDomain:      envOrDefault("CITYLING_COS_PUBLIC_DOMAIN", ""),
 	}
 	log.Printf(
-		"llm init config: base=%s model=%s timeout=%s companion_chat_timeout=%s key_meta={%s} image_base=%s image_key_meta={%s} voice_base=%s voice_key_meta={%s}",
+		"llm init config: base=%s model=%s companion_model=%s timeout=%s companion_chat_timeout=%s key_meta={%s} image_base=%s image_key_meta={%s} voice_base=%s voice_key_meta={%s}",
 		cfg.BaseURL,
 		cfg.ChatModel,
+		cfg.CompanionModel,
 		cfg.Timeout.String(),
 		cfg.CompanionChatTimeout.String(),
 		safeKeyMeta(cfg.APIKey),

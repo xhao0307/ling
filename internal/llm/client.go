@@ -21,12 +21,14 @@ const (
 	defaultDashScopeBaseURL               = "https://dashscope.aliyuncs.com"
 	dashScopeCompatibleChatCompletionsURL = "/compatible-mode/v1/chat/completions"
 	defaultDashScopeChatModel             = "qwen3.5-flash"
+	defaultDashScopeCompanionModel        = "qwen-plus"
 )
 
 type Config struct {
 	BaseURL              string
 	APIKey               string
 	ChatModel            string
+	CompanionModel       string
 	AppID                string
 	PlatformID           string
 	VisionGPTType        int
@@ -56,6 +58,7 @@ type Client struct {
 	baseURL              string
 	apiKey               string
 	chatModel            string
+	companionModel       string
 	chatCompletionsPath  string
 	appID                string
 	platformID           string
@@ -115,6 +118,10 @@ func NewClient(cfg Config) (*Client, error) {
 	chatModel := strings.TrimSpace(cfg.ChatModel)
 	if chatModel == "" {
 		chatModel = defaultDashScopeChatModel
+	}
+	companionModel := strings.TrimSpace(cfg.CompanionModel)
+	if companionModel == "" {
+		companionModel = defaultDashScopeCompanionModel
 	}
 	if cfg.VisionGPTType == 0 {
 		cfg.VisionGPTType = 8102
@@ -197,6 +204,7 @@ func NewClient(cfg Config) (*Client, error) {
 		baseURL:              strings.TrimRight(baseURL, "/"),
 		apiKey:               strings.TrimSpace(cfg.APIKey),
 		chatModel:            chatModel,
+		companionModel:       companionModel,
 		chatCompletionsPath:  resolveChatCompletionsPath(baseURL),
 		appID:                appID,
 		platformID:           platformID,

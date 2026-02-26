@@ -1911,3 +1911,25 @@
 - 下一步建议:
   - 执行一次 `scan -> answer -> pokedex` 真实链路抽检，重点观察同义表达与错误答案的判定稳定性。
 - 对应提交: （本次提交）
+
+### [2026-02-26 16:35] F019/F006 模型分流：剧情用强模型，识别与判题用轻量模型
+- 会话目标: 按要求将“剧情生成”与“识别/判题”模型分开，避免全部走 flash 或全部走重模型。
+- 选择功能: `F019`（兼顾 `F006` 判题链路）
+- 实际改动:
+  - `internal/llm/client.go`：新增 `CompanionModel` 配置与 `companionModel` 客户端字段；默认值设为 `qwen-plus`；
+  - `internal/llm/companion.go`：`GenerateCompanionScene`、`GenerateCompanionReply` 改为使用 `c.companionModel`；
+  - 保持识别与判题链路继续使用 `c.chatModel`（当前轻量模型 `qwen3.5-flash`）；
+  - `cmd/server/main.go`：新增 `CITYLING_COMPANION_MODEL`（默认 `qwen-plus`）并纳入启动日志；
+  - `README.md`、`ling.ini.example`、`ecosystem.config.cjs`：补充新配置说明；
+  - 单测增强：
+    - `internal/llm/companion_test.go` 断言剧情回复请求使用 `CompanionModel`；
+    - `internal/llm/client_test.go` 断言判题请求仍使用轻量 `ChatModel`。
+- 验证结果:
+  - `go test ./internal/llm ./internal/service ./internal/httpapi ./cmd/server` 通过；
+  - `./init.sh` 通过（`smoke 通过: http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 强模型会增加剧情文案链路成本与时延；若线上延迟偏高，可按需调 `CITYLING_COMPANION_MODEL`。
+  - 本轮为后端与单测验证，`F019.passes` 维持 `false`（未补浏览器剧情 e2e 抽检）。
+- 下一步建议:
+  - 线上灰度观察 `/api/v1/companion/scene` 与 `/api/v1/companion/chat` 的耗时与质量变化，再决定是否上调到更强模型档位。
+- 对应提交: （本次提交）

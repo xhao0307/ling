@@ -33,10 +33,12 @@ Optional environment variables:
 - `CITYLING_DATA_FILE` (default `data/cityling.db` for sqlite, `data/cityling.json` for json)
 - `CITYLING_DASHSCOPE_API_KEY` (用于文本/视觉大模型，enable LLM integration when set)
 - 聊天识别链路固定使用 `https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions`
-- 聊天识别模型固定使用 `qwen3.5-flash`
+- 主体识别/判题等轻量链路模型固定使用 `qwen3.5-flash`
+- 剧情文案链路模型默认使用 `qwen-plus`（可通过 `CITYLING_COMPANION_MODEL` 覆盖）
 - `CITYLING_LLM_APP_ID` (default `4`)
 - `CITYLING_LLM_PLATFORM_ID` (default `5`)
 - `CITYLING_LLM_TIMEOUT_SECONDS` (default `20`)
+- `CITYLING_COMPANION_MODEL` (default `qwen-plus`，仅用于 `/api/v1/companion/scene` 与 `/api/v1/companion/chat` 文案生成)
 - `CITYLING_COMPANION_CHAT_TIMEOUT_SECONDS` (`/api/v1/companion/chat` 专用超时，default `45`)
 - `CITYLING_COMPANION_PROMPT_FILE` (default `prompt.txt`，剧情场景/多轮对话将完整按该文件规则执行)
 - `CITYLING_IMAGE_API_BASE_URL` (default `https://api-image.charaboard.com`)

@@ -72,6 +72,7 @@ func TestJudgeAnswerOnlyUsesQuestionAndAnswer(t *testing.T) {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		var req struct {
+			Model    string `json:"model"`
 			Messages []struct {
 				Role    string `json:"role"`
 				Content string `json:"content"`
@@ -79,6 +80,9 @@ func TestJudgeAnswerOnlyUsesQuestionAndAnswer(t *testing.T) {
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			t.Fatalf("decode request body: %v", err)
+		}
+		if req.Model != "qwen3.5-flash-test" {
+			t.Fatalf("expected simple model qwen3.5-flash-test, got %q", req.Model)
 		}
 		for _, msg := range req.Messages {
 			if msg.Role == "user" {
@@ -91,8 +95,9 @@ func TestJudgeAnswerOnlyUsesQuestionAndAnswer(t *testing.T) {
 	defer server.Close()
 
 	client, err := NewClient(Config{
-		APIKey:  "test-key",
-		BaseURL: server.URL,
+		APIKey:    "test-key",
+		BaseURL:   server.URL,
+		ChatModel: "qwen3.5-flash-test",
 	})
 	if err != nil {
 		t.Fatalf("NewClient() error = %v", err)
