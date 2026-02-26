@@ -1077,7 +1077,7 @@ class _CityLingHomePageState extends State<CityLingHomePage> {
     ];
 
     return Scaffold(
-      appBar: _tabIndex == 0
+      appBar: (_tabIndex == 0 || _tabIndex == 3)
           ? null
           : AppBar(
               title: Text(_titleForTab(session)),
@@ -1108,7 +1108,7 @@ class _CityLingHomePageState extends State<CityLingHomePage> {
       case 2:
         return '报告';
       case 3:
-        return session.isDebug ? '我的（调试）' : '我的';
+        return '我的';
       default:
         return session.isDebug ? '城市灵（调试模式）' : '城市灵';
     }
@@ -3224,18 +3224,15 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
             const SizedBox(height: 14),
-            Card(
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-                child: Row(
-                  children: [
-                    _buildStatItem('图鉴精灵', _totalSpirits.toString()),
-                    _buildStatItem('累计收集', _totalCaptures.toString()),
-                    _buildStatItem('今日收集', _todayCaptures.toString()),
-                    _buildStatItem('今日知识点', _todayKnowledgePoints.toString()),
-                  ],
-                ),
+            _buildProfilePanel(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+              child: Row(
+                children: [
+                  _buildStatItem('图鉴精灵', _totalSpirits.toString()),
+                  _buildStatItem('累计收集', _totalCaptures.toString()),
+                  _buildStatItem('今日收集', _todayCaptures.toString()),
+                  _buildStatItem('今日知识点', _todayKnowledgePoints.toString()),
+                ],
               ),
             ),
             if (_loading)
@@ -3293,7 +3290,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ],
             ),
             const SizedBox(height: 14),
-            Card(
+            _buildProfilePanel(
               child: Column(
                 children: [
                   _buildMenuTile(
@@ -3362,6 +3359,27 @@ class _ProfilePageState extends State<ProfilePage> {
           fontSize: 12,
         ),
       ),
+    );
+  }
+
+  Widget _buildProfilePanel({
+    required Widget child,
+    EdgeInsetsGeometry padding = const EdgeInsets.all(12),
+  }) {
+    return _GlassPanel(
+      radius: 24,
+      blurSigma: 16,
+      backgroundColor: Colors.white.withValues(alpha: 0.68),
+      borderColor: Colors.white.withValues(alpha: 0.52),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x142D2A38),
+          blurRadius: 22,
+          offset: Offset(0, 10),
+        ),
+      ],
+      padding: padding,
+      child: child,
     );
   }
 
