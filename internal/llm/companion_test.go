@@ -615,9 +615,28 @@ func TestParseCompanionReplyWithTrailingJSON(t *testing.T) {
 }
 
 func TestGenerateCompanionReply(t *testing.T) {
+	var capturedUserPrompt string
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/compatible-mode/v1/chat/completions" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		var reqBody struct {
+			Messages []struct {
+				Role    string `json:"role"`
+				Content string `json:"content"`
+			} `json:"messages"`
+			MaxTokens int `json:"max_tokens"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
+			t.Fatalf("decode request body failed: %v", err)
+		}
+		if len(reqBody.Messages) != 2 {
+			t.Fatalf("unexpected message count: %d", len(reqBody.Messages))
+		}
+		capturedUserPrompt = reqBody.Messages[1].Content
+		if reqBody.MaxTokens != 180 {
+			t.Fatalf("expected max_tokens=180, got %d", reqBody.MaxTokens)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"{\"reply_text\":\"我们一起数数它有几个灯吧！\"}"}}]}`))
@@ -641,13 +660,22 @@ func TestGenerateCompanionReply(t *testing.T) {
 		Weather:              "晴天",
 		Environment:          "小区道路",
 		ObjectTraits:         "暖光",
-		History:              []string{"角色：你好呀", "孩子：你好"},
-		ChildMessage:         "为什么它会亮？",
+		History: []string{
+			"角色：第1句", "孩子：第2句", "角色：第3句", "孩子：第4句", "角色：第5句",
+			"孩子：第6句", "角色：第7句", "孩子：第8句", "角色：第9句", "孩子：第10句",
+		},
+		ChildMessage: "为什么它会亮？",
 	})
 	if err != nil {
 		t.Fatalf("GenerateCompanionReply() error = %v", err)
 	}
 	if reply.ReplyText == "" {
 		t.Fatalf("expected non-empty reply text")
+	}
+	if strings.Contains(capturedUserPrompt, "第1句") || strings.Contains(capturedUserPrompt, "第2句") {
+		t.Fatalf("expected old history to be truncated, got prompt=%q", capturedUserPrompt)
+	}
+	if !strings.Contains(capturedUserPrompt, "第10句") {
+		t.Fatalf("expected latest history in prompt, got prompt=%q", capturedUserPrompt)
 	}
 }

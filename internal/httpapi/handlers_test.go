@@ -8,8 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"ling/internal/knowledge"
+	"ling/internal/llm"
 	"ling/internal/service"
 	"ling/internal/store"
 )
@@ -149,6 +151,51 @@ func TestCompanionChatMissingMessageReturns400(t *testing.T) {
 
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected status %d, got %d, body=%s", http.StatusBadRequest, rec.Code, rec.Body.String())
+	}
+}
+
+func TestCompanionChatTimeoutReturns504(t *testing.T) {
+	st, err := store.NewJSONStore(filepath.Join(t.TempDir(), "state.json"))
+	if err != nil {
+		t.Fatalf("NewJSONStore() error = %v", err)
+	}
+	svc := service.New(st, knowledge.BaseKnowledge)
+	h := NewHandler(svc)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/compatible-mode/v1/chat/completions" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		time.Sleep(80 * time.Millisecond)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"{\"reply_text\":\"你好\"}"}}]}`))
+	}))
+	defer server.Close()
+
+	client, err := llm.NewClient(llm.Config{
+		APIKey:               "test-key",
+		BaseURL:              server.URL,
+		Timeout:              20 * time.Millisecond,
+		CompanionChatTimeout: 20 * time.Millisecond,
+	})
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+	svc.SetLLMClient(client)
+
+	body := map[string]any{
+		"child_id":      "kid_httpapi_timeout",
+		"child_age":     8,
+		"object_type":   "猫",
+		"child_message": "为什么会这样？",
+	}
+	payload, _ := json.Marshal(body)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/companion/chat", bytes.NewReader(payload))
+	rec := httptest.NewRecorder()
+	h.companionChat(rec, req)
+
+	if rec.Code != http.StatusGatewayTimeout {
+		t.Fatalf("expected status %d, got %d, body=%s", http.StatusGatewayTimeout, rec.Code, rec.Body.String())
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"net"
 	"sort"
 	"strconv"
 	"strings"
@@ -31,6 +32,7 @@ var (
 	ErrStoryTextMissing  = errors.New("请提供 text")
 	ErrMediaUnavailable  = errors.New("角色形象或语音能力暂不可用")
 	ErrImageUpload       = errors.New("图片上传失败")
+	ErrCompanionTimeout  = errors.New("剧情回复生成超时，请稍后再试")
 )
 
 type ScanRequest struct {
@@ -520,6 +522,9 @@ func (s *Service) ChatCompanion(req CompanionChatRequest) (CompanionChatResponse
 		ChildMessage:         childMessage,
 	})
 	if err != nil {
+		if isTimeoutError(err) {
+			return CompanionChatResponse{}, ErrCompanionTimeout
+		}
 		return CompanionChatResponse{}, err
 	}
 	replyText := ensureCompanionEmotionHook(reply.ReplyText, strings.TrimSpace(req.CharacterName), objectType)
@@ -537,6 +542,17 @@ func (s *Service) ChatCompanion(req CompanionChatRequest) (CompanionChatResponse
 		VoiceAudioBase64: base64.StdEncoding.EncodeToString(audioBytes),
 		VoiceMimeType:    mimeType,
 	}, nil
+}
+
+func isTimeoutError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	var netErr net.Error
+	return errors.As(err, &netErr) && netErr.Timeout()
 }
 
 func (s *Service) SynthesizeCompanionVoice(req CompanionVoiceRequest) (CompanionVoiceResponse, error) {

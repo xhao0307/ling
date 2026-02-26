@@ -56,6 +56,7 @@ const (
 	bytePlusImageGenerationPath  = "/v1/byteplus/images/generations"
 	dashScopeImageGenerationPath = "/api/v1/services/aigc/multimodal-generation/generation"
 	dashScopeTTSGenerationPath   = "/api/v1/services/aigc/multimodal-generation/generation"
+	companionHistoryLimit        = 8
 )
 
 func (c *Client) GenerateCompanionScene(ctx context.Context, req CompanionSceneRequest) (CompanionScene, error) {
@@ -341,15 +342,10 @@ func extractDataURLBase64Payload(dataURL string) string {
 }
 
 func (c *Client) GenerateCompanionReply(ctx context.Context, req CompanionReplyRequest) (CompanionReply, error) {
-	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	ctx, cancel := context.WithTimeout(ctx, c.companionChatTimeout)
 	defer cancel()
 
-	var historyBlock string
-	if len(req.History) == 0 {
-		historyBlock = "(无历史对话)"
-	} else {
-		historyBlock = strings.Join(req.History, "\n")
-	}
+	historyBlock := buildCompanionHistoryBlock(req.History)
 
 	body := map[string]any{
 		"model": c.chatModel,
@@ -364,7 +360,7 @@ func (c *Client) GenerateCompanionReply(ctx context.Context, req CompanionReplyR
 			},
 		},
 		"temperature": 0.7,
-		"max_tokens":  240,
+		"max_tokens":  180,
 		"response_format": map[string]any{
 			"type": "json_object",
 		},
@@ -819,6 +815,27 @@ image_prompt 规则（必须满足）：
 
 func buildCompanionReplySystemPrompt() string {
 	return "你是儿童剧情互动角色，持续用第一人称“我”与孩子多轮对话。只输出 JSON，不要 markdown。"
+}
+
+func buildCompanionHistoryBlock(history []string) string {
+	if len(history) == 0 {
+		return "(无历史对话)"
+	}
+	filtered := make([]string, 0, len(history))
+	for _, entry := range history {
+		line := strings.TrimSpace(entry)
+		if line == "" {
+			continue
+		}
+		filtered = append(filtered, line)
+	}
+	if len(filtered) == 0 {
+		return "(无历史对话)"
+	}
+	if len(filtered) > companionHistoryLimit {
+		filtered = filtered[len(filtered)-companionHistoryLimit:]
+	}
+	return strings.Join(filtered, "\n")
 }
 
 func buildCompanionReplyUserPrompt(req CompanionReplyRequest, historyBlock string) string {

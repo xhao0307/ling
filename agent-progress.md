@@ -1813,3 +1813,35 @@
 - 下一步建议:
   - 在 Xcode 完成 Team/证书/Bundle ID 配置后，重跑 `cd flutter_client && flutter build ipa --release`。
 - 对应提交: （本次提交）
+
+### [2026-02-26 15:20] F019 修复 companion/chat 20秒超时导致 500
+- 会话目标: 修复 `/api/v1/companion/chat` 频繁 `context deadline exceeded`，避免 20 秒固定超时直接打断对话。
+- 选择功能: `F019`
+- 实际改动:
+  - `internal/llm/client.go`：
+    - 新增 `CompanionChatTimeout` 配置；
+    - 默认将剧情对话超时设为 `45s`（独立于通用 `CITYLING_LLM_TIMEOUT_SECONDS`）。
+  - `internal/llm/companion.go`：
+    - `GenerateCompanionReply` 改为使用 `c.companionChatTimeout`；
+    - 对历史对话做裁剪（仅保留最近 8 条非空记录）；
+    - 将 `max_tokens` 从 `240` 下调为 `180`，降低响应时延。
+  - `internal/service/service.go`：
+    - 新增 `ErrCompanionTimeout`；
+    - 将上游超时错误统一映射为业务超时错误。
+  - `internal/httpapi/handlers.go`：
+    - `companionChat` 对 `ErrCompanionTimeout` 返回 `504 Gateway Timeout`，不再走 `500`。
+  - 配置与文档：
+    - `cmd/server/main.go` 增加 `CITYLING_COMPANION_CHAT_TIMEOUT_SECONDS`（默认 `45`）；
+    - `ecosystem.config.cjs`、`ling.ini.example`、`README.md` 同步新增该配置说明。
+  - 测试补充：
+    - `internal/service/service_test.go`：新增超时映射单测；
+    - `internal/httpapi/handlers_test.go`：新增 `/companion/chat` 超时返回 504 单测；
+    - `internal/llm/companion_test.go`：新增历史裁剪与 `max_tokens=180` 断言。
+- 验证结果:
+  - `go test ./internal/llm ./internal/service ./internal/httpapi ./cmd/server` 通过；
+  - `./init.sh` smoke 通过（`http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 若 DashScope 端拥塞极高，45 秒仍可能超时；但当前会返回 504，便于前端提示“可重试”而非 500。
+- 下一步建议:
+  - 线上将 `CITYLING_COMPANION_CHAT_TIMEOUT_SECONDS` 调到 `45~60` 并重启服务，观察 `POST /api/v1/companion/chat` 的 p95 延迟与 504 比例。
+- 对应提交: （本次提交）

@@ -24,60 +24,62 @@ const (
 )
 
 type Config struct {
-	BaseURL             string
-	APIKey              string
-	ChatModel           string
-	AppID               string
-	PlatformID          string
-	VisionGPTType       int
-	TextGPTType         int
-	Timeout             time.Duration
-	ImageBaseURL        string
-	ImageAPIKey         string
-	ImageModel          string
-	ImageResponseFormat string
-	VoiceBaseURL        string
-	VoiceAPIKey         string
-	VoiceID             string
-	VoiceModelID        string
-	VoiceLangCode       string
-	VoiceFormat         string
-	TTSProfilePath      string
-	COSSecretID         string
-	COSSecretKey        string
-	COSRegion           string
-	COSBucketName       string
-	COSPublicDomain     string
+	BaseURL              string
+	APIKey               string
+	ChatModel            string
+	AppID                string
+	PlatformID           string
+	VisionGPTType        int
+	TextGPTType          int
+	Timeout              time.Duration
+	CompanionChatTimeout time.Duration
+	ImageBaseURL         string
+	ImageAPIKey          string
+	ImageModel           string
+	ImageResponseFormat  string
+	VoiceBaseURL         string
+	VoiceAPIKey          string
+	VoiceID              string
+	VoiceModelID         string
+	VoiceLangCode        string
+	VoiceFormat          string
+	TTSProfilePath       string
+	COSSecretID          string
+	COSSecretKey         string
+	COSRegion            string
+	COSBucketName        string
+	COSPublicDomain      string
 }
 
 type Client struct {
-	baseURL             string
-	apiKey              string
-	chatModel           string
-	chatCompletionsPath string
-	appID               string
-	platformID          string
-	visionGPTType       int
-	textGPTType         int
-	timeout             time.Duration
-	httpClient          *http.Client
-	imageBaseURL        string
-	imageAPIKey         string
-	imageModel          string
-	imageResponseFormat string
-	voiceBaseURL        string
-	voiceAPIKey         string
-	voiceID             string
-	voiceModelID        string
-	voiceLangCode       string
-	voiceFormat         string
-	ttsVoiceProfiles    []ttsVoiceProfile
-	ttsFallbackVoices   []string
-	cosSecretID         string
-	cosSecretKey        string
-	cosRegion           string
-	cosBucketName       string
-	cosPublicDomain     string
+	baseURL              string
+	apiKey               string
+	chatModel            string
+	chatCompletionsPath  string
+	appID                string
+	platformID           string
+	visionGPTType        int
+	textGPTType          int
+	timeout              time.Duration
+	companionChatTimeout time.Duration
+	httpClient           *http.Client
+	imageBaseURL         string
+	imageAPIKey          string
+	imageModel           string
+	imageResponseFormat  string
+	voiceBaseURL         string
+	voiceAPIKey          string
+	voiceID              string
+	voiceModelID         string
+	voiceLangCode        string
+	voiceFormat          string
+	ttsVoiceProfiles     []ttsVoiceProfile
+	ttsFallbackVoices    []string
+	cosSecretID          string
+	cosSecretKey         string
+	cosRegion            string
+	cosBucketName        string
+	cosPublicDomain      string
 }
 
 type RecognizeResult struct {
@@ -120,6 +122,9 @@ func NewClient(cfg Config) (*Client, error) {
 	}
 	if cfg.Timeout <= 0 {
 		cfg.Timeout = 20 * time.Second
+	}
+	if cfg.CompanionChatTimeout <= 0 {
+		cfg.CompanionChatTimeout = 45 * time.Second
 	}
 	imageBaseURL := strings.TrimSpace(cfg.ImageBaseURL)
 	if imageBaseURL == "" {
@@ -186,33 +191,34 @@ func NewClient(cfg Config) (*Client, error) {
 	}
 
 	return &Client{
-		baseURL:             strings.TrimRight(baseURL, "/"),
-		apiKey:              strings.TrimSpace(cfg.APIKey),
-		chatModel:           chatModel,
-		chatCompletionsPath: resolveChatCompletionsPath(baseURL),
-		appID:               appID,
-		platformID:          platformID,
-		visionGPTType:       cfg.VisionGPTType,
-		textGPTType:         cfg.TextGPTType,
-		timeout:             cfg.Timeout,
-		httpClient:          &http.Client{},
-		imageBaseURL:        strings.TrimRight(imageBaseURL, "/"),
-		imageAPIKey:         imageAPIKey,
-		imageModel:          imageModel,
-		imageResponseFormat: imageResponseFormat,
-		voiceBaseURL:        strings.TrimRight(voiceBaseURL, "/"),
-		voiceAPIKey:         voiceAPIKey,
-		voiceID:             voiceID,
-		voiceModelID:        voiceModelID,
-		voiceLangCode:       voiceLangCode,
-		voiceFormat:         voiceFormat,
-		ttsVoiceProfiles:    ttsProfiles,
-		ttsFallbackVoices:   ttsFallbackVoices,
-		cosSecretID:         strings.TrimSpace(cfg.COSSecretID),
-		cosSecretKey:        strings.TrimSpace(cfg.COSSecretKey),
-		cosRegion:           cosRegion,
-		cosBucketName:       strings.TrimSpace(cfg.COSBucketName),
-		cosPublicDomain:     strings.TrimRight(strings.TrimSpace(cfg.COSPublicDomain), "/"),
+		baseURL:              strings.TrimRight(baseURL, "/"),
+		apiKey:               strings.TrimSpace(cfg.APIKey),
+		chatModel:            chatModel,
+		chatCompletionsPath:  resolveChatCompletionsPath(baseURL),
+		appID:                appID,
+		platformID:           platformID,
+		visionGPTType:        cfg.VisionGPTType,
+		textGPTType:          cfg.TextGPTType,
+		timeout:              cfg.Timeout,
+		companionChatTimeout: cfg.CompanionChatTimeout,
+		httpClient:           &http.Client{},
+		imageBaseURL:         strings.TrimRight(imageBaseURL, "/"),
+		imageAPIKey:          imageAPIKey,
+		imageModel:           imageModel,
+		imageResponseFormat:  imageResponseFormat,
+		voiceBaseURL:         strings.TrimRight(voiceBaseURL, "/"),
+		voiceAPIKey:          voiceAPIKey,
+		voiceID:              voiceID,
+		voiceModelID:         voiceModelID,
+		voiceLangCode:        voiceLangCode,
+		voiceFormat:          voiceFormat,
+		ttsVoiceProfiles:     ttsProfiles,
+		ttsFallbackVoices:    ttsFallbackVoices,
+		cosSecretID:          strings.TrimSpace(cfg.COSSecretID),
+		cosSecretKey:         strings.TrimSpace(cfg.COSSecretKey),
+		cosRegion:            cosRegion,
+		cosBucketName:        strings.TrimSpace(cfg.COSBucketName),
+		cosPublicDomain:      strings.TrimRight(strings.TrimSpace(cfg.COSPublicDomain), "/"),
 	}, nil
 }
 

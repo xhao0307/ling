@@ -202,6 +202,9 @@ func (h *Handler) companionChat(w http.ResponseWriter, r *http.Request) {
 			errors.Is(err, service.ErrMediaUnavailable):
 			log.Printf("companionChat unavailable: child_id=%s err=%v", req.ChildID, err)
 			writeError(w, http.StatusServiceUnavailable, err.Error())
+		case errors.Is(err, service.ErrCompanionTimeout):
+			log.Printf("companionChat timeout: child_id=%s object_type=%s err=%v", req.ChildID, req.ObjectType, err)
+			writeError(w, http.StatusGatewayTimeout, err.Error())
 		default:
 			log.Printf("companionChat internal error: child_id=%s object_type=%s err=%v", req.ChildID, req.ObjectType, err)
 			writeError(w, http.StatusInternalServerError, err.Error())

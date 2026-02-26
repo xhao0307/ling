@@ -3,6 +3,7 @@ package service_test
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -552,6 +553,42 @@ func TestChatCompanionMissingMessage(t *testing.T) {
 	}
 	if err != service.ErrChildMessageEmpty {
 		t.Fatalf("expected ErrChildMessageEmpty, got %v", err)
+	}
+}
+
+func TestChatCompanionTimeoutMappedError(t *testing.T) {
+	t.Parallel()
+	svc, _ := newTestService(t)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/compatible-mode/v1/chat/completions" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		time.Sleep(80 * time.Millisecond)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"{\"reply_text\":\"你好\"}"}}]}`))
+	}))
+	defer server.Close()
+
+	client, err := llm.NewClient(llm.Config{
+		APIKey:               "test-key",
+		BaseURL:              server.URL,
+		Timeout:              20 * time.Millisecond,
+		CompanionChatTimeout: 20 * time.Millisecond,
+	})
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+	svc.SetLLMClient(client)
+
+	_, err = svc.ChatCompanion(service.CompanionChatRequest{
+		ChildID:      "kid_timeout_1",
+		ChildAge:     8,
+		ObjectType:   "猫",
+		ChildMessage: "为什么会这样？",
+	})
+	if !errors.Is(err, service.ErrCompanionTimeout) {
+		t.Fatalf("expected ErrCompanionTimeout, got %v", err)
 	}
 }
 

@@ -25,6 +25,8 @@ module.exports = {
         CITYLING_LLM_PLATFORM_ID: process.env.CITYLING_LLM_PLATFORM_ID || "5",
         CITYLING_LLM_TIMEOUT_SECONDS:
           process.env.CITYLING_LLM_TIMEOUT_SECONDS || "20",
+        CITYLING_COMPANION_CHAT_TIMEOUT_SECONDS:
+          process.env.CITYLING_COMPANION_CHAT_TIMEOUT_SECONDS || "45",
       },
     },
   ],
