@@ -346,17 +346,41 @@ func TestResolveImageGenerationRequestURL(t *testing.T) {
 
 func TestSynthesizeSpeech(t *testing.T) {
 	expected := []byte{1, 2, 3, 4, 5}
+	var selectedVoice string
+	var selectedModel string
+	var selectedLanguage string
+	var mockAudioURL string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/elevenlabs/tts/generate" {
-			t.Fatalf("unexpected path: %s", r.URL.Path)
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/services/aigc/multimodal-generation/generation":
+			var req struct {
+				Model string `json:"model"`
+				Input struct {
+					Text         string `json:"text"`
+					Voice        string `json:"voice"`
+					LanguageType string `json:"language_type"`
+				} `json:"input"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				t.Fatalf("decode request body failed: %v", err)
+			}
+			if strings.TrimSpace(req.Input.Text) == "" {
+				t.Fatalf("text should not be empty")
+			}
+			selectedModel = strings.TrimSpace(req.Model)
+			selectedVoice = strings.TrimSpace(req.Input.Voice)
+			selectedLanguage = strings.TrimSpace(req.Input.LanguageType)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"status_code":200,"request_id":"req-1","output":{"audio":{"url":"` + mockAudioURL + `"}}}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/mock-audio.wav":
+			w.Header().Set("Content-Type", "audio/wav")
+			_, _ = w.Write(expected)
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		if got := r.URL.Query().Get("output_format"); got == "" {
-			t.Fatalf("output_format should not be empty")
-		}
-		w.Header().Set("Content-Type", "audio/mpeg")
-		_, _ = w.Write(expected)
 	}))
 	defer server.Close()
+	mockAudioURL = server.URL + "/mock-audio.wav"
 
 	client, err := NewClient(Config{
 		APIKey:       "test-key",
@@ -369,15 +393,24 @@ func TestSynthesizeSpeech(t *testing.T) {
 	}
 	client.httpClient = server.Client()
 
-	audio, mime, err := client.SynthesizeSpeech(context.Background(), "你好，小朋友")
+	audio, mime, err := client.SynthesizeSpeech(context.Background(), "你好，小朋友", "猫")
 	if err != nil {
 		t.Fatalf("SynthesizeSpeech() error = %v", err)
 	}
-	if mime != "audio/mpeg" {
-		t.Fatalf("expected audio/mpeg, got %s", mime)
+	if mime != "audio/wav" {
+		t.Fatalf("expected audio/wav, got %s", mime)
 	}
 	if string(audio) != string(expected) {
 		t.Fatalf("unexpected audio bytes")
+	}
+	if selectedModel != "qwen3-tts-flash" {
+		t.Fatalf("expected qwen3-tts-flash, got %q", selectedModel)
+	}
+	if selectedVoice == "" {
+		t.Fatalf("voice should not be empty")
+	}
+	if selectedLanguage != "Chinese" {
+		t.Fatalf("expected Chinese language type, got %q", selectedLanguage)
 	}
 }
 

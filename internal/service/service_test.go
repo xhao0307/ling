@@ -271,6 +271,7 @@ func TestGenerateCompanionSceneFallsBackWhenSceneLLMFailed(t *testing.T) {
 	svc, _ := newTestService(t)
 
 	var mockImageURL string
+	var mockAudioURL string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.Method == http.MethodPost && r.URL.Path == "/compatible-mode/v1/chat/completions":
@@ -291,8 +292,11 @@ func TestGenerateCompanionSceneFallsBackWhenSceneLLMFailed(t *testing.T) {
 		case r.Method == http.MethodGet && r.URL.Path == "/mock-image.png":
 			w.Header().Set("Content-Type", "image/png")
 			_, _ = w.Write([]byte{1, 2, 3, 4})
-		case r.Method == http.MethodPost && r.URL.Path == "/elevenlabs/tts/generate":
-			w.Header().Set("Content-Type", "audio/mpeg")
+		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/services/aigc/multimodal-generation/generation":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"status_code":200,"request_id":"req-voice-1","output":{"audio":{"url":"` + mockAudioURL + `"}}}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/mock-audio.wav":
+			w.Header().Set("Content-Type", "audio/wav")
 			_, _ = w.Write([]byte{5, 6, 7, 8})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
@@ -300,6 +304,7 @@ func TestGenerateCompanionSceneFallsBackWhenSceneLLMFailed(t *testing.T) {
 	}))
 	defer server.Close()
 	mockImageURL = server.URL + "/mock-image.png"
+	mockAudioURL = server.URL + "/mock-audio.wav"
 
 	client, err := llm.NewClient(llm.Config{
 		APIKey:              "test-key",
@@ -350,6 +355,7 @@ func TestGenerateCompanionSceneImageToImageIgnoresEnvironmentFields(t *testing.T
 	var chatRequestBody string
 	var imagePrompt string
 	var imageInput string
+	var mockAudioURL string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.Method == http.MethodPost && r.URL.Path == "/compatible-mode/v1/chat/completions":
@@ -372,8 +378,11 @@ func TestGenerateCompanionSceneImageToImageIgnoresEnvironmentFields(t *testing.T
 		case r.Method == http.MethodGet && r.URL.Path == "/mock-image.png":
 			w.Header().Set("Content-Type", "image/png")
 			_, _ = w.Write([]byte{1, 2, 3})
-		case r.Method == http.MethodPost && r.URL.Path == "/elevenlabs/tts/generate":
-			w.Header().Set("Content-Type", "audio/mpeg")
+		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/services/aigc/multimodal-generation/generation":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"status_code":200,"request_id":"req-voice-2","output":{"audio":{"url":"` + mockAudioURL + `"}}}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/mock-audio.wav":
+			w.Header().Set("Content-Type", "audio/wav")
 			_, _ = w.Write([]byte{4, 5, 6})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
@@ -381,6 +390,7 @@ func TestGenerateCompanionSceneImageToImageIgnoresEnvironmentFields(t *testing.T
 	}))
 	defer server.Close()
 	mockImageURL = server.URL + "/mock-image.png"
+	mockAudioURL = server.URL + "/mock-audio.wav"
 
 	client, err := llm.NewClient(llm.Config{
 		APIKey:              "test-key",
@@ -440,6 +450,7 @@ func TestGenerateCompanionSceneSupportsB64JSONImageResponse(t *testing.T) {
 	svc, _ := newTestService(t)
 
 	var imagePrompt string
+	var mockAudioURL string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.Method == http.MethodPost && r.URL.Path == "/compatible-mode/v1/chat/completions":
@@ -456,14 +467,18 @@ func TestGenerateCompanionSceneSupportsB64JSONImageResponse(t *testing.T) {
 			}
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"data":[{"b64_json":"aGVsbG8="}]}`))
-		case r.Method == http.MethodPost && r.URL.Path == "/elevenlabs/tts/generate":
-			w.Header().Set("Content-Type", "audio/mpeg")
+		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/services/aigc/multimodal-generation/generation":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"status_code":200,"request_id":"req-voice-3","output":{"audio":{"url":"` + mockAudioURL + `"}}}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/mock-audio.wav":
+			w.Header().Set("Content-Type", "audio/wav")
 			_, _ = w.Write([]byte{7, 8, 9})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
 	}))
 	defer server.Close()
+	mockAudioURL = server.URL + "/mock-audio.wav"
 
 	client, err := llm.NewClient(llm.Config{
 		APIKey:              "test-key",

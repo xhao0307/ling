@@ -1495,3 +1495,26 @@
 - 下一步建议:
   - 发布后观察启动日志是否出现 `llm chat base/model forced`，若出现说明线上还留有旧环境变量，可清理。
 - 对应提交: （本次提交）
+
+### [2026-02-26 10:48] F019 TTS切换DashScope并按识别物体随机音色
+- 会话目标: 将剧情语音合成改为 DashScope 千问 TTS 接口，并根据识别物体随机采用合适音色。
+- 选择功能: `F019`
+- 实际改动:
+  - `internal/llm/companion.go`：
+    - `SynthesizeSpeech` 改为调用 DashScope `POST /api/v1/services/aigc/multimodal-generation/generation`；
+    - 解析 `output.audio.url/data`，URL 模式下自动下载音频；
+    - 新增按 `object_type` 分类音色池并随机选择（动物/交通工具/植物/默认），若音色无效自动重试其他候选；
+    - 新增 `language_type` 标准化映射（`zh -> Chinese` 等）。
+  - `internal/service/service.go`：语音合成调用透传 `objectType`，用于音色选择。
+  - `cmd/server/main.go`、`internal/llm/client.go`：TTS默认配置切换到 DashScope（`base=https://dashscope.aliyuncs.com`、`model=qwen3-tts-flash`、`voice=Cherry`、`language=Chinese`），并支持 key 回退链 `CITYLING_TTS_API_KEY -> CITYLING_DASHSCOPE_API_KEY -> CITYLING_LLM_API_KEY`。
+  - `internal/llm/companion_test.go`、`internal/service/service_test.go`：更新为 DashScope TTS 请求/响应路径与断言。
+  - `README.md`、`ling.ini.example`：同步 TTS 配置说明与默认值。
+- 验证结果:
+  - `go test ./internal/llm ./internal/service ./internal/httpapi ./cmd/server` 通过；
+  - `go test ./...` 通过；
+  - `./init.sh` smoke 通过（`http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 随机音色依赖模型支持的系统音色名称；若后端返回“音色非法”，当前会自动重试候选并回退 `Cherry`，但建议后续在配置中提供可运营化音色白名单。
+- 下一步建议:
+  - 在线上真实 key 下跑一轮 `/api/v1/companion/scene` 和 `/api/v1/companion/chat`，对比不同 `object_type` 的音色差异与延迟。
+- 对应提交: （本次提交）

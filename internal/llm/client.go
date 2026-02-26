@@ -139,7 +139,7 @@ func NewClient(cfg Config) (*Client, error) {
 	}
 	voiceBaseURL := strings.TrimSpace(cfg.VoiceBaseURL)
 	if voiceBaseURL == "" {
-		voiceBaseURL = "https://api-voice.charaboard.com"
+		voiceBaseURL = defaultDashScopeBaseURL
 	}
 	voiceAPIKey := strings.TrimSpace(cfg.VoiceAPIKey)
 	if voiceAPIKey == "" {
@@ -147,19 +147,19 @@ func NewClient(cfg Config) (*Client, error) {
 	}
 	voiceID := strings.TrimSpace(cfg.VoiceID)
 	if voiceID == "" {
-		voiceID = "Xb7hH8MSUJpSbSDYk0k2"
+		voiceID = "Cherry"
 	}
 	voiceModelID := strings.TrimSpace(cfg.VoiceModelID)
 	if voiceModelID == "" {
-		voiceModelID = "eleven_multilingual_v2"
+		voiceModelID = "qwen3-tts-flash"
 	}
 	voiceLangCode := strings.TrimSpace(cfg.VoiceLangCode)
 	if voiceLangCode == "" {
-		voiceLangCode = "zh"
+		voiceLangCode = "Chinese"
 	}
 	voiceFormat := strings.TrimSpace(cfg.VoiceFormat)
 	if voiceFormat == "" {
-		voiceFormat = "mp3_44100_128"
+		voiceFormat = "wav"
 	}
 	cosRegion := strings.TrimSpace(cfg.COSRegion)
 	if cosRegion == "" {

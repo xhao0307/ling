@@ -41,13 +41,13 @@ Optional environment variables:
 - `CITYLING_IMAGE_API_KEY` (optional, fallback to `CITYLING_DASHSCOPE_API_KEY`)
 - `CITYLING_IMAGE_MODEL` (default `seedream-4-0-250828`)
 - `CITYLING_IMAGE_RESPONSE_FORMAT` (`b64_json` or `url`, default `b64_json`)
-- `CITYLING_TTS_API_BASE_URL` (default `https://api-voice.charaboard.com`)
-- `CITYLING_LLM_API_KEY` (用于文字转语音默认 key，保持原有链路)
-- `CITYLING_TTS_API_KEY` (optional, fallback to `CITYLING_LLM_API_KEY`)
-- `CITYLING_TTS_VOICE_ID` (default `Xb7hH8MSUJpSbSDYk0k2`)
-- `CITYLING_TTS_MODEL_ID` (default `eleven_multilingual_v2`)
-- `CITYLING_TTS_LANGUAGE_CODE` (default `zh`)
-- `CITYLING_TTS_OUTPUT_FORMAT` (default `mp3_44100_128`)
+- `CITYLING_TTS_API_BASE_URL` (default `https://dashscope.aliyuncs.com`)
+- `CITYLING_LLM_API_KEY` (保留兼容：当未设置 `CITYLING_TTS_API_KEY` 与 `CITYLING_DASHSCOPE_API_KEY` 时作为最终回退)
+- `CITYLING_TTS_API_KEY` (optional, fallback to `CITYLING_DASHSCOPE_API_KEY`)
+- `CITYLING_TTS_VOICE_ID` (default `Cherry`)
+- `CITYLING_TTS_MODEL_ID` (default `qwen3-tts-flash`)
+- `CITYLING_TTS_LANGUAGE_CODE` (default `Chinese`)
+- `CITYLING_TTS_OUTPUT_FORMAT` (default `wav`)
 
 ## API
 

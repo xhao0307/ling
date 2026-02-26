@@ -8,9 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
-	"net/url"
 	"strings"
+	"time"
 )
 
 var (
@@ -54,6 +55,7 @@ type CompanionReply struct {
 const (
 	bytePlusImageGenerationPath  = "/v1/byteplus/images/generations"
 	dashScopeImageGenerationPath = "/api/v1/services/aigc/multimodal-generation/generation"
+	dashScopeTTSGenerationPath   = "/api/v1/services/aigc/multimodal-generation/generation"
 )
 
 func (c *Client) GenerateCompanionScene(ctx context.Context, req CompanionSceneRequest) (CompanionScene, error) {
@@ -402,36 +404,225 @@ func (c *Client) GenerateCompanionReply(ctx context.Context, req CompanionReplyR
 	return reply, nil
 }
 
-func (c *Client) SynthesizeSpeech(ctx context.Context, text string) ([]byte, string, error) {
-	if strings.TrimSpace(c.voiceAPIKey) == "" || strings.TrimSpace(c.voiceID) == "" {
+func (c *Client) SynthesizeSpeech(ctx context.Context, text string, objectType string) ([]byte, string, error) {
+	if strings.TrimSpace(c.voiceAPIKey) == "" || strings.TrimSpace(c.voiceModelID) == "" {
 		return nil, "", ErrVoiceCapabilityUnavailable
+	}
+	trimmedText := strings.TrimSpace(text)
+	if trimmedText == "" {
+		return nil, "", ErrInvalidResponse
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
-	body := map[string]any{
-		"text":          strings.TrimSpace(text),
-		"voice_id":      c.voiceID,
-		"model_id":      c.voiceModelID,
-		"language_code": c.voiceLangCode,
-		"voice_settings": map[string]any{
-			"stability":        0.45,
-			"similarity_boost": 0.75,
-			"speed":            1.0,
-		},
+	requestURL := resolveTTSGenerationRequestURL(c.voiceBaseURL)
+	for _, voice := range ttsVoiceCandidates(objectType, c.voiceID) {
+		body := map[string]any{
+			"model": strings.TrimSpace(c.voiceModelID),
+			"input": map[string]any{
+				"text":          trimmedText,
+				"voice":         voice,
+				"language_type": normalizeTTSLanguageType(c.voiceLangCode),
+			},
+			"parameters": map[string]any{
+				"stream": false,
+			},
+		}
+		respBody, _, err := c.doMediaJSON(ctx, requestURL, c.voiceAPIKey, body)
+		if err != nil {
+			if isInvalidTTSVoiceError(err) {
+				continue
+			}
+			return nil, "", err
+		}
+		audioBytes, mimeType, err := c.parseDashScopeTTSAudio(ctx, respBody)
+		if err != nil {
+			if isInvalidTTSVoiceError(err) {
+				continue
+			}
+			return nil, "", err
+		}
+		return audioBytes, mimeType, nil
 	}
+	return nil, "", fmt.Errorf("tts generation failed: no available voice for object_type=%s", strings.TrimSpace(objectType))
+}
 
-	requestURL := c.voiceBaseURL + "/elevenlabs/tts/generate?output_format=" + url.QueryEscape(c.voiceFormat)
-	audio, headers, err := c.doMediaBinary(ctx, requestURL, c.voiceAPIKey, body)
+func resolveTTSGenerationRequestURL(baseURL string) string {
+	trimmed := strings.TrimSpace(baseURL)
+	if trimmed == "" {
+		return "https://dashscope.aliyuncs.com" + dashScopeTTSGenerationPath
+	}
+	lower := strings.ToLower(trimmed)
+	if strings.Contains(lower, "/api/v1/services/aigc/multimodal-generation/generation") {
+		return strings.TrimRight(trimmed, "/")
+	}
+	return strings.TrimRight(trimmed, "/") + dashScopeTTSGenerationPath
+}
+
+func normalizeTTSLanguageType(lang string) string {
+	switch strings.ToLower(strings.TrimSpace(lang)) {
+	case "", "auto":
+		return "Auto"
+	case "zh", "cn", "zh-cn", "chinese":
+		return "Chinese"
+	case "en", "en-us", "english":
+		return "English"
+	case "ja", "japanese":
+		return "Japanese"
+	case "ko", "korean":
+		return "Korean"
+	case "fr", "french":
+		return "French"
+	case "de", "german":
+		return "German"
+	case "es", "spanish":
+		return "Spanish"
+	case "it", "italian":
+		return "Italian"
+	case "pt", "portuguese":
+		return "Portuguese"
+	case "ru", "russian":
+		return "Russian"
+	default:
+		return strings.TrimSpace(lang)
+	}
+}
+
+func ttsVoiceCandidates(objectType string, preferred string) []string {
+	trimmedObjectType := strings.TrimSpace(objectType)
+	pool := []string{"Cherry", "Serena", "Ethan"}
+	switch {
+	case containsAny(trimmedObjectType, "猫", "狗", "兔", "熊", "鸟", "鱼", "鸭", "鸡", "动物", "宠物"):
+		pool = []string{"Cherry", "Serena"}
+	case containsAny(trimmedObjectType, "车", "火车", "地铁", "飞机", "船", "机器人", "机械"):
+		pool = []string{"Ethan", "Serena"}
+	case containsAny(trimmedObjectType, "花", "树", "草", "叶", "水果", "蔬菜", "香蕉", "苹果", "西瓜", "植物"):
+		pool = []string{"Serena", "Cherry"}
+	}
+	candidates := shuffleStrings(pool)
+	if v := strings.TrimSpace(preferred); v != "" {
+		candidates = append(candidates, v)
+	}
+	candidates = append(candidates, "Cherry")
+	return uniqueNonEmptyStrings(candidates)
+}
+
+func containsAny(text string, keywords ...string) bool {
+	lowerText := strings.ToLower(strings.TrimSpace(text))
+	if lowerText == "" {
+		return false
+	}
+	for _, keyword := range keywords {
+		if strings.Contains(lowerText, strings.ToLower(strings.TrimSpace(keyword))) {
+			return true
+		}
+	}
+	return false
+}
+
+func shuffleStrings(items []string) []string {
+	cloned := append([]string(nil), items...)
+	if len(cloned) <= 1 {
+		return cloned
+	}
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r.Shuffle(len(cloned), func(i, j int) {
+		cloned[i], cloned[j] = cloned[j], cloned[i]
+	})
+	return cloned
+}
+
+func uniqueNonEmptyStrings(items []string) []string {
+	result := make([]string, 0, len(items))
+	seen := make(map[string]struct{}, len(items))
+	for _, item := range items {
+		trimmed := strings.TrimSpace(item)
+		if trimmed == "" {
+			continue
+		}
+		key := strings.ToLower(trimmed)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		result = append(result, trimmed)
+	}
+	return result
+}
+
+func isInvalidTTSVoiceError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "voice") &&
+		(strings.Contains(msg, "invalid") ||
+			strings.Contains(msg, "illegal") ||
+			strings.Contains(msg, "not found"))
+}
+
+func (c *Client) parseDashScopeTTSAudio(ctx context.Context, respBody []byte) ([]byte, string, error) {
+	var resp struct {
+		StatusCode int    `json:"status_code"`
+		RequestID  string `json:"request_id"`
+		Code       string `json:"code"`
+		Message    string `json:"message"`
+		Output     struct {
+			Audio struct {
+				Data string `json:"data"`
+				URL  string `json:"url"`
+			} `json:"audio"`
+		} `json:"output"`
+	}
+	if err := json.Unmarshal(respBody, &resp); err != nil {
+		return nil, "", fmt.Errorf("parse tts response failed: %w", err)
+	}
+	if resp.StatusCode != 0 && resp.StatusCode != http.StatusOK {
+		return nil, "", fmt.Errorf("tts request failed: status_code=%d request_id=%s code=%s message=%s", resp.StatusCode, strings.TrimSpace(resp.RequestID), strings.TrimSpace(resp.Code), strings.TrimSpace(resp.Message))
+	}
+	if code := strings.TrimSpace(resp.Code); code != "" && !strings.EqualFold(code, "ok") && code != "200" {
+		return nil, "", fmt.Errorf("tts request failed: request_id=%s code=%s message=%s", strings.TrimSpace(resp.RequestID), code, strings.TrimSpace(resp.Message))
+	}
+	if data := strings.TrimSpace(resp.Output.Audio.Data); data != "" {
+		audio, err := base64.StdEncoding.DecodeString(data)
+		if err != nil {
+			return nil, "", fmt.Errorf("decode tts audio data failed: %w", err)
+		}
+		return audio, "audio/wav", nil
+	}
+	if audioURL := strings.TrimSpace(resp.Output.Audio.URL); audioURL != "" {
+		return c.downloadBinary(ctx, audioURL, "audio/wav")
+	}
+	return nil, "", ErrInvalidResponse
+}
+
+func (c *Client) downloadBinary(ctx context.Context, resourceURL string, fallbackContentType string) ([]byte, string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimSpace(resourceURL), nil)
 	if err != nil {
 		return nil, "", err
 	}
-	contentType := strings.TrimSpace(headers.Get("Content-Type"))
-	if contentType == "" {
-		contentType = "audio/mpeg"
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, "", err
 	}
-	return audio, contentType, nil
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, "", err
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, "", fmt.Errorf("download resource failed, status=%d", resp.StatusCode)
+	}
+	contentType := strings.TrimSpace(resp.Header.Get("Content-Type"))
+	if contentType == "" {
+		contentType = fallbackContentType
+	}
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+	return body, contentType, nil
 }
 
 func (c *Client) DownloadImage(ctx context.Context, imageURL string) ([]byte, string, error) {

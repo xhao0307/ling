@@ -383,7 +383,7 @@ func (s *Service) GenerateCompanionScene(req CompanionSceneRequest) (CompanionSc
 		return CompanionSceneResponse{}, err
 	}
 
-	audioBytes, mimeType, err := s.llm.SynthesizeSpeech(context.Background(), scene.DialogText)
+	audioBytes, mimeType, err := s.llm.SynthesizeSpeech(context.Background(), scene.DialogText, objectType)
 	if err != nil {
 		if errors.Is(err, llm.ErrVoiceCapabilityUnavailable) {
 			return CompanionSceneResponse{}, ErrMediaUnavailable
@@ -489,7 +489,7 @@ func (s *Service) ChatCompanion(req CompanionChatRequest) (CompanionChatResponse
 		return CompanionChatResponse{}, err
 	}
 
-	audioBytes, mimeType, err := s.llm.SynthesizeSpeech(context.Background(), reply.ReplyText)
+	audioBytes, mimeType, err := s.llm.SynthesizeSpeech(context.Background(), reply.ReplyText, objectType)
 	if err != nil {
 		if errors.Is(err, llm.ErrVoiceCapabilityUnavailable) {
 			return CompanionChatResponse{}, ErrMediaUnavailable
