@@ -2011,3 +2011,23 @@
 - 下一步建议:
   - 补一次前端真机/Web 路径验收（登录页、应用切后台后的系统展示名、PWA 安装名）确认品牌展示一致。
 - 对应提交: （本次提交）
+
+### [2026-02-26 17:19] F019 使用 logo.png 统一替换 App 图标
+- 会话目标: 按需求将 `logo.png` 作为应用 Logo，统一替换 Android/iOS/macOS/Web 图标资源。
+- 选择功能: `F019`
+- 实际改动:
+  - 新增并纳入版本管理：根目录 `logo.png`（1024x1024）。
+  - Android：覆盖 `flutter_client/android/app/src/main/res/mipmap-*/ic_launcher.png`（48/72/96/144/192）。
+  - iOS：覆盖 `flutter_client/ios/Runner/Assets.xcassets/AppIcon.appiconset/*.png` 全套图标。
+  - macOS：覆盖 `flutter_client/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_*.png` 全套图标。
+  - Web：覆盖 `flutter_client/web/icons/Icon-192.png`、`Icon-512.png`、`Icon-maskable-192.png`、`Icon-maskable-512.png`。
+- 验证结果:
+  - 尺寸抽检通过（如 192/167/512 等关键尺寸正确）；
+  - `cd flutter_client && /Users/xuxinghao/develop/flutter/bin/flutter analyze` 通过；
+  - `./init.sh` 通过（`smoke 通过: http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 本轮为静态资源替换，未执行真机安装后的系统缓存图标清理；个别设备可能需重装 App 才看到新图标。
+  - `feature_list.json` 本轮未新增对应端到端验收，`F019.passes` 保持 `false`。
+- 下一步建议:
+  - 在 Android/iOS 真机各安装一次，确认桌面图标与启动器图标均更新为 `logo.png`。
+- 对应提交: （本次提交）
