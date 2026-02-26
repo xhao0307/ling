@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func TestParseCompanionScene(t *testing.T) {
@@ -81,6 +82,22 @@ func TestRenderCompanionPromptSpecReplacesPlaceholders(t *testing.T) {
 	want := "age=3,age2=3,image=路灯"
 	if got != want {
 		t.Fatalf("renderCompanionPromptSpec() = %q, want %q", got, want)
+	}
+}
+
+func TestNormalizeImagePromptLimitBytes(t *testing.T) {
+	t.Parallel()
+
+	longPrompt := strings.Repeat("狗狗在公园里开心奔跑，", 80)
+	got := normalizeImagePrompt(longPrompt)
+	if len([]byte(got)) > imagePromptMaxBytes {
+		t.Fatalf("expected prompt bytes <= %d, got %d", imagePromptMaxBytes, len([]byte(got)))
+	}
+	if !utf8.ValidString(got) {
+		t.Fatalf("expected valid utf8 string")
+	}
+	if strings.TrimSpace(got) == "" {
+		t.Fatalf("expected non-empty prompt after normalize")
 	}
 }
 

@@ -1933,3 +1933,20 @@
 - 下一步建议:
   - 线上灰度观察 `/api/v1/companion/scene` 与 `/api/v1/companion/chat` 的耗时与质量变化，再决定是否上调到更强模型档位。
 - 对应提交: （本次提交）
+
+### [2026-02-26 16:45] F019 修复 companion/scene 生图 prompt 超长导致 400
+- 会话目标: 修复线上 `POST /api/v1/companion/scene` 报错 `InvalidParameter: Range of input length should be [0, 600]`。
+- 选择功能: `F019`
+- 实际改动:
+  - `internal/llm/companion.go`：在 `GenerateCharacterImage` 前新增 `normalizeImagePrompt`；
+  - 对生图 prompt 做 UTF-8 安全裁剪，统一限制为 `<=580 bytes`，避免触发上游 600 长度上限；
+  - 新增常量 `imagePromptMaxBytes=580`，对图生图与文本生图统一生效。
+  - `internal/llm/companion_test.go`：新增 `TestNormalizeImagePromptLimitBytes`，校验裁剪后字节长度、UTF-8 有效性与非空。
+- 验证结果:
+  - `go test ./internal/llm ./internal/service ./internal/httpapi ./cmd/server` 通过；
+  - `./init.sh` 通过（`smoke 通过: http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 当原始 prompt 超长时会被截断，生图细节约束可能部分丢失；但可保证不再因长度超限直接 400 失败。
+- 下一步建议:
+  - 线上复测 `/api/v1/companion/scene`（object_type=狗）并观察是否从 500 恢复到 200；如仍偶发 400，再把模板进一步压缩并增加结构化短 prompt。
+- 对应提交: （本次提交）

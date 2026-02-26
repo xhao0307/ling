@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 var (
@@ -57,6 +58,7 @@ const (
 	dashScopeImageGenerationPath = "/api/v1/services/aigc/multimodal-generation/generation"
 	dashScopeTTSGenerationPath   = "/api/v1/services/aigc/multimodal-generation/generation"
 	companionHistoryLimit        = 8
+	imagePromptMaxBytes          = 580
 )
 
 func (c *Client) GenerateCompanionScene(ctx context.Context, req CompanionSceneRequest) (CompanionScene, error) {
@@ -106,7 +108,7 @@ func (c *Client) GenerateCharacterImage(ctx context.Context, imagePrompt string,
 	// 这里不再额外套超时，避免上游慢请求在客户端提前被 context cancel。
 	// 调用方可按需在更高层控制超时策略。
 	requestURL := resolveImageGenerationRequestURL(c.imageBaseURL)
-	trimmedPrompt := strings.TrimSpace(imagePrompt)
+	trimmedPrompt := normalizeImagePrompt(strings.TrimSpace(imagePrompt))
 	trimmedSourceImage := strings.TrimSpace(sourceImage)
 
 	if isDashScopeImageRequestURL(requestURL) {
@@ -207,6 +209,31 @@ func buildDashScopeImageGenerationBody(model string, prompt string, sourceImage 
 			"size":              "1280*1280",
 		},
 	}
+}
+
+func normalizeImagePrompt(prompt string) string {
+	trimmed := strings.TrimSpace(prompt)
+	if trimmed == "" {
+		return trimmed
+	}
+	if len([]byte(trimmed)) <= imagePromptMaxBytes {
+		return trimmed
+	}
+	var b strings.Builder
+	b.Grow(imagePromptMaxBytes)
+	size := 0
+	for _, r := range trimmed {
+		runeBytes := utf8.RuneLen(r)
+		if runeBytes <= 0 {
+			continue
+		}
+		if size+runeBytes > imagePromptMaxBytes {
+			break
+		}
+		b.WriteRune(r)
+		size += runeBytes
+	}
+	return strings.TrimSpace(b.String())
 }
 
 func parseGeneratedImageValue(respBody []byte) (string, error) {
