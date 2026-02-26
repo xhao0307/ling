@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
@@ -18,11 +19,16 @@ const List<(String, String)> kObjectOptions = [
   ('traffic_light', '红绿灯'),
 ];
 
-const Color kFairyRose = Color(0xFFF08CB7);
-const Color kFairySky = Color(0xFFA7D8FF);
-const Color kFairyMint = Color(0xFF9EE6D2);
-const Color kFairyButter = Color(0xFFFFE7A7);
-const Color kFairyInk = Color(0xFF5F4B74);
+const Color kFairyRose = Color(0xFFE86AA6);
+const Color kFairyRoseDeep = Color(0xFFB84D86);
+const Color kFairySky = Color(0xFFDCEBFF);
+const Color kFairyMint = Color(0xFF6ED3B5);
+const Color kFairyButter = Color(0xFFF4B860);
+const Color kFairyInk = Color(0xFF2D2A38);
+const Color kFairyInkSubtle = Color(0xFF6B667A);
+const Color kFairyInkHint = Color(0xFFB3AFC1);
+const Color kFairyBgBase = Color(0xFFF5F2FA);
+const Duration kMicroAnim = Duration(milliseconds: 150);
 const List<double> _kGrayScaleMatrix = <double>[
   0.2126,
   0.7152,
@@ -62,37 +68,77 @@ class CityLingApp extends StatelessWidget {
           seedColor: kFairyRose,
           brightness: Brightness.light,
         ),
-        scaffoldBackgroundColor: const Color(0xFFFFF8FE),
+        scaffoldBackgroundColor: kFairyBgBase,
+        textTheme: ThemeData.light().textTheme.copyWith(
+              headlineLarge: const TextStyle(
+                color: kFairyInk,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.64,
+                height: 1.22,
+              ),
+              titleLarge: const TextStyle(
+                color: kFairyInk,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.2,
+              ),
+              bodyMedium: const TextStyle(
+                color: kFairyInkSubtle,
+                fontWeight: FontWeight.w500,
+                height: 1.5,
+              ),
+            ),
         inputDecorationTheme: const InputDecorationTheme(
           filled: true,
-          fillColor: Color(0xFFFFFDFF),
+          fillColor: Color(0xFFF8F6FC),
+          contentPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          labelStyle: TextStyle(
+            color: kFairyInkSubtle,
+            fontWeight: FontWeight.w600,
+          ),
+          floatingLabelStyle: TextStyle(
+            color: kFairyRoseDeep,
+            fontWeight: FontWeight.w700,
+          ),
+          hintStyle: TextStyle(
+            color: kFairyInkHint,
+            fontWeight: FontWeight.w500,
+          ),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(18)),
+            borderRadius: BorderRadius.all(Radius.circular(22)),
+            borderSide: BorderSide(color: Colors.transparent),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(18)),
-            borderSide: BorderSide(color: Color(0xFFE7D6F2)),
+            borderRadius: BorderRadius.all(Radius.circular(22)),
+            borderSide: BorderSide(color: Colors.transparent),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(18)),
-            borderSide: BorderSide(color: Color(0xFFF08CB7), width: 1.6),
+            borderRadius: BorderRadius.all(Radius.circular(22)),
+            borderSide: BorderSide(color: Colors.transparent),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(22)),
+            borderSide: BorderSide(color: Colors.transparent),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(22)),
+            borderSide: BorderSide(color: Colors.transparent),
           ),
         ),
         cardTheme: const CardThemeData(
           surfaceTintColor: Colors.transparent,
-          color: Color(0xFFFFFDFF),
+          color: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(24)),
+            borderRadius: BorderRadius.all(Radius.circular(28)),
           ),
         ),
         navigationBarTheme: const NavigationBarThemeData(
-          backgroundColor: Color(0xFFFFF4FB),
-          indicatorColor: Color(0xFFFFD8EA),
+          backgroundColor: Colors.transparent,
+          indicatorColor: Colors.transparent,
+          iconTheme: WidgetStatePropertyAll(
+            IconThemeData(color: kFairyInkSubtle, size: 22),
+          ),
           labelTextStyle: WidgetStatePropertyAll(
-            TextStyle(
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF5F4B74),
-            ),
+            TextStyle(fontWeight: FontWeight.w700, letterSpacing: 0.2),
           ),
         ),
         filledButtonTheme: FilledButtonThemeData(
@@ -102,22 +148,25 @@ class CityLingApp extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(999),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            shadowColor: const Color(0x66E86AA6),
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
-            foregroundColor: kFairyInk,
-            side: const BorderSide(color: Color(0xFFE8C4DA)),
+            foregroundColor: kFairyInkSubtle,
+            side: const BorderSide(color: Color(0x88FFFFFF)),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(999),
             ),
+            backgroundColor: Colors.white54,
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           ),
         ),
         snackBarTheme: const SnackBarThemeData(
           behavior: SnackBarBehavior.floating,
-          backgroundColor: Color(0xFF6E5A86),
+          backgroundColor: Color(0xFF5A506B),
           contentTextStyle: TextStyle(fontWeight: FontWeight.w600),
         ),
         useMaterial3: true,
@@ -306,6 +355,264 @@ class AuthStore {
   }
 }
 
+class _AtmosphericBackground extends StatelessWidget {
+  const _AtmosphericBackground({
+    required this.child,
+    this.showStars = true,
+  });
+
+  final Widget child;
+  final bool showStars;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: kFairyBgBase,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFF7DCF1), Color(0xFFE0ECFF), Color(0xFFF5F2FA)],
+          stops: [0.0, 0.52, 1.0],
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            top: -130,
+            left: -96,
+            child: _glow(const Color(0xAAFFD4EC), 360),
+          ),
+          Positioned(
+            top: 60,
+            right: -90,
+            child: _glow(const Color(0x88DCEBFF), 320),
+          ),
+          Positioned(
+            bottom: -120,
+            left: -44,
+            child: _glow(const Color(0x80FFE8D4), 300),
+          ),
+          if (showStars) ...[
+            const Positioned(
+              top: 120,
+              right: 46,
+              child:
+                  Icon(Icons.auto_awesome, color: Color(0xFFFFD26D), size: 20),
+            ),
+            const Positioned(
+              bottom: 150,
+              left: 26,
+              child:
+                  Icon(Icons.auto_awesome, color: Color(0xFFC5D8FF), size: 16),
+            ),
+          ],
+          Positioned.fill(child: child),
+        ],
+      ),
+    );
+  }
+
+  static Widget _glow(Color color, double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [color, color.withValues(alpha: 0)],
+        ),
+      ),
+    );
+  }
+}
+
+class _GlassPanel extends StatelessWidget {
+  const _GlassPanel({
+    required this.child,
+    this.padding = const EdgeInsets.all(22),
+    this.radius = 30,
+  });
+
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.62),
+            borderRadius: BorderRadius.circular(radius),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.42),
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x142D2A38),
+                blurRadius: 32,
+                offset: Offset(0, 14),
+              ),
+              BoxShadow(
+                color: Color(0x22FFFFFF),
+                blurRadius: 1,
+                offset: Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Padding(padding: padding, child: child),
+        ),
+      ),
+    );
+  }
+}
+
+class _CandyPrimaryButton extends StatefulWidget {
+  const _CandyPrimaryButton({
+    required this.label,
+    required this.onPressed,
+    this.icon,
+    this.enabled = true,
+    this.breathe = false,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+  final IconData? icon;
+  final bool enabled;
+  final bool breathe;
+
+  @override
+  State<_CandyPrimaryButton> createState() => _CandyPrimaryButtonState();
+}
+
+class _CandyPrimaryButtonState extends State<_CandyPrimaryButton>
+    with SingleTickerProviderStateMixin {
+  bool _hovering = false;
+  late final AnimationController _breathingController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1300),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.breathe) {
+      _breathingController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _CandyPrimaryButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.breathe && !_breathingController.isAnimating) {
+      _breathingController.repeat(reverse: true);
+    }
+    if (!widget.breathe && _breathingController.isAnimating) {
+      _breathingController.stop();
+      _breathingController.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _breathingController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = widget.enabled;
+    return AnimatedBuilder(
+      animation: _breathingController,
+      builder: (context, _) {
+        final breatheScale =
+            widget.breathe ? (1 + _breathingController.value * 0.02) : 1.0;
+        final hoverScale = _hovering && enabled ? 1.03 : 1.0;
+        return AnimatedScale(
+          scale: breatheScale * hoverScale,
+          duration: kMicroAnim,
+          curve: Curves.easeOutCubic,
+          child: Opacity(
+            opacity: enabled ? 1 : 0.55,
+            child: SizedBox(
+              height: 54,
+              child: MouseRegion(
+                onEnter: (_) => setState(() => _hovering = true),
+                onExit: (_) => setState(() => _hovering = false),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [kFairyRose, kFairyRoseDeep],
+                    ),
+                    borderRadius: BorderRadius.circular(999),
+                    border:
+                        Border.all(color: Colors.white.withValues(alpha: 0.32)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0x66E86AA6).withValues(
+                          alpha: _hovering ? 0.35 : 0.25,
+                        ),
+                        blurRadius: _hovering ? 24 : 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(999),
+                      onTap: enabled ? widget.onPressed : null,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(999),
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.white.withValues(alpha: 0.24),
+                              Colors.white.withValues(alpha: 0),
+                            ],
+                          ),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 18),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (widget.icon != null) ...[
+                              Icon(widget.icon, color: Colors.white, size: 20),
+                              const SizedBox(width: 8),
+                            ],
+                            Text(
+                              widget.label,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class AuthEntryPage extends StatefulWidget {
   const AuthEntryPage({
     required this.authStore,
@@ -410,246 +717,167 @@ class _AuthEntryPageState extends State<AuthEntryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFFFEAF6), Color(0xFFEAF4FF), Color(0xFFFFF8D8)],
-          ),
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              top: -76,
-              right: -30,
-              child: _buildGlowCircle(
-                color: const Color(0xFFFFA5CD).withValues(alpha: 0.78),
-                size: 200,
-              ),
-            ),
-            Positioned(
-              top: 80,
-              left: -24,
-              child: _buildGlowCircle(
-                color: const Color(0xFFA8DBFF).withValues(alpha: 0.75),
-                size: 160,
-              ),
-            ),
-            Positioned(
-              bottom: -80,
-              left: -10,
-              child: _buildGlowCircle(
-                color: const Color(0xFFFFDC99).withValues(alpha: 0.7),
-                size: 210,
-              ),
-            ),
-            Positioned(
-              top: 96,
-              right: 50,
-              child: _buildFairyStar(const Color(0xFFFFCE57), 22),
-            ),
-            Positioned(
-              bottom: 140,
-              left: 28,
-              child: _buildFairyStar(const Color(0xFFA7D8FF), 18),
-            ),
-            SafeArea(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 24,
-                  ),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 420),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        border: Border.all(
-                          color: const Color(0xFFFFD4EA),
-                          width: 1.2,
-                        ),
-                        borderRadius: BorderRadius.circular(34),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x22A35B87),
-                            blurRadius: 30,
-                            offset: Offset(0, 16),
-                          ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(22),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: _AtmosphericBackground(
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              child: TweenAnimationBuilder<double>(
+                duration: const Duration(milliseconds: 260),
+                tween: Tween<double>(begin: 20, end: 0),
+                curve: Curves.easeOutCubic,
+                builder: (context, dy, child) {
+                  final opacity = (1 - dy / 20).clamp(0.0, 1.0);
+                  return Transform.translate(
+                    offset: Offset(0, dy),
+                    child: Opacity(opacity: opacity, child: child),
+                  );
+                },
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 390),
+                  child: _GlassPanel(
+                    radius: 32,
+                    padding: const EdgeInsets.fromLTRB(22, 20, 22, 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Row(
                           children: [
-                            const Row(
-                              children: [
-                                Icon(Icons.auto_awesome, color: kFairyRose),
-                                SizedBox(width: 6),
-                                Text(
-                                  '城市灵童话站',
-                                  style: TextStyle(
-                                    fontSize: 31,
-                                    fontWeight: FontWeight.w900,
-                                    color: Color(0xFF7B4E9F),
-                                    height: 1.1,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              '欢迎来到童话小镇，登录后开始奇妙识别冒险。',
+                            Icon(Icons.auto_awesome, color: kFairyRose),
+                            SizedBox(width: 8),
+                            Text(
+                              '城市灵童话站',
                               style: TextStyle(
-                                color: Color(0xFF6E5A86),
-                                fontWeight: FontWeight.w600,
+                                fontSize: 32,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.64,
+                                color: kFairyInk,
+                                height: 1.2,
                               ),
                             ),
-                            const SizedBox(height: 18),
-                            SegmentedButton<_AuthMode>(
-                              segments: const [
-                                ButtonSegment<_AuthMode>(
-                                  value: _AuthMode.login,
-                                  icon: Icon(Icons.login),
-                                  label: Text('登录'),
-                                ),
-                                ButtonSegment<_AuthMode>(
-                                  value: _AuthMode.register,
-                                  icon: Icon(Icons.app_registration),
-                                  label: Text('注册'),
-                                ),
-                              ],
-                              selected: {_mode},
-                              onSelectionChanged: (selected) {
-                                setState(() {
-                                  _mode = selected.first;
-                                  _error = '';
-                                });
-                              },
-                            ),
-                            const SizedBox(height: 14),
-                            TextField(
-                              controller: _accountCtrl,
-                              textInputAction: TextInputAction.next,
-                              decoration: const InputDecoration(
-                                labelText: '账号',
-                                hintText: '示例：kid_parent_01',
-                                prefixIcon: Icon(Icons.person_outline),
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            TextField(
-                              controller: _passwordCtrl,
-                              obscureText: true,
-                              textInputAction: _mode == _AuthMode.login
-                                  ? TextInputAction.done
-                                  : TextInputAction.next,
-                              onSubmitted: (_) {
-                                if (_mode == _AuthMode.login) {
-                                  unawaited(_submit());
-                                }
-                              },
-                              decoration: const InputDecoration(
-                                labelText: '密码',
-                                hintText: '不少于 6 位',
-                                prefixIcon: Icon(Icons.lock_outline),
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                            if (_mode == _AuthMode.register) ...[
-                              const SizedBox(height: 12),
-                              TextField(
-                                controller: _confirmCtrl,
-                                obscureText: true,
-                                textInputAction: TextInputAction.done,
-                                onSubmitted: (_) => unawaited(_submit()),
-                                decoration: const InputDecoration(
-                                  labelText: '确认密码',
-                                  prefixIcon:
-                                      Icon(Icons.verified_user_outlined),
-                                  border: OutlineInputBorder(),
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 16),
-                            FilledButton.icon(
-                              onPressed: _submitting ? null : _submit,
-                              icon: Icon(_mode == _AuthMode.login
-                                  ? Icons.login
-                                  : Icons.check_circle),
-                              label: Text(
-                                _mode == _AuthMode.login ? '登录进入' : '注册并进入',
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            OutlinedButton.icon(
-                              onPressed: _submitting ? null : _enterDebugMode,
-                              icon: const Icon(Icons.bug_report_outlined),
-                              label: const Text('调试测试入口（免登录）'),
-                            ),
-                            if (_error.isNotEmpty) ...[
-                              const SizedBox(height: 12),
-                              DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFFE9EA)
-                                      .withValues(alpha: 0.9),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(10),
-                                  child: Text(
-                                    _error,
-                                    style: const TextStyle(
-                                      color: Color(0xFFB22A30),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
                           ],
                         ),
-                      ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          '欢迎回来，今天也一起去发现生活里的小魔法。',
+                          style: TextStyle(
+                            color: kFairyInkSubtle,
+                            fontWeight: FontWeight.w500,
+                            height: 1.45,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        SegmentedButton<_AuthMode>(
+                          style: const ButtonStyle(
+                            textStyle: WidgetStatePropertyAll(
+                              TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          segments: const [
+                            ButtonSegment<_AuthMode>(
+                              value: _AuthMode.login,
+                              icon: Icon(Icons.login),
+                              label: Text('登录'),
+                            ),
+                            ButtonSegment<_AuthMode>(
+                              value: _AuthMode.register,
+                              icon: Icon(Icons.app_registration),
+                              label: Text('注册'),
+                            ),
+                          ],
+                          selected: {_mode},
+                          onSelectionChanged: (selected) {
+                            setState(() {
+                              _mode = selected.first;
+                              _error = '';
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: _accountCtrl,
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(
+                            labelText: '账号',
+                            hintText: '示例：kid_parent_01',
+                            prefixIcon: Icon(Icons.person_outline),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _passwordCtrl,
+                          obscureText: true,
+                          textInputAction: _mode == _AuthMode.login
+                              ? TextInputAction.done
+                              : TextInputAction.next,
+                          onSubmitted: (_) {
+                            if (_mode == _AuthMode.login) {
+                              unawaited(_submit());
+                            }
+                          },
+                          decoration: const InputDecoration(
+                            labelText: '密码',
+                            hintText: '不少于 6 位',
+                            prefixIcon: Icon(Icons.lock_outline),
+                          ),
+                        ),
+                        if (_mode == _AuthMode.register) ...[
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _confirmCtrl,
+                            obscureText: true,
+                            textInputAction: TextInputAction.done,
+                            onSubmitted: (_) => unawaited(_submit()),
+                            decoration: const InputDecoration(
+                              labelText: '确认密码',
+                              prefixIcon: Icon(Icons.verified_user_outlined),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 18),
+                        _CandyPrimaryButton(
+                          onPressed: _submitting ? () {} : _submit,
+                          enabled: !_submitting,
+                          breathe: true,
+                          icon: _mode == _AuthMode.login
+                              ? Icons.login
+                              : Icons.check_circle,
+                          label: _mode == _AuthMode.login ? '登录进入' : '注册并进入',
+                        ),
+                        const SizedBox(height: 10),
+                        OutlinedButton.icon(
+                          onPressed: _submitting ? null : _enterDebugMode,
+                          icon: const Icon(Icons.bug_report_outlined),
+                          label: const Text('调试测试入口（免登录）'),
+                        ),
+                        if (_error.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFDEDEE)
+                                  .withValues(alpha: 0.9),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Text(
+                                _error,
+                                style: const TextStyle(
+                                  color: Color(0xFFB22A30),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ),
               ),
             ),
-          ],
+          ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildGlowCircle({
-    required Color color,
-    required double size,
-  }) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(
-          colors: [
-            color,
-            color.withValues(alpha: 0.02),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFairyStar(Color color, double size) {
-    return Transform.rotate(
-      angle: 0.28,
-      child: Icon(
-        Icons.auto_awesome,
-        color: color,
-        size: size,
       ),
     );
   }
@@ -863,29 +1091,7 @@ class _CityLingHomePageState extends State<CityLingHomePage> {
               ],
             ),
       body: tabs[_tabIndex],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _tabIndex,
-        onDestinationSelected: (idx) => setState(() => _tabIndex = idx),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.travel_explore),
-            label: '探索',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.auto_awesome),
-            label: '图鉴',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.summarize),
-            label: '报告',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: '我的',
-          ),
-        ],
-      ),
+      bottomNavigationBar: _buildFrostedBottomNav(),
     );
   }
 
@@ -900,6 +1106,90 @@ class _CityLingHomePageState extends State<CityLingHomePage> {
       default:
         return session.isDebug ? '城市灵（调试模式）' : '城市灵';
     }
+  }
+
+  Widget _buildFrostedBottomNav() {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 0, 16, 8 + bottomInset),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.45)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x122D2A38),
+                  blurRadius: 18,
+                  offset: Offset(0, -2),
+                ),
+              ],
+            ),
+            child: NavigationBar(
+              height: 72,
+              backgroundColor: Colors.transparent,
+              selectedIndex: _tabIndex,
+              onDestinationSelected: (idx) => setState(() => _tabIndex = idx),
+              destinations: [
+                NavigationDestination(
+                  icon: _buildUnselectedNavIcon(Icons.travel_explore_outlined),
+                  selectedIcon: _buildSelectedNavIcon(Icons.travel_explore),
+                  label: '探索',
+                ),
+                NavigationDestination(
+                  icon: _buildUnselectedNavIcon(Icons.auto_awesome_outlined),
+                  selectedIcon: _buildSelectedNavIcon(Icons.auto_awesome),
+                  label: '图鉴',
+                ),
+                NavigationDestination(
+                  icon: _buildUnselectedNavIcon(Icons.summarize_outlined),
+                  selectedIcon: _buildSelectedNavIcon(Icons.summarize),
+                  label: '报告',
+                ),
+                NavigationDestination(
+                  icon: _buildUnselectedNavIcon(Icons.person_outline),
+                  selectedIcon: _buildSelectedNavIcon(Icons.person),
+                  label: '我的',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUnselectedNavIcon(IconData icon) {
+    return Opacity(
+      opacity: 0.6,
+      child: Icon(icon, color: kFairyInkSubtle),
+    );
+  }
+
+  Widget _buildSelectedNavIcon(IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF2EAF8).withValues(alpha: 0.96),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.58)),
+      ),
+      child: ShaderMask(
+        blendMode: BlendMode.srcIn,
+        shaderCallback: (bounds) {
+          return const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [kFairyRose, kFairyRoseDeep],
+          ).createShader(bounds);
+        },
+        child: Icon(icon, color: Colors.white, size: 22),
+      ),
+    );
   }
 }
 
@@ -1004,32 +1294,24 @@ class _ExplorePageState extends State<ExplorePage> {
 
   Widget _buildEntryScreen() {
     final isDebug = widget.session.isDebug;
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomCenter,
-          colors: [
-            const Color(0xFFFFECF7),
-            const Color(0xFFEEF5FF),
-            const Color(0xFFFFF8DB).withValues(alpha: 0.96),
-          ],
-        ),
-      ),
+    return _AtmosphericBackground(
+      showStars: false,
       child: SafeArea(
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: Card(
-                elevation: 0,
-                color: Colors.white.withValues(alpha: 0.9),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(22),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 250),
+              tween: Tween<double>(begin: 22, end: 0),
+              curve: Curves.easeOutCubic,
+              builder: (context, dy, child) {
+                return Transform.translate(offset: Offset(0, dy), child: child);
+              },
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: _GlassPanel(
+                  radius: 30,
+                  padding: const EdgeInsets.fromLTRB(24, 18, 24, 22),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1037,20 +1319,25 @@ class _ExplorePageState extends State<ExplorePage> {
                       const Text(
                         '梦幻探索',
                         style: TextStyle(
-                          fontSize: 30,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF7A4C9D),
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.64,
+                          color: kFairyInk,
+                          height: 1.2,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 12),
                       Text(
-                        isDebug ? '当前为调试测试模式，可快速验证流程。' : '先输入孩子信息，然后进入奇妙识别模式。',
+                        isDebug
+                            ? '当前是调试测试模式，你可以快速验证完整流程。'
+                            : '先输入孩子信息，再开始今天的童话识别旅程。',
                         style: const TextStyle(
-                          color: Color(0xFF665C7D),
-                          fontWeight: FontWeight.w600,
+                          color: kFairyInkSubtle,
+                          fontWeight: FontWeight.w500,
+                          height: 1.45,
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 16),
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
@@ -1072,7 +1359,7 @@ class _ExplorePageState extends State<ExplorePage> {
                             icon: const Icon(Icons.logout, size: 16),
                             label: const Text('切换账号'),
                             style: TextButton.styleFrom(
-                              foregroundColor: const Color(0xFF7A4C9D),
+                              foregroundColor: kFairyRoseDeep,
                             ),
                           ),
                         ],
@@ -1082,7 +1369,6 @@ class _ExplorePageState extends State<ExplorePage> {
                         controller: _childIdCtrl,
                         decoration: const InputDecoration(
                           labelText: '孩子 ID',
-                          border: OutlineInputBorder(),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -1091,14 +1377,14 @@ class _ExplorePageState extends State<ExplorePage> {
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
                           labelText: '孩子年龄（3-15）',
-                          border: OutlineInputBorder(),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      FilledButton.icon(
+                      const SizedBox(height: 18),
+                      _CandyPrimaryButton(
                         onPressed: _enterExploreMode,
-                        icon: const Icon(Icons.play_arrow_rounded),
-                        label: const Text('进入识别'),
+                        icon: Icons.play_arrow_rounded,
+                        label: '进入识别',
+                        breathe: true,
                       ),
                     ],
                   ),
