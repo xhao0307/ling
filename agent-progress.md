@@ -2031,3 +2031,24 @@
 - 下一步建议:
   - 在 Android/iOS 真机各安装一次，确认桌面图标与启动器图标均更新为 `logo.png`。
 - 对应提交: （本次提交）
+
+### [2026-02-26 17:27] F019 识别界面升级为“魔镜视窗”
+- 会话目标: 将探索页识别主界面改为“在魔镜中展示取景”的视觉表现，保持拍照/上传/剧情流程不变。
+- 选择功能: `F019`
+- 实际改动:
+  - `flutter_client/lib/main.dart`（`ExplorePage`）重构识别区视觉：
+    - 新增魔镜舞台布局 `_buildMagicMirrorStage`，将识别主预览置于中心镜框；
+    - 新增魔镜镜框 `_buildMagicMirrorFrame`（镜框渐变、镜面高光、顶部铭牌“万物魔镜”、环境星光）；
+    - 相机实时画面改为 `_buildLiveMirrorPreview` 注入镜面区域；
+    - 保持 `_SpiritOverlay` 叠加逻辑，识别后角色仍可显示；
+    - 顶部账号操作条、识别状态 badge、底部拍照按钮改为统一魔镜风格配色与文案（“对镜识别/魔镜识别中...”）。
+  - 兼容状态覆盖：不支持相机、初始化中、初始化失败、未就绪状态均复用魔镜容器显示。
+- 验证结果:
+  - `cd flutter_client && /Users/xuxinghao/develop/flutter/bin/flutter analyze` 通过；
+  - `./init.sh` 通过（`smoke 通过: http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 本轮未补浏览器自动化截图回归，视觉验收仍建议补一次 Web/真机实拍检查。
+  - `feature_list.json` 本轮未新增端到端验收，`F019.passes` 保持 `false`。
+- 下一步建议:
+  - 用真实摄像头场景抽检 2 类机型（窄屏 Android + iOS），确认镜框比例与底部按钮无遮挡。
+- 对应提交: （本次提交）

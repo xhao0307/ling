@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:camera/camera.dart';
@@ -1406,6 +1407,7 @@ class _ExplorePageState extends State<ExplorePage> {
   Widget _buildExploreScreen() {
     final safeTop = MediaQuery.paddingOf(context).top;
     final storyModeActive = _scanResult != null && !_scanCardCollapsed;
+    final actionDisabled = _busy || _detecting;
 
     return Stack(
       fit: StackFit.expand,
@@ -1419,88 +1421,112 @@ class _ExplorePageState extends State<ExplorePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.45),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                widget.session.isDebug
-                                    ? '调试模式 · ${widget.session.displayName}'
-                                    : '账号：${widget.session.displayName}',
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              Text(
-                                '孩子：$_childId · 年龄：$_childAge',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            const Color(0xCC4A2E72),
+                            const Color(0xAA243A66),
+                          ],
                         ),
-                        FilledButton.tonalIcon(
-                          onPressed: _busy || _detecting
-                              ? null
-                              : _pickPhotoAndGenerate,
-                          style: FilledButton.styleFrom(
-                            visualDensity: VisualDensity.compact,
-                            foregroundColor: Colors.white,
-                            backgroundColor:
-                                Colors.white.withValues(alpha: 0.14),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 8,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.34),
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x4417122A),
+                            blurRadius: 16,
+                            offset: Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    widget.session.isDebug
+                                        ? '调试模式 · ${widget.session.displayName}'
+                                        : '账号：${widget.session.displayName}',
+                                    style: TextStyle(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.8),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '孩子：$_childId · 年龄：$_childAge',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          icon: const Icon(Icons.file_upload, size: 18),
-                          label: const Text(
-                            '上传',
-                            style: TextStyle(fontSize: 12),
-                          ),
+                            FilledButton.tonalIcon(
+                              onPressed:
+                                  actionDisabled ? null : _pickPhotoAndGenerate,
+                              style: FilledButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                foregroundColor: Colors.white,
+                                backgroundColor:
+                                    Colors.white.withValues(alpha: 0.14),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 8,
+                                ),
+                              ),
+                              icon: const Icon(Icons.file_upload, size: 18),
+                              label: const Text(
+                                '上传',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            IconButton(
+                              onPressed: actionDisabled
+                                  ? null
+                                  : () => unawaited(widget.onOpenApiSettings()),
+                              icon: const Icon(Icons.settings_ethernet),
+                              style: IconButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                backgroundColor:
+                                    Colors.white.withValues(alpha: 0.14),
+                              ),
+                              tooltip: '后端地址',
+                            ),
+                            const SizedBox(width: 6),
+                            IconButton(
+                              onPressed: actionDisabled
+                                  ? null
+                                  : () => unawaited(widget.onLogout()),
+                              icon: const Icon(Icons.logout),
+                              style: IconButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                backgroundColor:
+                                    Colors.white.withValues(alpha: 0.14),
+                              ),
+                              tooltip: '退出登录',
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 6),
-                        IconButton(
-                          onPressed: _busy || _detecting
-                              ? null
-                              : () => unawaited(widget.onOpenApiSettings()),
-                          icon: const Icon(Icons.settings_ethernet),
-                          style: IconButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor:
-                                Colors.white.withValues(alpha: 0.14),
-                          ),
-                          tooltip: '后端地址',
-                        ),
-                        const SizedBox(width: 6),
-                        IconButton(
-                          onPressed: _busy || _detecting
-                              ? null
-                              : () => unawaited(widget.onLogout()),
-                          icon: const Icon(Icons.logout),
-                          style: IconButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor:
-                                Colors.white.withValues(alpha: 0.14),
-                          ),
-                          tooltip: '退出登录',
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -1550,40 +1576,75 @@ class _ExplorePageState extends State<ExplorePage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  InkWell(
-                    onTap: _busy || _detecting ? null : _captureAndGenerate,
-                    borderRadius: BorderRadius.circular(40),
-                    child: Ink(
-                      width: 76,
-                      height: 76,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _busy || _detecting
-                            ? Colors.white.withValues(alpha: 0.45)
-                            : Colors.white,
-                        border: Border.all(
-                          color: const Color(0xFF0C7E78),
-                          width: 5,
-                        ),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: actionDisabled
+                            ? [
+                                const Color(0x806A657A),
+                                const Color(0x806A657A),
+                              ]
+                            : [
+                                const Color(0xFFB58AF7),
+                                const Color(0xFF6F92F8),
+                              ],
                       ),
-                      child: Icon(
-                        _detecting ? Icons.hourglass_top : Icons.camera_alt,
-                        color: const Color(0xFF0C7E78),
-                        size: 34,
+                      boxShadow: actionDisabled
+                          ? const []
+                          : const [
+                              BoxShadow(
+                                color: Color(0x5A7B8EFF),
+                                blurRadius: 22,
+                                offset: Offset(0, 10),
+                              ),
+                            ],
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.38),
+                        width: 2,
+                      ),
+                    ),
+                    child: InkWell(
+                      onTap: actionDisabled ? null : _captureAndGenerate,
+                      borderRadius: BorderRadius.circular(999),
+                      child: Ink(
+                        width: 84,
+                        height: 84,
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: actionDisabled
+                              ? Colors.white.withValues(alpha: 0.28)
+                              : Colors.white.withValues(alpha: 0.95),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.55),
+                            width: 2,
+                          ),
+                        ),
+                        child: Icon(
+                          _detecting ? Icons.hourglass_top : Icons.auto_awesome,
+                          color: const Color(0xFF5E4AAF),
+                          size: 36,
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 8),
                   DecoratedBox(
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.45),
+                      color: const Color(0xCC2D2550),
                       borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.24),
+                      ),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 6),
                       child: Text(
-                        _detecting ? '识别中...' : '拍照识别',
+                        _detecting ? '魔镜识别中...' : '对镜识别',
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
@@ -1601,30 +1662,35 @@ class _ExplorePageState extends State<ExplorePage> {
 
   Widget _buildCameraBackground() {
     if (!_supportsCameraPreview) {
-      return const DecoratedBox(
-        decoration: BoxDecoration(color: Colors.black87),
-        child: Center(
-          child: Text(
-            '当前平台不支持相机取景，请使用手机设备进行识别。',
-            style: TextStyle(color: Colors.white70),
+      return _buildMagicMirrorStage(
+        mirrorChild: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Text(
+              '当前平台不支持相机取景，请使用手机设备进行识别。',
+              style: TextStyle(
+                color: Colors.white,
+                height: 1.5,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
           ),
         ),
       );
     }
 
     if (_cameraInitializing) {
-      return const DecoratedBox(
-        decoration: BoxDecoration(color: Colors.black87),
-        child: Center(
-          child: CircularProgressIndicator(),
+      return _buildMagicMirrorStage(
+        mirrorChild: const Center(
+          child: CircularProgressIndicator(color: Colors.white),
         ),
       );
     }
 
     if (_cameraError.isNotEmpty) {
-      return ColoredBox(
-        color: Colors.black87,
-        child: Center(
+      return _buildMagicMirrorStage(
+        mirrorChild: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1635,7 +1701,7 @@ class _ExplorePageState extends State<ExplorePage> {
               const SizedBox(height: 8),
               Text(
                 _cameraError,
-                style: const TextStyle(color: Colors.white70),
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.8)),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
@@ -1654,9 +1720,8 @@ class _ExplorePageState extends State<ExplorePage> {
     if (!_cameraReady ||
         controller == null ||
         !controller.value.isInitialized) {
-      return ColoredBox(
-        color: Colors.black87,
-        child: Center(
+      return _buildMagicMirrorStage(
+        mirrorChild: Center(
           child: FilledButton.icon(
             onPressed: _initCamera,
             icon: const Icon(Icons.videocam),
@@ -1666,44 +1731,247 @@ class _ExplorePageState extends State<ExplorePage> {
       );
     }
 
-    final previewSize = controller.value.previewSize;
+    return _buildMagicMirrorStage(
+      mirrorChild: _buildLiveMirrorPreview(controller),
+      includeSpiritOverlay: true,
+    );
+  }
+
+  Widget _buildMagicMirrorStage({
+    required Widget mirrorChild,
+    bool includeSpiritOverlay = false,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final rawWidth = math.min(constraints.maxWidth - 28, 430.0);
+        final mirrorWidth = math.max(220.0, rawWidth);
+        final rawHeight = mirrorWidth * 1.18;
+        final mirrorHeight = math.min(
+          math.max(280.0, rawHeight),
+          constraints.maxHeight * 0.72,
+        );
+
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFF2B2048),
+                    Color(0xFF1A2544),
+                    Color(0xFF241A3F),
+                  ],
+                  stops: [0, 0.5, 1],
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: const Alignment(0, -0.25),
+                    radius: 0.95,
+                    colors: [
+                      const Color(0x996589F0),
+                      const Color(0x552E3A6D),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const Positioned(
+              left: 34,
+              top: 168,
+              child: Icon(
+                Icons.auto_awesome,
+                color: Color(0xDDFFE5A8),
+                size: 20,
+              ),
+            ),
+            const Positioned(
+              right: 38,
+              top: 248,
+              child: Icon(
+                Icons.auto_awesome,
+                color: Color(0xCCBFD8FF),
+                size: 16,
+              ),
+            ),
+            const Positioned(
+              left: 42,
+              bottom: 170,
+              child: Icon(
+                Icons.auto_awesome,
+                color: Color(0xCCCEC1FF),
+                size: 14,
+              ),
+            ),
+            Align(
+              alignment: Alignment.center,
+              child: SizedBox(
+                width: mirrorWidth,
+                height: mirrorHeight,
+                child: _buildMagicMirrorFrame(mirrorChild),
+              ),
+            ),
+            if (includeSpiritOverlay && _scanResult != null)
+              _SpiritOverlay(
+                spirit: _scanResult!.spirit,
+                objectType: _scanResult!.objectType,
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildMagicMirrorFrame(Widget child) {
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (previewSize != null)
-          FittedBox(
-            fit: BoxFit.cover,
-            child: SizedBox(
-              width: previewSize.height,
-              height: previewSize.width,
-              child: CameraPreview(controller),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFE4D4FF),
+                Color(0xFFA385E8),
+                Color(0xFF6F5CB9),
+              ],
             ),
-          )
-        else
-          CameraPreview(controller),
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withValues(alpha: 0.30),
-                  Colors.transparent,
-                  Colors.black.withValues(alpha: 0.36),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.62),
+              width: 2.2,
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x8A423E73),
+                blurRadius: 26,
+                offset: Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  child,
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.white.withValues(alpha: 0.22),
+                            Colors.transparent,
+                            const Color(0xAA1A2044),
+                          ],
+                          stops: const [0.0, 0.4, 1.0],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 18,
+                    left: 24,
+                    right: 24,
+                    height: 72,
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(999),
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.white.withValues(alpha: 0.42),
+                              Colors.white.withValues(alpha: 0),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
-                stops: const [0, 0.45, 1],
               ),
             ),
           ),
         ),
-        if (_scanResult != null)
-          _SpiritOverlay(
-            spirit: _scanResult!.spirit,
-            objectType: _scanResult!.objectType,
+        Align(
+          alignment: Alignment.topCenter,
+          child: Transform.translate(
+            offset: const Offset(0, -16),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFF9E6FF), Color(0xFFA19AEF)],
+                ),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.72),
+                ),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x4A4E3A84),
+                    blurRadius: 12,
+                    offset: Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.auto_awesome,
+                      size: 14,
+                      color: Color(0xFF5D4F98),
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      '万物魔镜',
+                      style: TextStyle(
+                        color: Color(0xFF4A3F7A),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
+        ),
       ],
     );
+  }
+
+  Widget _buildLiveMirrorPreview(CameraController controller) {
+    final previewSize = controller.value.previewSize;
+    if (previewSize != null) {
+      return FittedBox(
+        fit: BoxFit.cover,
+        child: SizedBox(
+          width: previewSize.height,
+          height: previewSize.width,
+          child: CameraPreview(controller),
+        ),
+      );
+    }
+    return CameraPreview(controller);
   }
 
   Widget _buildDetectionBadge({bool compact = false}) {
@@ -1744,8 +2012,13 @@ class _ExplorePageState extends State<ExplorePage> {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.55),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xCC35264F), Color(0xCC263E6A)],
+        ),
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -1991,152 +2264,152 @@ class _ExplorePageState extends State<ExplorePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: canTapDialogToAdvance
-                        ? () {
-                            unawaited(_advanceStoryLine());
-                          }
-                        : null,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [Color(0xFFF2EBFA), Color(0xFFE7DAF8)],
-                            ),
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.6),
-                            ),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 5,
-                            ),
-                            child: Text(
-                              displaySpeaker,
-                              style: const TextStyle(
-                                color: kFairyInk,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                                letterSpacing: 0.2,
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: canTapDialogToAdvance
+                          ? () {
+                              unawaited(_advanceStoryLine());
+                            }
+                          : null,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [Color(0xFFF2EBFA), Color(0xFFE7DAF8)],
+                              ),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.6),
                               ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxHeight: dialogTextMaxHeight,
-                          ),
-                          child: Scrollbar(
-                            child: SingleChildScrollView(
-                              padding: const EdgeInsets.only(right: 6),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 5,
+                              ),
                               child: Text(
-                                displayText,
+                                displaySpeaker,
                                 style: const TextStyle(
-                                  color: Colors.white,
-                                  height: 1.46,
-                                  fontSize: 19,
+                                  color: kFairyInk,
                                   fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                  letterSpacing: 0.2,
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        if (_waitingForAnswerInput && !_quizSolved)
-                          TextField(
-                            controller: _companionReplyCtrl,
-                            minLines: 1,
-                            maxLines: 3,
-                            textInputAction: TextInputAction.send,
-                            onSubmitted: (_) async {
-                              await _sendCompanionMessage(scan);
-                            },
-                            decoration: InputDecoration(
-                              filled: true,
-                              fillColor: Colors.white.withValues(alpha: 0.94),
-                              labelText: '输入你的回答',
-                              suffixIcon: IconButton(
-                                onPressed: _busy
-                                    ? null
-                                    : () async {
-                                        await _sendCompanionMessage(scan);
-                                      },
-                                icon: const Icon(Icons.send),
-                                tooltip: '发送',
+                          const SizedBox(height: 10),
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: dialogTextMaxHeight,
+                            ),
+                            child: Scrollbar(
+                              child: SingleChildScrollView(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: Text(
+                                  displayText,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    height: 1.46,
+                                    fontSize: 19,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
                               ),
                             ),
-                          )
-                        else
-                          Text(
-                            _quizSolved
-                                ? '你已经完成本轮问答，可以退出剧情继续探索。'
-                                : (canTapDialogToAdvance
-                                    ? '点击聊天框或右侧按钮推进剧情，左侧可回看。'
-                                    : (canRetreatStory
-                                        ? '已到当前末句，可用左箭头回看。'
-                                        : '等待剧情加载或角色回应。')),
-                            style: const TextStyle(
-                              color: Color(0xDDE3E7FB),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
                           ),
+                          const SizedBox(height: 8),
+                          if (_waitingForAnswerInput && !_quizSolved)
+                            TextField(
+                              controller: _companionReplyCtrl,
+                              minLines: 1,
+                              maxLines: 3,
+                              textInputAction: TextInputAction.send,
+                              onSubmitted: (_) async {
+                                await _sendCompanionMessage(scan);
+                              },
+                              decoration: InputDecoration(
+                                filled: true,
+                                fillColor: Colors.white.withValues(alpha: 0.94),
+                                labelText: '输入你的回答',
+                                suffixIcon: IconButton(
+                                  onPressed: _busy
+                                      ? null
+                                      : () async {
+                                          await _sendCompanionMessage(scan);
+                                        },
+                                  icon: const Icon(Icons.send),
+                                  tooltip: '发送',
+                                ),
+                              ),
+                            )
+                          else
+                            Text(
+                              _quizSolved
+                                  ? '你已经完成本轮问答，可以退出剧情继续探索。'
+                                  : (canTapDialogToAdvance
+                                      ? '点击聊天框或右侧按钮推进剧情，左侧可回看。'
+                                      : (canRetreatStory
+                                          ? '已到当前末句，可用左箭头回看。'
+                                          : '等待剧情加载或角色回应。')),
+                              style: const TextStyle(
+                                color: Color(0xDDE3E7FB),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        _buildStoryActionButton(
+                          icon: Icons.chevron_left,
+                          label: '上一句',
+                          onTap: canRetreatStory
+                              ? () {
+                                  unawaited(_retreatStoryLine());
+                                }
+                              : null,
+                        ),
+                        _buildStoryActionButton(
+                          icon: Icons.volume_up,
+                          label: '播放',
+                          onTap: _busy
+                              ? null
+                              : () {
+                                  unawaited(_playCurrentStoryVoice());
+                                },
+                        ),
+                        _buildStoryActionButton(
+                          icon: Icons.chevron_right,
+                          label: '下一句',
+                          primary: true,
+                          onTap: canTapDialogToAdvance
+                              ? () {
+                                  unawaited(_advanceStoryLine());
+                                }
+                              : null,
+                        ),
+                        if (_busy) ...[
+                          const SizedBox(width: 10),
+                          const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ],
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      _buildStoryActionButton(
-                        icon: Icons.chevron_left,
-                        label: '上一句',
-                        onTap: canRetreatStory
-                            ? () {
-                                unawaited(_retreatStoryLine());
-                              }
-                            : null,
-                      ),
-                      _buildStoryActionButton(
-                        icon: Icons.volume_up,
-                        label: '播放',
-                        onTap: _busy
-                            ? null
-                            : () {
-                                unawaited(_playCurrentStoryVoice());
-                              },
-                      ),
-                      _buildStoryActionButton(
-                        icon: Icons.chevron_right,
-                        label: '下一句',
-                        primary: true,
-                        onTap: canTapDialogToAdvance
-                            ? () {
-                                unawaited(_advanceStoryLine());
-                              }
-                            : null,
-                      ),
-                      if (_busy) ...[
-                        const SizedBox(width: 10),
-                        const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      ],
-                    ],
-                  ),
                   ],
                 ),
               ),
