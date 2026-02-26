@@ -1,6 +1,6 @@
 {
-    "name": "city_ling_client",
-    "short_name": "city_ling_client",
+    "name": "万物魔镜",
+    "short_name": "万物魔镜",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

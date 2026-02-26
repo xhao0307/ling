@@ -1990,3 +1990,24 @@
 - 下一步建议:
   - 在真实长台词场景下做一次 Web/移动端截图回归，确认滚动体验与按钮可见性稳定。
 - 对应提交: （本次提交）
+
+### [2026-02-26 17:15] F019 应用品牌名适配为“万物魔镜”
+- 会话目标: 按需求将 App 对外展示品牌从“城市灵/City Ling”统一为“万物魔镜”，并覆盖主要端侧入口。
+- 选择功能: `F019`
+- 实际改动:
+  - `flutter_client/lib/main.dart`：`MaterialApp.title`、登录页主标题、首页默认标题与调试模式标题统一改为“万物魔镜”。
+  - `flutter_client/android/app/src/main/AndroidManifest.xml`：`android:label` 改为“万物魔镜”。
+  - `flutter_client/ios/Runner/Info.plist`：`CFBundleDisplayName` 改为“万物魔镜”，并同步相机权限文案品牌名。
+  - `flutter_client/macos/Runner/Configs/AppInfo.xcconfig`：`PRODUCT_NAME` 改为“万物魔镜”。
+  - `flutter_client/macos/Runner/Info.plist`：同步相机权限文案品牌名。
+  - `flutter_client/web/index.html`、`flutter_client/web/manifest.json`：Web 标题及 PWA 名称改为“万物魔镜”。
+  - `design/copy/children_copy_zh_cn.json`、`flutter_client/assets/brand/logo_cityling_fairy.svg`：品牌文案资源同步替换为“万物魔镜”。
+- 验证结果:
+  - `cd flutter_client && /Users/xuxinghao/develop/flutter/bin/flutter analyze` 通过；
+  - `./init.sh` 通过（`smoke 通过: http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 本次未改环境变量前缀与 Bundle Identifier（如 `CITYLING_*`、`com.example.cityLingClient`），避免影响部署兼容；如需全量品牌重命名需单独评估。
+  - `feature_list.json` 对应项本轮未新增端到端剧情验收，`F019.passes` 保持 `false`。
+- 下一步建议:
+  - 补一次前端真机/Web 路径验收（登录页、应用切后台后的系统展示名、PWA 安装名）确认品牌展示一致。
+- 对应提交: （本次提交）

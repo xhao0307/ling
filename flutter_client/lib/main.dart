@@ -62,7 +62,7 @@ class CityLingApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '城市灵',
+      title: '万物魔镜',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: kFairyRose,
@@ -752,7 +752,7 @@ class _AuthEntryPageState extends State<AuthEntryPage> {
                             Icon(Icons.auto_awesome, color: kFairyRose),
                             SizedBox(width: 8),
                             Text(
-                              '城市灵童话站',
+                              '万物魔镜',
                               style: TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.w800,
@@ -1110,7 +1110,7 @@ class _CityLingHomePageState extends State<CityLingHomePage> {
       case 3:
         return '我的';
       default:
-        return session.isDebug ? '城市灵（调试模式）' : '城市灵';
+        return session.isDebug ? '万物魔镜（调试模式）' : '万物魔镜';
     }
   }
 
