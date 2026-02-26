@@ -330,6 +330,9 @@ func TestGenerateCompanionSceneFallsBackWhenSceneLLMFailed(t *testing.T) {
 	if strings.TrimSpace(resp.DialogText) == "" {
 		t.Fatalf("expected dialog text from fallback scene")
 	}
+	if !strings.Contains(resp.DialogText, "我现在正开心") {
+		t.Fatalf("expected dialog first line to include emotion+state hook, got %q", resp.DialogText)
+	}
 	if strings.TrimSpace(resp.CharacterImageURL) == "" {
 		t.Fatalf("expected image url")
 	}
@@ -418,6 +421,9 @@ func TestGenerateCompanionSceneImageToImageIgnoresEnvironmentFields(t *testing.T
 	}
 	if strings.TrimSpace(resp.DialogText) == "" {
 		t.Fatalf("expected dialog text")
+	}
+	if !strings.Contains(resp.DialogText, "我是喵喵星友") || !strings.Contains(resp.DialogText, "我现在正开心") {
+		t.Fatalf("expected dialog first line to include identity+emotion hook, got %q", resp.DialogText)
 	}
 	if strings.Contains(chatRequestBody, "暴雨夜晚") || strings.Contains(chatRequestBody, "火山口") || strings.Contains(chatRequestBody, "金属刺甲") {
 		t.Fatalf("expected scene request to ignore env fields in image-to-image mode, got %s", chatRequestBody)
@@ -546,6 +552,59 @@ func TestChatCompanionMissingMessage(t *testing.T) {
 	}
 	if err != service.ErrChildMessageEmpty {
 		t.Fatalf("expected ErrChildMessageEmpty, got %v", err)
+	}
+}
+
+func TestChatCompanionAddsEmotionHookForReply(t *testing.T) {
+	t.Parallel()
+	svc, _ := newTestService(t)
+
+	var mockAudioURL string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/compatible-mode/v1/chat/completions":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"{\"reply_text\":\"我是路灯，我们继续观察。\"}"}}]}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/services/aigc/multimodal-generation/generation":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"status_code":200,"request_id":"req-chat-voice","output":{"audio":{"url":"` + mockAudioURL + `"}}}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/mock-chat-audio.wav":
+			w.Header().Set("Content-Type", "audio/wav")
+			_, _ = w.Write([]byte{9, 8, 7})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	}))
+	defer server.Close()
+	mockAudioURL = server.URL + "/mock-chat-audio.wav"
+
+	client, err := llm.NewClient(llm.Config{
+		APIKey:       "test-key",
+		BaseURL:      server.URL,
+		ImageBaseURL: server.URL,
+		VoiceBaseURL: server.URL,
+	})
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+	svc.SetLLMClient(client)
+
+	resp, err := svc.ChatCompanion(service.CompanionChatRequest{
+		ChildID:              "kid_chat_1",
+		ChildAge:             8,
+		ObjectType:           "路灯",
+		CharacterName:        "云朵灯灯",
+		CharacterPersonality: "温柔",
+		ChildMessage:         "你会亮多久？",
+	})
+	if err != nil {
+		t.Fatalf("ChatCompanion() error = %v", err)
+	}
+	if !strings.Contains(resp.ReplyText, "我是云朵灯灯") || !strings.Contains(resp.ReplyText, "我现在正开心") {
+		t.Fatalf("expected reply to include identity+emotion hook, got %q", resp.ReplyText)
+	}
+	if strings.TrimSpace(resp.VoiceAudioBase64) == "" {
+		t.Fatalf("expected non-empty voice base64")
 	}
 }
 

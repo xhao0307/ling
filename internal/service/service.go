@@ -369,6 +369,7 @@ func (s *Service) GenerateCompanionScene(req CompanionSceneRequest) (CompanionSc
 			objectTraits,
 		)
 	}
+	scene.DialogText = ensureCompanionEmotionHook(scene.DialogText, scene.CharacterName, objectType)
 
 	imagePrompt := ensureInteractiveGazePrompt(scene.ImagePrompt)
 	if sourceImageURL != "" || sourceImageBase64 != "" {
@@ -521,8 +522,9 @@ func (s *Service) ChatCompanion(req CompanionChatRequest) (CompanionChatResponse
 	if err != nil {
 		return CompanionChatResponse{}, err
 	}
+	replyText := ensureCompanionEmotionHook(reply.ReplyText, strings.TrimSpace(req.CharacterName), objectType)
 
-	audioBytes, mimeType, err := s.llm.SynthesizeSpeech(context.Background(), reply.ReplyText, objectType)
+	audioBytes, mimeType, err := s.llm.SynthesizeSpeech(context.Background(), replyText, objectType)
 	if err != nil {
 		if errors.Is(err, llm.ErrVoiceCapabilityUnavailable) {
 			return CompanionChatResponse{}, ErrMediaUnavailable
@@ -531,7 +533,7 @@ func (s *Service) ChatCompanion(req CompanionChatRequest) (CompanionChatResponse
 	}
 
 	return CompanionChatResponse{
-		ReplyText:        reply.ReplyText,
+		ReplyText:        replyText,
 		VoiceAudioBase64: base64.StdEncoding.EncodeToString(audioBytes),
 		VoiceMimeType:    mimeType,
 	}, nil
@@ -940,6 +942,76 @@ func ensureInteractiveGazePrompt(prompt string) string {
 		return trimmed
 	}
 	return trimmed + "，角色视线看向镜头（看向屏幕中的小朋友），营造互动感。"
+}
+
+func ensureCompanionEmotionHook(dialogText string, characterName string, objectType string) string {
+	trimmed := strings.TrimSpace(dialogText)
+	opening := companionEmotionOpening(characterName, objectType)
+	if trimmed == "" {
+		return opening
+	}
+
+	first, rest := splitFirstSentence(trimmed)
+	if firstHasEmotionAndState(first) && strings.Contains(first, "我是") {
+		return trimmed
+	}
+	if rest == "" {
+		return opening
+	}
+	return opening + rest
+}
+
+func companionEmotionOpening(characterName string, objectType string) string {
+	name := strings.TrimSpace(characterName)
+	if name == "" {
+		name = strings.TrimSpace(objectTypeToChinese(objectType))
+	}
+	if name == "" {
+		name = "你的小伙伴"
+	}
+	return fmt.Sprintf("哎呀，你终于看到我啦，我是%s，我现在正开心地和你打招呼呢。", name)
+}
+
+func firstHasEmotionAndState(text string) bool {
+	emotionWords := []string{"开心", "惊喜", "兴奋", "好奇", "激动", "期待", "温柔", "得意", "害羞"}
+	stateWords := []string{"正在", "现在正", "刚刚", "此刻", "今天正", "已经在"}
+	return containsAnyKeyword(text, emotionWords) && containsAnyKeyword(text, stateWords)
+}
+
+func containsAnyKeyword(text string, keywords []string) bool {
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" {
+		return false
+	}
+	for _, keyword := range keywords {
+		if strings.Contains(trimmed, keyword) {
+			return true
+		}
+	}
+	return false
+}
+
+func splitFirstSentence(text string) (string, string) {
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" {
+		return "", ""
+	}
+	for idx, r := range trimmed {
+		if isSentenceBreak(r) {
+			end := idx + len(string(r))
+			return strings.TrimSpace(trimmed[:end]), strings.TrimSpace(trimmed[end:])
+		}
+	}
+	return trimmed, ""
+}
+
+func isSentenceBreak(r rune) bool {
+	switch r {
+	case '。', '！', '？', '!', '?', ';', '；', '\n':
+		return true
+	default:
+		return false
+	}
 }
 
 func (s *Service) defaultLearningContent(objectType string) (string, model.QuizItem) {

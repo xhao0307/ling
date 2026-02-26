@@ -110,6 +110,7 @@ func TestBuildCompanionSceneUserPromptIncludesPolicy(t *testing.T) {
 
 	expectedSnippets := []string{
 		"第一句直接说明“我是谁”",
+		"第一句必须同时包含1个情绪词",
 		"触电/烫伤/割伤/有毒/夹伤/坠落/动物攻击/过敏",
 		"只能有一个问句",
 		"你还有什么想知道的吗？随便问——我在这儿听着呢！",
