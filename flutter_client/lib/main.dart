@@ -432,37 +432,43 @@ class _GlassPanel extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(22),
     this.radius = 30,
+    this.backgroundColor = const Color(0x9EFFFFFF),
+    this.borderColor = const Color(0x6BFFFFFF),
+    this.blurSigma = 20,
+    this.boxShadow = const [
+      BoxShadow(
+        color: Color(0x142D2A38),
+        blurRadius: 32,
+        offset: Offset(0, 14),
+      ),
+      BoxShadow(
+        color: Color(0x22FFFFFF),
+        blurRadius: 1,
+        offset: Offset(0, 1),
+      ),
+    ],
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
   final double radius;
+  final Color backgroundColor;
+  final Color borderColor;
+  final double blurSigma;
+  final List<BoxShadow> boxShadow;
 
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.62),
+            color: backgroundColor,
             borderRadius: BorderRadius.circular(radius),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.42),
-            ),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x142D2A38),
-                blurRadius: 32,
-                offset: Offset(0, 14),
-              ),
-              BoxShadow(
-                color: Color(0x22FFFFFF),
-                blurRadius: 1,
-                offset: Offset(0, 1),
-              ),
-            ],
+            border: Border.all(color: borderColor),
+            boxShadow: boxShadow,
           ),
           child: Padding(padding: padding, child: child),
         ),
@@ -1700,11 +1706,41 @@ class _ExplorePageState extends State<ExplorePage> {
     );
   }
 
-  Widget _buildDetectionBadge() {
+  Widget _buildDetectionBadge({bool compact = false}) {
     final text = _detectedLabel.isEmpty
         ? '视觉识别：未命中'
         : '视觉识别：${_detectedLabelDisplayZh()}';
     final reason = _detectedReasonDisplayZh();
+
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          text,
+          style: TextStyle(
+            color:
+                compact ? Colors.white.withValues(alpha: 0.92) : Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        if (reason.isNotEmpty)
+          Text(
+            reason,
+            style: TextStyle(
+              color: compact
+                  ? Colors.white.withValues(alpha: 0.78)
+                  : Colors.white70,
+              fontSize: 11,
+            ),
+          ),
+      ],
+    );
+
+    if (compact) {
+      return content;
+    }
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -1713,20 +1749,63 @@ class _ExplorePageState extends State<ExplorePage> {
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              text,
-              style: const TextStyle(color: Colors.white, fontSize: 12),
-            ),
-            if (reason.isNotEmpty)
-              Text(
-                reason,
-                style: const TextStyle(color: Colors.white70, fontSize: 11),
+        child: content,
+      ),
+    );
+  }
+
+  Widget _buildStoryActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback? onTap,
+    bool primary = false,
+  }) {
+    final enabled = onTap != null;
+    return AnimatedOpacity(
+      duration: kMicroAnim,
+      opacity: enabled ? 1 : 0.45,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(999),
+          onTap: onTap,
+          child: Ink(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              gradient: primary
+                  ? const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [kFairyRose, kFairyRoseDeep],
+                    )
+                  : null,
+              color: primary ? null : Colors.white.withValues(alpha: 0.15),
+              border: Border.all(
+                color: primary
+                    ? Colors.white.withValues(alpha: 0.24)
+                    : Colors.white.withValues(alpha: 0.35),
               ),
-          ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  size: 18,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -1752,38 +1831,66 @@ class _ExplorePageState extends State<ExplorePage> {
 
     if (!hasSceneImage) {
       return DecoratedBox(
-        decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.72)),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(
-                width: 34,
-                height: 34,
-                child: CircularProgressIndicator(strokeWidth: 3),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                '剧情图片生成中...',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                '图片加载完成后自动进入剧情',
-                style: TextStyle(color: Colors.white70),
-              ),
-              const SizedBox(height: 16),
-              TextButton.icon(
-                onPressed: _dismissScanCard,
-                icon: const Icon(Icons.close, size: 18),
-                label: const Text('退出剧情'),
-                style: TextButton.styleFrom(foregroundColor: Colors.white),
-              ),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.black.withValues(alpha: 0.76),
+              const Color(0xFF1F2332).withValues(alpha: 0.76),
             ],
+          ),
+        ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 320),
+            child: _GlassPanel(
+              radius: 24,
+              backgroundColor: const Color(0x70303649),
+              borderColor: const Color(0x66FFFFFF),
+              blurSigma: 16,
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x2B11131C),
+                  blurRadius: 24,
+                  offset: Offset(0, 12),
+                ),
+              ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 34,
+                    height: 34,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      valueColor: AlwaysStoppedAnimation<Color>(kFairyRose),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    '剧情图片生成中...',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    '正在给你准备更有沉浸感的画面',
+                    style: TextStyle(color: Color(0xDDE7ECF8), height: 1.35),
+                  ),
+                  const SizedBox(height: 14),
+                  _buildStoryActionButton(
+                    icon: Icons.close,
+                    label: '退出剧情',
+                    onTap: _dismissScanCard,
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       );
@@ -1810,40 +1917,63 @@ class _ExplorePageState extends State<ExplorePage> {
           ),
         ),
         Positioned(
-          top: 16,
+          top: 14,
           left: 14,
           right: 14,
-          child: Row(
-            children: [
-              Expanded(child: _buildDetectionBadge()),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: _dismissScanCard,
-                icon: const Icon(Icons.close),
-                style: IconButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: Colors.black.withValues(alpha: 0.38),
-                ),
-                tooltip: '关闭剧情',
+          child: _GlassPanel(
+            radius: 20,
+            blurSigma: 12,
+            backgroundColor: const Color(0x5230384A),
+            borderColor: const Color(0x55FFFFFF),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x1A131722),
+                blurRadius: 16,
+                offset: Offset(0, 6),
               ),
             ],
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Row(
+              children: [
+                const Icon(Icons.auto_awesome,
+                    color: Color(0xFFF7D272), size: 18),
+                const SizedBox(width: 8),
+                Expanded(child: _buildDetectionBadge(compact: true)),
+                const SizedBox(width: 8),
+                _buildStoryActionButton(
+                  icon: Icons.close,
+                  label: '关闭',
+                  onTap: _dismissScanCard,
+                ),
+              ],
+            ),
           ),
         ),
         Positioned(
-          left: 12,
-          right: 12,
-          bottom: viewInsetsBottom + safeBottom + 12,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.46),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.26),
+          left: 14,
+          right: 14,
+          bottom: viewInsetsBottom + safeBottom + 10,
+          child: _GlassPanel(
+            radius: 24,
+            backgroundColor: const Color(0x72303649),
+            borderColor: const Color(0x66FFFFFF),
+            blurSigma: 16,
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x2A131722),
+                blurRadius: 22,
+                offset: Offset(0, 10),
               ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+            ],
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 150),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeOutCubic,
               child: Column(
+                key: ValueKey<String>(
+                  '$displaySpeaker::$displayText::$_currentStoryIndex::$_waitingForAnswerInput::$_quizSolved',
+                ),
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1861,9 +1991,14 @@ class _ExplorePageState extends State<ExplorePage> {
                         DecoratedBox(
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [Color(0xFFFBE8B0), Color(0xFFE7C36A)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFFF2EBFA), Color(0xFFE7DAF8)],
                             ),
                             borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.6),
+                            ),
                           ),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
@@ -1873,9 +2008,10 @@ class _ExplorePageState extends State<ExplorePage> {
                             child: Text(
                               displaySpeaker,
                               style: const TextStyle(
-                                color: Color(0xFF332200),
-                                fontWeight: FontWeight.w800,
+                                color: kFairyInk,
+                                fontWeight: FontWeight.w700,
                                 fontSize: 13,
+                                letterSpacing: 0.2,
                               ),
                             ),
                           ),
@@ -1885,9 +2021,9 @@ class _ExplorePageState extends State<ExplorePage> {
                           displayText,
                           style: const TextStyle(
                             color: Colors.white,
-                            height: 1.45,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
+                            height: 1.46,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -1902,9 +2038,8 @@ class _ExplorePageState extends State<ExplorePage> {
                             },
                             decoration: InputDecoration(
                               filled: true,
-                              fillColor: Colors.white.withValues(alpha: 0.95),
+                              fillColor: Colors.white.withValues(alpha: 0.94),
                               labelText: '输入你的回答',
-                              border: const OutlineInputBorder(),
                               suffixIcon: IconButton(
                                 onPressed: _busy
                                     ? null
@@ -1921,74 +2056,52 @@ class _ExplorePageState extends State<ExplorePage> {
                             _quizSolved
                                 ? '你已经完成本轮问答，可以退出剧情继续探索。'
                                 : (canTapDialogToAdvance
-                                    ? '点击聊天框或右箭头继续剧情，可用左箭头回看。'
+                                    ? '点击聊天框或右侧按钮推进剧情，左侧可回看。'
                                     : (canRetreatStory
                                         ? '已到当前末句，可用左箭头回看。'
                                         : '等待剧情加载或角色回应。')),
                             style: const TextStyle(
-                              color: Color(0xFFE3E7FB),
+                              color: Color(0xDDE3E7FB),
                               fontSize: 13,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      FilledButton.tonalIcon(
-                        onPressed: canRetreatStory
-                            ? () async {
-                                await _retreatStoryLine();
+                      _buildStoryActionButton(
+                        icon: Icons.chevron_left,
+                        label: '上一句',
+                        onTap: canRetreatStory
+                            ? () {
+                                unawaited(_retreatStoryLine());
                               }
                             : null,
-                        style: FilledButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.white.withValues(alpha: 0.16),
-                          disabledForegroundColor:
-                              Colors.white.withValues(alpha: 0.5),
-                          disabledBackgroundColor:
-                              Colors.white.withValues(alpha: 0.10),
-                        ),
-                        icon: const Icon(Icons.chevron_left),
-                        label: const Text('上一句'),
                       ),
-                      FilledButton.tonalIcon(
-                        onPressed: _busy
+                      _buildStoryActionButton(
+                        icon: Icons.volume_up,
+                        label: '播放',
+                        onTap: _busy
                             ? null
-                            : () async {
-                                await _playCurrentStoryVoice();
+                            : () {
+                                unawaited(_playCurrentStoryVoice());
                               },
-                        style: FilledButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.white.withValues(alpha: 0.16),
-                          disabledForegroundColor:
-                              Colors.white.withValues(alpha: 0.5),
-                          disabledBackgroundColor:
-                              Colors.white.withValues(alpha: 0.10),
-                        ),
-                        icon: const Icon(Icons.volume_up),
-                        label: const Text('播放'),
                       ),
-                      FilledButton.tonalIcon(
-                        onPressed: canTapDialogToAdvance
-                            ? () async {
-                                await _advanceStoryLine();
+                      _buildStoryActionButton(
+                        icon: Icons.chevron_right,
+                        label: '下一句',
+                        primary: true,
+                        onTap: canTapDialogToAdvance
+                            ? () {
+                                unawaited(_advanceStoryLine());
                               }
                             : null,
-                        style: FilledButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.white.withValues(alpha: 0.16),
-                          disabledForegroundColor:
-                              Colors.white.withValues(alpha: 0.5),
-                          disabledBackgroundColor:
-                              Colors.white.withValues(alpha: 0.10),
-                        ),
-                        icon: const Icon(Icons.chevron_right),
-                        label: const Text('下一句'),
                       ),
                       if (_busy) ...[
                         const SizedBox(width: 10),
