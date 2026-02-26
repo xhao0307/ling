@@ -2073,3 +2073,23 @@
 - 下一步建议:
   - 如需进一步统一，可继续把“剧情全屏页”的按钮高光和边框细节同步为同一 token 体系。
 - 对应提交: （本次提交）
+
+### [2026-02-26 18:01] F019 收窄剧情聊天框并在答对后自动退出剧情
+- 会话目标: 按反馈修复剧情页交互：聊天框明显过宽；答题正确后仍能继续“下一句”。
+- 选择功能: `F019`
+- 实际改动:
+  - `flutter_client/lib/main.dart`（`_buildStoryFullscreen`）：
+    - 新增 `dialogPanelWidth`，按屏幕宽度取 50% 并做上下限约束（`300~560`）；
+    - 底部剧情面板由“左右贴边”改为“居中固定宽度”，视觉上约为原来一半宽。
+  - `flutter_client/lib/main.dart`（`_sendCompanionMessage`）：
+    - 在 `submitAnswer` 判定 `correct=true` 后，直接提示并调用 `_dismissScanCard()`；
+    - 正确后不再请求后续 `chatCompanion` 文案，不再进入“下一句”链路。
+- 验证结果:
+  - `cd flutter_client && /Users/xuxinghao/develop/flutter/bin/flutter analyze` 通过；
+  - `./init.sh` 通过（`smoke 通过: http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 桌面大屏已显著收窄；小屏因最小宽度保护仍保留可读性，不会严格到“物理一半”。
+  - `feature_list.json` 本轮未新增端到端验收，`F019.passes` 保持 `false`。
+- 下一步建议:
+  - 若你希望更极致窄屏视觉，可再把上限 `560` 下调到 `460` 并加断点适配。
+- 对应提交: （本次提交）
