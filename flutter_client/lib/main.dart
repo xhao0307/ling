@@ -1814,6 +1814,7 @@ class _ExplorePageState extends State<ExplorePage> {
   Widget _buildStoryFullscreen(ScanResult scan) {
     final viewInsetsBottom = MediaQuery.viewInsetsOf(context).bottom;
     final safeBottom = MediaQuery.paddingOf(context).bottom;
+    final screenHeight = MediaQuery.sizeOf(context).height;
     final companionName = _companionScene?.characterName ?? scan.spirit.name;
     final currentLine = _currentStoryLine;
     final hasStoryLine = currentLine != null;
@@ -1828,6 +1829,17 @@ class _ExplorePageState extends State<ExplorePage> {
         ((scene.characterImageBytes != null &&
                 scene.characterImageBytes!.isNotEmpty) ||
             scene.characterImageUrl.trim().isNotEmpty);
+    final naturalDialogHeight =
+        (screenHeight * 0.46).clamp(250.0, 430.0).toDouble();
+    final keyboardSafeDialogHeight =
+        (screenHeight - viewInsetsBottom - safeBottom - 118)
+            .clamp(220.0, 430.0)
+            .toDouble();
+    final dialogPanelHeight = naturalDialogHeight < keyboardSafeDialogHeight
+        ? naturalDialogHeight
+        : keyboardSafeDialogHeight;
+    final dialogTextMaxHeight =
+        (dialogPanelHeight * 0.45).clamp(120.0, 250.0).toDouble();
 
     if (!hasSceneImage) {
       return DecoratedBox(
@@ -1953,30 +1965,32 @@ class _ExplorePageState extends State<ExplorePage> {
           left: 14,
           right: 14,
           bottom: viewInsetsBottom + safeBottom + 10,
-          child: _GlassPanel(
-            radius: 24,
-            backgroundColor: const Color(0x72303649),
-            borderColor: const Color(0x66FFFFFF),
-            blurSigma: 16,
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x2A131722),
-                blurRadius: 22,
-                offset: Offset(0, 10),
-              ),
-            ],
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 150),
-              switchInCurve: Curves.easeOutCubic,
-              switchOutCurve: Curves.easeOutCubic,
-              child: Column(
-                key: ValueKey<String>(
-                  '$displaySpeaker::$displayText::$_currentStoryIndex::$_waitingForAnswerInput::$_quizSolved',
+          child: SizedBox(
+            height: dialogPanelHeight,
+            child: _GlassPanel(
+              radius: 24,
+              backgroundColor: const Color(0x72303649),
+              borderColor: const Color(0x66FFFFFF),
+              blurSigma: 16,
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x2A131722),
+                  blurRadius: 22,
+                  offset: Offset(0, 10),
                 ),
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
+              ],
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 150),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeOutCubic,
+                child: Column(
+                  key: ValueKey<String>(
+                    '$displaySpeaker::$displayText::$_currentStoryIndex::$_waitingForAnswerInput::$_quizSolved',
+                  ),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: canTapDialogToAdvance
@@ -2017,13 +2031,23 @@ class _ExplorePageState extends State<ExplorePage> {
                           ),
                         ),
                         const SizedBox(height: 10),
-                        Text(
-                          displayText,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            height: 1.46,
-                            fontSize: 19,
-                            fontWeight: FontWeight.w700,
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxHeight: dialogTextMaxHeight,
+                          ),
+                          child: Scrollbar(
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: Text(
+                                displayText,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  height: 1.46,
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -2113,7 +2137,8 @@ class _ExplorePageState extends State<ExplorePage> {
                       ],
                     ],
                   ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
