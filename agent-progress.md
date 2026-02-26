@@ -1769,3 +1769,29 @@
 - 下一步建议:
   - 补 UI 回归截图并做一次“深浅模式/不同窗口宽度”对齐检查，防止玻璃层在窄屏出现重叠感。
 - 对应提交: （本次提交）
+
+### [2026-02-26 14:40] F018 Android/iOS 打包产物输出（iOS 因签名证书未生成 ipa）
+- 会话目标: 按需求分别打包 Android 与 iOS 安装产物，并确认输出路径。
+- 选择功能: `F018`
+- 实际改动:
+  - 按固定流程执行 `pwd`、`git status`、`git log --oneline -20`、读取 `agent-progress.md` 与 `feature_list.json`；
+  - 执行 `./init.sh`，确认 smoke 通过；
+  - 在 `flutter_client` 执行 `flutter pub get`；
+  - 生成 Android release 包：`flutter build apk --release`；
+  - 修复 iOS 打包环境阻塞：执行 `xcodebuild -downloadPlatform iOS` 安装 iOS 26.2 Simulator 组件；
+  - 生成 iOS 无签名归档：`flutter build ipa --release --no-codesign`，得到 `Runner.xcarchive`；
+  - 尝试签名导出 `ipa`：`flutter build ipa --release`，因本机无有效 Apple 开发证书失败。
+- 验证结果:
+  - `./init.sh`：`smoke 通过: http://127.0.0.1:39028`；
+  - Android 产物：
+    - `flutter_client/build/app/outputs/flutter-apk/app-release.apk`（约 51MB）；
+  - iOS 产物：
+    - `flutter_client/build/ios/archive/Runner.xcarchive`（无签名归档）；
+  - iOS `ipa` 导出失败信息：
+    - `No valid code signing certificates were found`。
+- 风险与遗留:
+  - 当前 iOS 仅产出无签名 `xcarchive`，未生成可直接安装的 `ipa`；
+  - 需在 Xcode 配置有效 Team/证书/Provisioning Profile，并替换默认 Bundle ID（当前为 `com.example.cityLingClient`）后再导出。
+- 下一步建议:
+  - 完成 Xcode 签名配置后重跑：`cd flutter_client && flutter build ipa --release`，补齐可安装 iOS 包。
+- 对应提交: （本次提交）
