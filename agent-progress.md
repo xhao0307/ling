@@ -1795,3 +1795,21 @@
 - 下一步建议:
   - 完成 Xcode 签名配置后重跑：`cd flutter_client && flutter build ipa --release`，补齐可安装 iOS 包。
 - 对应提交: （本次提交）
+
+### [2026-02-26 14:43] F018 iOS 签名导出阻塞定位（证书缺失）
+- 会话目标: 按请求“签名并导出 .ipa”，在现有归档基础上直接产出可安装 iOS 包。
+- 选择功能: `F018`
+- 实际改动:
+  - 检查签名证书：`security find-identity -v -p codesigning`；
+  - 检查工程签名配置：`xcodebuild -workspace Runner.xcworkspace -scheme Runner -showBuildSettings`；
+  - 再次尝试签名导出：`cd flutter_client && flutter build ipa --release`。
+- 验证结果:
+  - 证书检查结果：`0 valid identities found`；
+  - 工程当前包名：`PRODUCT_BUNDLE_IDENTIFIER = com.example.cityLingClient`；
+  - 签名导出失败：`No valid code signing certificates were found`。
+- 风险与遗留:
+  - 在当前机器上无法由 CLI 自动完成签名导出，必须先在 Xcode 登录 Apple ID 并创建可用开发证书/描述文件；
+  - `com.example.*` 默认包名不适合正式签名分发，建议改为唯一 Bundle ID。
+- 下一步建议:
+  - 在 Xcode 完成 Team/证书/Bundle ID 配置后，重跑 `cd flutter_client && flutter build ipa --release`。
+- 对应提交: （本次提交）
