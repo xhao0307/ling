@@ -1446,6 +1446,8 @@ class _ExplorePageState extends State<ExplorePage> {
   }
 
   Widget _buildStoryFullscreen(ScanResult scan) {
+    final viewInsetsBottom = MediaQuery.viewInsetsOf(context).bottom;
+    final safeBottom = MediaQuery.paddingOf(context).bottom;
     final companionName = _companionScene?.characterName ?? scan.spirit.name;
     final currentLine = _currentStoryLine;
     final hasStoryLine = currentLine != null;
@@ -1543,7 +1545,7 @@ class _ExplorePageState extends State<ExplorePage> {
         Positioned(
           left: 12,
           right: 12,
-          bottom: 16,
+          bottom: viewInsetsBottom + safeBottom + 12,
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: Colors.black.withValues(alpha: 0.46),
@@ -1645,59 +1647,61 @@ class _ExplorePageState extends State<ExplorePage> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Row(
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.18),
-                          shape: BoxShape.circle,
+                      FilledButton.tonalIcon(
+                        onPressed: canRetreatStory
+                            ? () async {
+                                await _retreatStoryLine();
+                              }
+                            : null,
+                        style: FilledButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.white.withValues(alpha: 0.16),
+                          disabledForegroundColor:
+                              Colors.white.withValues(alpha: 0.5),
+                          disabledBackgroundColor:
+                              Colors.white.withValues(alpha: 0.10),
                         ),
-                        child: IconButton(
-                          onPressed: canRetreatStory
-                              ? () async {
-                                  await _retreatStoryLine();
-                                }
-                              : null,
-                          icon:
-                              const Icon(Icons.chevron_left, color: Colors.white),
-                          tooltip: '上一句',
-                        ),
+                        icon: const Icon(Icons.chevron_left),
+                        label: const Text('上一句'),
                       ),
-                      const SizedBox(width: 8),
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.18),
-                          shape: BoxShape.circle,
+                      FilledButton.tonalIcon(
+                        onPressed: _busy
+                            ? null
+                            : () async {
+                                await _playCurrentStoryVoice();
+                              },
+                        style: FilledButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.white.withValues(alpha: 0.16),
+                          disabledForegroundColor:
+                              Colors.white.withValues(alpha: 0.5),
+                          disabledBackgroundColor:
+                              Colors.white.withValues(alpha: 0.10),
                         ),
-                        child: IconButton(
-                          onPressed: _busy
-                              ? null
-                              : () async {
-                                  await _playCurrentStoryVoice();
-                                },
-                          icon:
-                              const Icon(Icons.volume_up, color: Colors.white),
-                          tooltip: '播放语音',
-                        ),
+                        icon: const Icon(Icons.volume_up),
+                        label: const Text('播放'),
                       ),
-                      const SizedBox(width: 8),
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.18),
-                          shape: BoxShape.circle,
+                      FilledButton.tonalIcon(
+                        onPressed: canTapDialogToAdvance
+                            ? () async {
+                                await _advanceStoryLine();
+                              }
+                            : null,
+                        style: FilledButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.white.withValues(alpha: 0.16),
+                          disabledForegroundColor:
+                              Colors.white.withValues(alpha: 0.5),
+                          disabledBackgroundColor:
+                              Colors.white.withValues(alpha: 0.10),
                         ),
-                        child: IconButton(
-                          onPressed: canTapDialogToAdvance
-                              ? () async {
-                                  await _advanceStoryLine();
-                                }
-                              : null,
-                          icon: const Icon(
-                            Icons.chevron_right,
-                            color: Colors.white,
-                          ),
-                          tooltip: '下一句',
-                        ),
+                        icon: const Icon(Icons.chevron_right),
+                        label: const Text('下一句'),
                       ),
                       if (_busy) ...[
                         const SizedBox(width: 10),
