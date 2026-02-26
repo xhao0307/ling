@@ -2114,6 +2114,10 @@ class _ExplorePageState extends State<ExplorePage> {
         (baseDialogPanelHeight * 0.5).clamp(130.0, 260.0).toDouble();
     final dialogTextMaxHeight =
         (dialogPanelHeight * 0.42).clamp(78.0, 130.0).toDouble();
+    const storyActionRailWidth = 102.0;
+    const storyActionRailGap = 10.0;
+    final dialogContentRightPadding =
+        14.0 + storyActionRailWidth + storyActionRailGap;
 
     if (!hasSceneImage) {
       return DecoratedBox(
@@ -2253,7 +2257,12 @@ class _ExplorePageState extends State<ExplorePage> {
                   offset: Offset(0, 10),
                 ),
               ],
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+              padding: EdgeInsets.fromLTRB(
+                14,
+                14,
+                dialogContentRightPadding,
+                12,
+              ),
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 150),
                 switchInCurve: Curves.easeOutCubic,
@@ -2382,48 +2391,51 @@ class _ExplorePageState extends State<ExplorePage> {
             borderColor: const Color(0x59FFFFFF),
             blurSigma: 14,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildStoryActionButton(
-                  icon: Icons.chevron_left,
-                  label: '上一句',
-                  onTap: canRetreatStory
-                      ? () {
-                          unawaited(_retreatStoryLine());
-                        }
-                      : null,
-                ),
-                const SizedBox(height: 8),
-                _buildStoryActionButton(
-                  icon: Icons.volume_up,
-                  label: '播放',
-                  onTap: _busy
-                      ? null
-                      : () {
-                          unawaited(_playCurrentStoryVoice());
-                        },
-                ),
-                const SizedBox(height: 8),
-                _buildStoryActionButton(
-                  icon: Icons.chevron_right,
-                  label: '下一句',
-                  primary: true,
-                  onTap: canTapDialogToAdvance
-                      ? () {
-                          unawaited(_advanceStoryLine());
-                        }
-                      : null,
-                ),
-                if (_busy) ...[
-                  const SizedBox(height: 8),
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+            child: SizedBox(
+              width: storyActionRailWidth,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildStoryActionButton(
+                    icon: Icons.chevron_left,
+                    label: '上一句',
+                    onTap: canRetreatStory
+                        ? () {
+                            unawaited(_retreatStoryLine());
+                          }
+                        : null,
                   ),
+                  const SizedBox(height: 8),
+                  _buildStoryActionButton(
+                    icon: Icons.volume_up,
+                    label: '播放',
+                    onTap: _busy
+                        ? null
+                        : () {
+                            unawaited(_playCurrentStoryVoice());
+                          },
+                  ),
+                  const SizedBox(height: 8),
+                  _buildStoryActionButton(
+                    icon: Icons.chevron_right,
+                    label: '下一句',
+                    primary: true,
+                    onTap: canTapDialogToAdvance
+                        ? () {
+                            unawaited(_advanceStoryLine());
+                          }
+                        : null,
+                  ),
+                  if (_busy) ...[
+                    const SizedBox(height: 8),
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
