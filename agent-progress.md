@@ -1950,3 +1950,25 @@
 - 下一步建议:
   - 线上复测 `/api/v1/companion/scene`（object_type=狗）并观察是否从 500 恢复到 200；如仍偶发 400，再把模板进一步压缩并增加结构化短 prompt。
 - 对应提交: （本次提交）
+
+### [2026-02-26 16:55] F019 去除 prompt.txt 全量注入，改为代码内置单一 prompt
+- 会话目标: 按要求不再全量注入 `prompt.txt`，将剧情 prompt 只保留代码内置版本，避免“文件+代码”混用。
+- 选择功能: `F019`
+- 实际改动:
+  - `internal/llm/client.go`：移除 `CompanionPromptFile` 与 `companionPromptSpec` 字段及加载逻辑；
+  - 删除 `internal/llm/companion_prompt.go`（文件读取/占位符替换逻辑完全下线）；
+  - `internal/llm/companion.go`：
+    - `GenerateCompanionScene/Reply` 不再调用 `renderCompanionPromptSpec`；
+    - 移除 `buildCompanion*WithSpec` 分支，仅保留代码内置 prompt 模板；
+  - 配置与文档清理：
+    - `cmd/server/main.go`、`README.md`、`ling.ini.example`、`ecosystem.config.cjs` 移除 `CITYLING_COMPANION_PROMPT_FILE`。
+  - 测试清理：
+    - `internal/llm/companion_test.go` 移除文件注入相关测试用例。
+- 验证结果:
+  - `go test ./internal/llm ./internal/service ./internal/httpapi ./cmd/server` 通过；
+  - `./init.sh` 通过（`smoke 通过: http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 现在运行时不再读取 `prompt.txt`，后续若要改 prompt，需要走代码变更与发布流程。
+- 下一步建议:
+  - 如果需要继续调风格，可在 `internal/llm/companion.go` 内置模板上做精简版本化（如 v1/v2 切换）。
+- 对应提交: （本次提交）

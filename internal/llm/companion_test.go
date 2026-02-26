@@ -59,32 +59,6 @@ func TestLoadTTSVoiceProfilesFromFile(t *testing.T) {
 	}
 }
 
-func TestLoadCompanionPromptSpecFromFile(t *testing.T) {
-	t.Parallel()
-
-	promptPath := filepath.Join(t.TempDir(), "prompt.txt")
-	content := "  规则A\n规则B  "
-	if err := os.WriteFile(promptPath, []byte(content), 0o644); err != nil {
-		t.Fatalf("write prompt file failed: %v", err)
-	}
-
-	got := loadCompanionPromptSpec(promptPath)
-	if got != "规则A\n规则B" {
-		t.Fatalf("unexpected prompt spec: %q", got)
-	}
-}
-
-func TestRenderCompanionPromptSpecReplacesPlaceholders(t *testing.T) {
-	t.Parallel()
-
-	spec := "age={{#1771985688667.kids_age#}},age2={{age}},image={{#1771985688667.image_input#}}"
-	got := renderCompanionPromptSpec(spec, 2, "路灯")
-	want := "age=3,age2=3,image=路灯"
-	if got != want {
-		t.Fatalf("renderCompanionPromptSpec() = %q, want %q", got, want)
-	}
-}
-
 func TestNormalizeImagePromptLimitBytes(t *testing.T) {
 	t.Parallel()
 
@@ -163,25 +137,6 @@ func TestBuildCompanionSceneUserPromptIncludesPolicy(t *testing.T) {
 		if !strings.Contains(prompt, snippet) {
 			t.Fatalf("expected scene prompt to include %q, got: %s", snippet, prompt)
 		}
-	}
-}
-
-func TestBuildCompanionScenePromptsWithSpec(t *testing.T) {
-	spec := "这是来自 prompt.txt 的规则"
-	systemPrompt := buildCompanionSceneSystemPromptWithSpec(spec)
-	if !strings.Contains(systemPrompt, spec) {
-		t.Fatalf("expected system prompt to include custom spec")
-	}
-
-	userPrompt := buildCompanionSceneUserPromptWithSpec(CompanionSceneRequest{
-		ObjectType:   "猫",
-		ChildAge:     5,
-		Weather:      "晴天",
-		Environment:  "小区",
-		ObjectTraits: "毛茸茸",
-	}, spec)
-	if !strings.Contains(userPrompt, "严格遵循系统消息中的《prompt.txt 规则原文》") {
-		t.Fatalf("expected user prompt to include prompt.txt guard, got: %s", userPrompt)
 	}
 }
 

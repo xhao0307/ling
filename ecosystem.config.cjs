@@ -29,8 +29,6 @@ module.exports = {
           process.env.CITYLING_COMPANION_MODEL || "qwen-plus",
         CITYLING_COMPANION_CHAT_TIMEOUT_SECONDS:
           process.env.CITYLING_COMPANION_CHAT_TIMEOUT_SECONDS || "45",
-        CITYLING_COMPANION_PROMPT_FILE:
-          process.env.CITYLING_COMPANION_PROMPT_FILE || "prompt.txt",
       },
     },
   ],
