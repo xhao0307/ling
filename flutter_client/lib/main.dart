@@ -2086,7 +2086,6 @@ class _ExplorePageState extends State<ExplorePage> {
   Widget _buildStoryFullscreen(ScanResult scan) {
     final viewInsetsBottom = MediaQuery.viewInsetsOf(context).bottom;
     final safeBottom = MediaQuery.paddingOf(context).bottom;
-    final screenWidth = MediaQuery.sizeOf(context).width;
     final screenHeight = MediaQuery.sizeOf(context).height;
     final companionName = _companionScene?.characterName ?? scan.spirit.name;
     final currentLine = _currentStoryLine;
@@ -2108,13 +2107,13 @@ class _ExplorePageState extends State<ExplorePage> {
         (screenHeight - viewInsetsBottom - safeBottom - 118)
             .clamp(220.0, 430.0)
             .toDouble();
-    final dialogPanelHeight = naturalDialogHeight < keyboardSafeDialogHeight
+    final baseDialogPanelHeight = naturalDialogHeight < keyboardSafeDialogHeight
         ? naturalDialogHeight
         : keyboardSafeDialogHeight;
+    final dialogPanelHeight =
+        (baseDialogPanelHeight * 0.5).clamp(130.0, 260.0).toDouble();
     final dialogTextMaxHeight =
-        (dialogPanelHeight * 0.45).clamp(120.0, 250.0).toDouble();
-    final dialogPanelWidth =
-        ((screenWidth - 28) * 0.5).clamp(300.0, 560.0).toDouble();
+        (dialogPanelHeight * 0.42).clamp(78.0, 130.0).toDouble();
 
     if (!hasSceneImage) {
       return DecoratedBox(
@@ -2133,7 +2132,7 @@ class _ExplorePageState extends State<ExplorePage> {
             constraints: const BoxConstraints(maxWidth: 320),
             child: _GlassPanel(
               radius: 24,
-              backgroundColor: const Color(0x70303649),
+              backgroundColor: const Color(0x4A303649),
               borderColor: const Color(0x66FFFFFF),
               blurSigma: 16,
               padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
@@ -2237,190 +2236,182 @@ class _ExplorePageState extends State<ExplorePage> {
           ),
         ),
         Positioned(
-          left: 0,
-          right: 0,
+          left: 14,
+          right: 14,
           bottom: viewInsetsBottom + safeBottom + 10,
-          child: Align(
-            alignment: Alignment.center,
-            child: SizedBox(
-              width: dialogPanelWidth,
-              height: dialogPanelHeight,
-              child: _GlassPanel(
-                radius: 24,
-                backgroundColor: const Color(0x72303649),
-                borderColor: const Color(0x66FFFFFF),
-                blurSigma: 16,
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x2A131722),
-                    blurRadius: 22,
-                    offset: Offset(0, 10),
+          child: SizedBox(
+            height: dialogPanelHeight,
+            child: _GlassPanel(
+              radius: 24,
+              backgroundColor: const Color(0x3E303649),
+              borderColor: const Color(0x66FFFFFF),
+              blurSigma: 16,
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x2A131722),
+                  blurRadius: 22,
+                  offset: Offset(0, 10),
+                ),
+              ],
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 150),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeOutCubic,
+                child: Column(
+                  key: ValueKey<String>(
+                    '$displaySpeaker::$displayText::$_currentStoryIndex::$_waitingForAnswerInput::$_quizSolved',
                   ),
-                ],
-                padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 150),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeOutCubic,
-                  child: Column(
-                    key: ValueKey<String>(
-                      '$displaySpeaker::$displayText::$_currentStoryIndex::$_waitingForAnswerInput::$_quizSolved',
-                    ),
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: canTapDialogToAdvance
-                            ? () {
-                                unawaited(_advanceStoryLine());
-                              }
-                            : null,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            DecoratedBox(
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    Color(0xFFF2EBFA),
-                                    Color(0xFFE7DAF8)
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.6),
-                                ),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 5,
-                                ),
-                                child: Text(
-                                  displaySpeaker,
-                                  style: const TextStyle(
-                                    color: kFairyInk,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 13,
-                                    letterSpacing: 0.2,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxHeight: dialogTextMaxHeight,
-                              ),
-                              child: Scrollbar(
-                                child: SingleChildScrollView(
-                                  padding: const EdgeInsets.only(right: 6),
-                                  child: Text(
-                                    displayText,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      height: 1.46,
-                                      fontSize: 19,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            if (_waitingForAnswerInput && !_quizSolved)
-                              TextField(
-                                controller: _companionReplyCtrl,
-                                minLines: 1,
-                                maxLines: 3,
-                                textInputAction: TextInputAction.send,
-                                onSubmitted: (_) async {
-                                  await _sendCompanionMessage(scan);
-                                },
-                                decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor:
-                                      Colors.white.withValues(alpha: 0.94),
-                                  labelText: '输入你的回答',
-                                  suffixIcon: IconButton(
-                                    onPressed: _busy
-                                        ? null
-                                        : () async {
-                                            await _sendCompanionMessage(scan);
-                                          },
-                                    icon: const Icon(Icons.send),
-                                    tooltip: '发送',
-                                  ),
-                                ),
-                              )
-                            else
-                              Text(
-                                _quizSolved
-                                    ? '你已经完成本轮问答，可以退出剧情继续探索。'
-                                    : (canTapDialogToAdvance
-                                        ? '点击聊天框或右侧按钮推进剧情，左侧可回看。'
-                                        : (canRetreatStory
-                                            ? '已到当前末句，可用左箭头回看。'
-                                            : '等待剧情加载或角色回应。')),
-                                style: const TextStyle(
-                                  color: Color(0xDDE3E7FB),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        crossAxisAlignment: WrapCrossAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: canTapDialogToAdvance
+                          ? () {
+                              unawaited(_advanceStoryLine());
+                            }
+                          : null,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          _buildStoryActionButton(
-                            icon: Icons.chevron_left,
-                            label: '上一句',
-                            onTap: canRetreatStory
-                                ? () {
-                                    unawaited(_retreatStoryLine());
-                                  }
-                                : null,
-                          ),
-                          _buildStoryActionButton(
-                            icon: Icons.volume_up,
-                            label: '播放',
-                            onTap: _busy
-                                ? null
-                                : () {
-                                    unawaited(_playCurrentStoryVoice());
-                                  },
-                          ),
-                          _buildStoryActionButton(
-                            icon: Icons.chevron_right,
-                            label: '下一句',
-                            primary: true,
-                            onTap: canTapDialogToAdvance
-                                ? () {
-                                    unawaited(_advanceStoryLine());
-                                  }
-                                : null,
-                          ),
-                          if (_busy) ...[
-                            const SizedBox(width: 10),
-                            const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [Color(0xFFF2EBFA), Color(0xFFE7DAF8)],
+                              ),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.6),
+                              ),
                             ),
-                          ],
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 5,
+                              ),
+                              child: Text(
+                                displaySpeaker,
+                                style: const TextStyle(
+                                  color: kFairyInk,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: dialogTextMaxHeight,
+                            ),
+                            child: Scrollbar(
+                              child: SingleChildScrollView(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: Text(
+                                  displayText,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    height: 1.46,
+                                    fontSize: 19,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          if (_waitingForAnswerInput && !_quizSolved)
+                            TextField(
+                              controller: _companionReplyCtrl,
+                              minLines: 1,
+                              maxLines: 3,
+                              textInputAction: TextInputAction.send,
+                              onSubmitted: (_) async {
+                                await _sendCompanionMessage(scan);
+                              },
+                              decoration: InputDecoration(
+                                filled: true,
+                                fillColor: Colors.white.withValues(alpha: 0.94),
+                                labelText: '输入你的回答',
+                                suffixIcon: IconButton(
+                                  onPressed: _busy
+                                      ? null
+                                      : () async {
+                                          await _sendCompanionMessage(scan);
+                                        },
+                                  icon: const Icon(Icons.send),
+                                  tooltip: '发送',
+                                ),
+                              ),
+                            )
+                          else
+                            Text(
+                              _quizSolved
+                                  ? '你已经完成本轮问答，可以退出剧情继续探索。'
+                                  : (canTapDialogToAdvance
+                                      ? '点击聊天框或右侧按钮推进剧情，左侧可回看。'
+                                      : (canRetreatStory
+                                          ? '已到当前末句，可用左箭头回看。'
+                                          : '等待剧情加载或角色回应。')),
+                              style: const TextStyle(
+                                color: Color(0xDDE3E7FB),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        _buildStoryActionButton(
+                          icon: Icons.chevron_left,
+                          label: '上一句',
+                          onTap: canRetreatStory
+                              ? () {
+                                  unawaited(_retreatStoryLine());
+                                }
+                              : null,
+                        ),
+                        _buildStoryActionButton(
+                          icon: Icons.volume_up,
+                          label: '播放',
+                          onTap: _busy
+                              ? null
+                              : () {
+                                  unawaited(_playCurrentStoryVoice());
+                                },
+                        ),
+                        _buildStoryActionButton(
+                          icon: Icons.chevron_right,
+                          label: '下一句',
+                          primary: true,
+                          onTap: canTapDialogToAdvance
+                              ? () {
+                                  unawaited(_advanceStoryLine());
+                                }
+                              : null,
+                        ),
+                        if (_busy) ...[
+                          const SizedBox(width: 10),
+                          const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),

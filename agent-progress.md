@@ -2093,3 +2093,24 @@
 - 下一步建议:
   - 若你希望更极致窄屏视觉，可再把上限 `560` 下调到 `460` 并加断点适配。
 - 对应提交: （本次提交）
+
+### [2026-02-26 18:16] F019 回退剧情框宽度并改为半高高透明度
+- 会话目标: 按反馈修正剧情对话框尺寸策略，恢复原宽度，改为半高并提高透明度，避免遮挡主画面。
+- 选择功能: `F019`
+- 实际改动:
+  - `flutter_client/lib/main.dart`（`_buildStoryFullscreen`）：
+    - 移除“50% 宽度居中”逻辑，恢复 `left/right` 贴边布局；
+    - 对话框高度改为原计算值的一半（保留上下限约束）；
+    - 台词滚动高度随面板半高同步收缩；
+    - 主剧情对话面板与“剧情图片生成中”加载面板背景透明度进一步提高。
+  - `flutter_client/lib/main.dart`：修复本轮调整中引入的 3 处括号闭合问题（探索页 `Stack`、魔镜框 `Align`、剧情面板 `Positioned`）。
+- 验证结果:
+  - `/Users/xuxinghao/develop/flutter/bin/dart format flutter_client/lib/main.dart` 通过；
+  - `cd flutter_client && /Users/xuxinghao/develop/flutter/bin/flutter analyze` 通过；
+  - `./init.sh` 通过（`smoke 通过: http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 本轮是样式与布局修正，未做真机视觉截图回归；不同分辨率下建议再抽检一次剧情页可读性。
+  - `feature_list.json` 中 `F019.passes` 维持 `false`（尚未按清单完成完整 e2e 验收证据）。
+- 下一步建议:
+  - 在 Web 与手机各走一遍“识别 -> 进入剧情 -> 长台词滚动 -> 提交答案”路径，确认遮挡和透明度观感。
+- 对应提交: （本次提交）
