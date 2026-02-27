@@ -2261,3 +2261,25 @@
 - 下一步建议:
   - 在你目标机型上看一眼勋章卡密度与顶部收起交互手感，再决定是否要继续微调间距。
 - 对应提交: （本次提交）
+
+### [2026-02-27 10:55] F018 Web 启动脚本增加快速重启模式（跳过构建）
+- 会话目标: 解决 `scripts/web-chrome-up.sh start/restart` 每次都 `pub get + build web` 导致重启过慢的问题。
+- 选择功能: `F018`
+- 实际改动:
+  - `scripts/web-chrome-up.sh`：
+    - 新增环境变量 `CITYLING_WEB_SKIP_BUILD`（默认 `0`）；
+    - 当 `CITYLING_WEB_SKIP_BUILD=1` 时跳过 `flutter pub get` 与 `flutter build web`，直接复用已有 `build/web`；
+    - 快速模式下若不存在 `build/web`，给出明确报错并提示先执行完整 `start`；
+    - 更新 `usage` 帮助文案，补充快速重启示例命令。
+- 验证结果:
+  - `bash -n scripts/web-chrome-up.sh` 通过；
+  - 快速模式实测：`time CITYLING_WEB_SKIP_BUILD=1 scripts/web-chrome-up.sh restart`，总耗时 `3.733s`；
+  - 默认模式实测：`time CITYLING_WEB_OPEN_BROWSER=0 scripts/web-chrome-up.sh restart`，总耗时 `2:09.85`（主要耗时在 `Compiling lib/main.dart for the Web... 119.1s`）。
+- 风险与遗留:
+  - 快速模式不会自动拉取依赖和重新编译，适合“代码未改动或仅联调后端”场景；
+  - 改了 Flutter 前端代码后，仍需执行一次完整 `start/restart` 以刷新 `build/web`。
+  - `feature_list.json` 中 `F018.passes` 保持 `false`（该条目验收步骤含 `scripts/pm2-up.sh` 路径，本次未覆盖）。
+- 下一步建议:
+  - 日常联调优先使用：`CITYLING_WEB_SKIP_BUILD=1 scripts/web-chrome-up.sh restart`；
+  - 前端代码有变更时再跑一次完整构建：`scripts/web-chrome-up.sh restart`。
+- 对应提交: （本次提交）

@@ -11,6 +11,7 @@ WEB_LOG_FILE="${CITYLING_WEB_LOG_FILE:-/tmp/cityling_web.log}"
 BASE_URL="${CITYLING_BASE_URL:-http://121.43.118.53:3026}"
 START_BACKEND="${CITYLING_WEB_START_BACKEND:-0}"
 OPEN_BROWSER="${CITYLING_WEB_OPEN_BROWSER:-1}"
+SKIP_BUILD="${CITYLING_WEB_SKIP_BUILD:-0}"
 
 # Prefer explicit Flutter path, fallback to PATH.
 FLUTTER_BIN="${CITYLING_FLUTTER_BIN:-}"
@@ -26,6 +27,8 @@ usage() {
   cat <<USAGE
 用法:
   scripts/web-chrome-up.sh start    # 构建并启动 Web + 打开 Chrome
+  CITYLING_WEB_SKIP_BUILD=1 scripts/web-chrome-up.sh restart
+                                   # 快速重启：复用现有 build/web，不重新构建
   scripts/web-chrome-up.sh stop     # 停止 Web 静态服务
   scripts/web-chrome-up.sh status   # 查看后端与 Web 状态
   scripts/web-chrome-up.sh restart  # 重启 Web
@@ -35,6 +38,7 @@ usage() {
   CITYLING_WEB_PORT           Web 端口（默认: ${WEB_PORT})
   CITYLING_WEB_START_BACKEND  1/0，是否先执行 ./init.sh restart（默认: ${START_BACKEND})
   CITYLING_WEB_OPEN_BROWSER   1/0，是否自动打开 Chrome（默认: ${OPEN_BROWSER})
+  CITYLING_WEB_SKIP_BUILD     1/0，是否跳过 pub get/build（默认: ${SKIP_BUILD}）
   CITYLING_FLUTTER_BIN        Flutter 可执行文件路径
 USAGE
 }
@@ -136,8 +140,16 @@ start_web() {
     exit 1
   fi
 
-  (cd "$FLUTTER_DIR" && "$FLUTTER_BIN" pub get)
-  (cd "$FLUTTER_DIR" && "$FLUTTER_BIN" build web --dart-define=CITYLING_BASE_URL="$BASE_URL")
+  if [[ "$SKIP_BUILD" == "1" ]]; then
+    if [[ ! -d "$FLUTTER_DIR/build/web" ]]; then
+      echo "快速模式失败：未找到 $FLUTTER_DIR/build/web，请先执行一次完整构建：scripts/web-chrome-up.sh start"
+      exit 1
+    fi
+    echo "快速模式：跳过 pub get/build，复用已有 build/web"
+  else
+    (cd "$FLUTTER_DIR" && "$FLUTTER_BIN" pub get)
+    (cd "$FLUTTER_DIR" && "$FLUTTER_BIN" build web --dart-define=CITYLING_BASE_URL="$BASE_URL")
+  fi
 
   stop_web
 
