@@ -2283,3 +2283,24 @@
   - 日常联调优先使用：`CITYLING_WEB_SKIP_BUILD=1 scripts/web-chrome-up.sh restart`；
   - 前端代码有变更时再跑一次完整构建：`scripts/web-chrome-up.sh restart`。
 - 对应提交: （本次提交）
+
+### [2026-02-27 11:01] F005 识别结果从上位类收敛到具体种类（龙眼鸡场景）
+- 会话目标: 修复 `scan/image` 把“龙眼鸡”识别成“昆虫”这类上位词的问题，优先返回具体种类。
+- 选择功能: `F005`
+- 实际改动:
+  - `internal/llm/client.go`：
+    - 强化视觉识别 prompt，明确“优先最具体种类/品类”，禁止输出“动物/昆虫/植物/交通工具”等上位词；
+    - `RecognizeObject` 新增“结果过于泛化时自动二次严格识别”机制；
+    - 新增 `preferSpecificObjectType` 与 `isGenericObjectType`，当 `object_type` 过泛且 `raw_label` 更具体时自动提升为具体类别。
+  - `internal/llm/client_test.go`：
+    - 新增“昆虫 + 龙眼鸡”解析回归测试；
+    - 新增“首轮泛化结果触发二次识别并收敛到具体种类”回归测试。
+- 验证结果:
+  - `go test ./internal/llm ./internal/service` 通过；
+  - `./init.sh` 通过（`smoke 通过: http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 若原图信息不足或模糊，模型仍可能返回较泛化结果；本次仅增加“二次严格识别 + 结果提升”，不保证所有低清图都能精确到物种。
+  - `feature_list.json` 中 `F005.passes` 保持 `false`（尚未用真实“龙眼鸡”图片完成端到端接口验收）。
+- 下一步建议:
+  - 用你刚才那张“龙眼鸡”原图再走一次 `/api/v1/scan/image`，确认返回 `detected_label` 为“龙眼鸡”或同粒度具体名称。
+- 对应提交: （本次提交）

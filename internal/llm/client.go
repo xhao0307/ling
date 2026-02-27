@@ -263,6 +263,15 @@ func (c *Client) RecognizeObject(ctx context.Context, imageBase64 string, imageU
 
 		result, err := parseVisionRecognizeResult(content)
 		if err == nil {
+			// 第一轮若只识别到上位类（如“昆虫/动物”），触发严格二次识别，尽量拿到具体种类。
+			if attempt == 0 && isGenericObjectType(result.ObjectType) {
+				lastErr = fmt.Errorf(
+					"vision result too generic: object_type=%s raw_label=%s",
+					result.ObjectType,
+					result.RawLabel,
+				)
+				continue
+			}
 			return result, nil
 		}
 		lastErr = fmt.Errorf("%w; raw=%s", err, truncateText(content, 240))
@@ -416,18 +425,19 @@ func (c *Client) doJSON(ctx context.Context, path string, payload any) ([]byte, 
 
 func (c *Client) buildVisionRequestBody(imageRef string, strict bool) map[string]any {
 	prompt := `你在服务中国用户，请全部使用简体中文表达。
-识别图中最主要的物体，仅输出一行 JSON，不要 markdown，不要解释。
+识别图中最主要的“具体对象”，仅输出一行 JSON，不要 markdown，不要解释。
 输出格式：
 {"object_type":"类别标识","raw_label":"中文标签","reason":"中文一句话识别依据"}
 
 字段要求：
-1) raw_label: 必须是中文常用叫法（例如：猫、汽车、建筑、路牌）。
+1) raw_label: 必须是中文常用叫法，优先“最具体种类/品类”（例如：龙眼鸡、柯基犬、三角梅、电动自行车）。
 2) reason: 必须是中文且简洁。
 3) object_type:
    - 不限制固定枚举，不要输出英文枚举；
-   - 统一使用中文短词（例如：猫、狗、公交车、红绿灯、井盖）。`
+   - 必须和 raw_label 保持同等粒度，优先具体种类；
+   - 禁止使用过于宽泛的上位词：动物、昆虫、鸟类、植物、水果、蔬菜、交通工具、建筑、物体。`
 	if strict {
-		prompt += "\n如果无法识别，object_type 设为 \"unknown\"，raw_label 设为“未知物体”。"
+		prompt += "\n严格模式：如果你第一眼只想到上位词，请继续观察花纹、形状、结构后给出更具体名称；只有确实无法判断时，object_type 才能设为 \"unknown\"，raw_label 设为“未知物体”。"
 	}
 
 	return map[string]any{
@@ -540,9 +550,8 @@ func parseVisionRecognizeResult(content string) (RecognizeResult, error) {
 		Reason     string `json:"reason"`
 	}
 	if err := json.Unmarshal([]byte(extractJSONPayload(trimmed)), &parsed); err == nil {
-		objectType := normalizeObjectType(parsed.ObjectType)
-		// 接受任意 object_type，不再限制在支持列表中
-		if objectType != "" && objectType != "unknown" {
+		objectType := preferSpecificObjectType(parsed.ObjectType, parsed.RawLabel)
+		if objectType != "" {
 			rawLabel := strings.TrimSpace(parsed.RawLabel)
 			if rawLabel == "" {
 				rawLabel = objectType
@@ -553,31 +562,19 @@ func parseVisionRecognizeResult(content string) (RecognizeResult, error) {
 				Reason:     strings.TrimSpace(parsed.Reason),
 			}, nil
 		}
-		// 如果是 unknown，也返回结果，让上层处理
-		if objectType == "unknown" {
-			rawLabel := strings.TrimSpace(parsed.RawLabel)
-			if rawLabel == "" {
-				rawLabel = "unknown"
-			}
-			return RecognizeResult{
-				ObjectType: "unknown",
-				RawLabel:   rawLabel,
-				Reason:     strings.TrimSpace(parsed.Reason),
-			}, nil
-		}
 	}
 
 	// 容错: 当返回被 markdown 包裹或 JSON 被截断时，尽量提取已输出字段。
 	payload := extractJSONPayload(trimmed)
-	objectType := normalizeObjectType(extractJSONField(payload, "object_type"))
+	rawLabel := strings.TrimSpace(extractJSONField(payload, "raw_label"))
+	if rawLabel == "" {
+		rawLabel = strings.TrimSpace(extractJSONField(trimmed, "raw_label"))
+	}
+	objectType := preferSpecificObjectType(extractJSONField(payload, "object_type"), rawLabel)
 	if objectType == "" {
-		objectType = normalizeObjectType(extractJSONField(trimmed, "object_type"))
+		objectType = preferSpecificObjectType(extractJSONField(trimmed, "object_type"), rawLabel)
 	}
 	if objectType != "" {
-		rawLabel := strings.TrimSpace(extractJSONField(payload, "raw_label"))
-		if rawLabel == "" {
-			rawLabel = strings.TrimSpace(extractJSONField(trimmed, "raw_label"))
-		}
 		if rawLabel == "" {
 			rawLabel = objectType
 		}
@@ -730,6 +727,77 @@ func safeKeyMeta(key string) string {
 		hasQuotes,
 		strings.Contains(trimmed, " "),
 	)
+}
+
+func preferSpecificObjectType(objectType string, rawLabel string) string {
+	normalizedObjectType := normalizeObjectType(objectType)
+	normalizedRawLabel := normalizeObjectType(rawLabel)
+
+	if normalizedObjectType == "" {
+		return normalizedRawLabel
+	}
+	if normalizedRawLabel == "" {
+		return normalizedObjectType
+	}
+	if normalizedObjectType == "unknown" && normalizedRawLabel != "unknown" {
+		return normalizedRawLabel
+	}
+	if isGenericObjectType(normalizedObjectType) && !isGenericObjectType(normalizedRawLabel) {
+		return normalizedRawLabel
+	}
+	return normalizedObjectType
+}
+
+func isGenericObjectType(objectType string) bool {
+	normalized := normalizeObjectType(objectType)
+	if normalized == "" {
+		return false
+	}
+
+	generic := map[string]struct{}{
+		"unknown":           {},
+		"object":            {},
+		"thing":             {},
+		"物体":                 {},
+		"东西":                 {},
+		"动物":                 {},
+		"动物类":                {},
+		"animal":            {},
+		"insect":            {},
+		"bug":               {},
+		"昆虫":                 {},
+		"昆虫类":                {},
+		"bird":              {},
+		"birds":             {},
+		"鸟":                  {},
+		"鸟类":                 {},
+		"plant":             {},
+		"植物":                 {},
+		"flower":            {},
+		"花":                  {},
+		"fruit":             {},
+		"水果":                 {},
+		"vegetable":         {},
+		"蔬菜":                 {},
+		"food":              {},
+		"食物":                 {},
+		"drink":             {},
+		"饮料":                 {},
+		"vehicle":           {},
+		"交通工具":               {},
+		"车":                  {},
+		"车辆":                 {},
+		"building":          {},
+		"建筑":                 {},
+		"家具":                 {},
+		"furniture":         {},
+		"toy":               {},
+		"玩具":                 {},
+		"电子产品":               {},
+		"electronics":       {},
+	}
+	_, ok := generic[normalized]
+	return ok
 }
 
 func normalizeObjectType(v string) string {

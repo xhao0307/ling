@@ -37,6 +37,58 @@ func TestParseVisionRecognizeResultFromBrokenJSONStillReadsFields(t *testing.T) 
 	}
 }
 
+func TestParseVisionRecognizeResultPrefersSpecificRawLabel(t *testing.T) {
+	content := `{"object_type":"昆虫","raw_label":"龙眼鸡","reason":"翅膀和体态特征明显"}`
+	got, err := parseVisionRecognizeResult(content)
+	if err != nil {
+		t.Fatalf("parseVisionRecognizeResult() error = %v", err)
+	}
+	if got.ObjectType != "龙眼鸡" {
+		t.Fatalf("expected object_type=龙眼鸡, got %q", got.ObjectType)
+	}
+	if got.RawLabel != "龙眼鸡" {
+		t.Fatalf("expected raw_label=龙眼鸡, got %q", got.RawLabel)
+	}
+}
+
+func TestRecognizeObjectRetriesWhenResultTooGeneric(t *testing.T) {
+	var callCount int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		if r.URL.Path != "/compatible-mode/v1/chat/completions" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+
+		if callCount == 1 {
+			_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"{\"object_type\":\"昆虫\",\"raw_label\":\"昆虫\",\"reason\":\"有翅和触角\"}"}}]}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"{\"object_type\":\"龙眼鸡\",\"raw_label\":\"龙眼鸡\",\"reason\":\"头胸背和翅脉特征匹配\"}"}}]}`))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(Config{
+		APIKey:    "test-key",
+		BaseURL:   server.URL,
+		ChatModel: "qwen3.5-flash-test",
+	})
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+	client.httpClient = server.Client()
+
+	got, err := client.RecognizeObject(context.Background(), "", "https://img.example.com/object.jpg")
+	if err != nil {
+		t.Fatalf("RecognizeObject() error = %v", err)
+	}
+	if callCount != 2 {
+		t.Fatalf("expected 2 recognize attempts, got %d", callCount)
+	}
+	if got.ObjectType != "龙眼鸡" {
+		t.Fatalf("expected object_type=龙眼鸡, got %q", got.ObjectType)
+	}
+}
+
 func TestParseAnswerJudgeResultWithBoolean(t *testing.T) {
 	content := `{"correct":true,"reason":"语义一致"}`
 	got, err := parseAnswerJudgeResult(content)
