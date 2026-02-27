@@ -2237,3 +2237,27 @@
 - 下一步建议:
   - 若需全链路统一术语，可在后端 `service` 与 LLM prompt 一并改为“万象灵”并做接口回归。
 - 对应提交: （本次提交）
+
+### [2026-02-27 10:36] F019 勋章圆形三列展示并支持顶部信息收起
+- 会话目标: 先完成勋章墙样式调整（圆形徽章 + 一排3个），再解决探索页顶部信息遮挡，改为可收起。
+- 选择功能: `F019`
+- 实际改动:
+  - `flutter_client/lib/main.dart`（`AchievementBadgesPage` 与 `PokedexPage` 的勋章网格）：
+    - 两处勋章网格统一由 `2` 列改为 `3` 列；
+    - 网格间距与纵横比同步调整（更适合 3 列展示）；
+    - 新增圆形勋章容器 `_buildBadgeMedallion`，网络图和兜底图都裁成圆形；
+    - 勋章标题/进度字号微调，适配 3 列窄卡片。
+  - `flutter_client/lib/main.dart`（`ExplorePage`）：
+    - 新增 `_topOverlayCollapsed` 状态；
+    - 顶部账号信息条支持“收起/展开”；
+    - 收起后只保留右上角“展开信息”小入口，减少对镜面取景遮挡。
+- 验证结果:
+  - `/Users/xuxinghao/develop/flutter/bin/dart format flutter_client/lib/main.dart` 通过；
+  - `cd flutter_client && /Users/xuxinghao/develop/flutter/bin/flutter analyze` 通过；
+  - `./init.sh` 通过（`smoke 通过: http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 三列布局在极窄屏下文字区域更紧凑，已通过字号压缩缓解；如仍觉得挤，可进一步缩短标题或改两行策略。
+  - `feature_list.json` 中 `F019.passes` 维持 `false`（未补完整 e2e 验收证据）。
+- 下一步建议:
+  - 在你目标机型上看一眼勋章卡密度与顶部收起交互手感，再决定是否要继续微调间距。
+- 对应提交: （本次提交）

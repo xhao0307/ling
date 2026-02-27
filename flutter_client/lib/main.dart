@@ -1288,6 +1288,7 @@ class _ExplorePageState extends State<ExplorePage> {
   String _cameraError = '';
   ScanResult? _scanResult;
   bool _scanCardCollapsed = false;
+  bool _topOverlayCollapsed = false;
   CompanionSceneResult? _companionScene;
   final List<_CompanionChatMessage> _companionMessages =
       <_CompanionChatMessage>[];
@@ -1460,119 +1461,172 @@ class _ExplorePageState extends State<ExplorePage> {
             top: safeTop + 10,
             left: 12,
             right: 12,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(18),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Colors.white.withValues(alpha: 0.74),
-                            const Color(0xE6EEF4FF),
-                          ],
-                        ),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.76),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color:
-                                const Color(0x262D2A38).withValues(alpha: 0.2),
-                            blurRadius: 14,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
+            child: _topOverlayCollapsed
+                ? Align(
+                    alignment: Alignment.topRight,
+                    child: _GlassPanel(
+                      radius: 999,
+                      blurSigma: 10,
+                      backgroundColor: Colors.white.withValues(alpha: 0.72),
+                      borderColor: Colors.white.withValues(alpha: 0.82),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 4,
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 10),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
+                      child: TextButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _topOverlayCollapsed = false;
+                          });
+                        },
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          foregroundColor: kFairyRoseDeep,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                        ),
+                        icon: const Icon(Icons.keyboard_arrow_down, size: 18),
+                        label: const Text(
+                          '展开信息',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(18),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(18),
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Colors.white.withValues(alpha: 0.74),
+                                  const Color(0xE6EEF4FF),
+                                ],
+                              ),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.76),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0x262D2A38)
+                                      .withValues(alpha: 0.2),
+                                  blurRadius: 14,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                              child: Row(
                                 children: [
-                                  Text(
-                                    widget.session.isDebug
-                                        ? '调试模式 · ${widget.session.displayName}'
-                                        : '账号：${widget.session.displayName}',
-                                    style: TextStyle(
-                                      color: kFairyInkSubtle,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          widget.session.isDebug
+                                              ? '调试模式 · ${widget.session.displayName}'
+                                              : '账号：${widget.session.displayName}',
+                                          style: TextStyle(
+                                            color: kFairyInkSubtle,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '孩子：$_childId · 年龄：$_childAge',
+                                          style: const TextStyle(
+                                            color: kFairyInk,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '孩子：$_childId · 年龄：$_childAge',
-                                    style: const TextStyle(
-                                      color: kFairyInk,
-                                      fontWeight: FontWeight.w700,
+                                  IconButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _topOverlayCollapsed = true;
+                                      });
+                                    },
+                                    icon: const Icon(Icons.keyboard_arrow_up),
+                                    style: IconButton.styleFrom(
+                                      foregroundColor: kFairyRoseDeep,
+                                      backgroundColor: const Color(0xFFF9F4FF),
                                     ),
+                                    tooltip: '收起顶部信息',
+                                  ),
+                                  const SizedBox(width: 6),
+                                  FilledButton.tonalIcon(
+                                    onPressed: actionDisabled
+                                        ? null
+                                        : _pickPhotoAndGenerate,
+                                    style: FilledButton.styleFrom(
+                                      visualDensity: VisualDensity.compact,
+                                      foregroundColor: kFairyRoseDeep,
+                                      backgroundColor: const Color(0xFFF9F4FF),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 8,
+                                      ),
+                                    ),
+                                    icon:
+                                        const Icon(Icons.file_upload, size: 18),
+                                    label: const Text(
+                                      '上传',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  IconButton(
+                                    onPressed: actionDisabled
+                                        ? null
+                                        : () => unawaited(
+                                              widget.onOpenApiSettings(),
+                                            ),
+                                    icon: const Icon(Icons.settings_ethernet),
+                                    style: IconButton.styleFrom(
+                                      foregroundColor: kFairyRoseDeep,
+                                      backgroundColor: const Color(0xFFF9F4FF),
+                                    ),
+                                    tooltip: '后端地址',
+                                  ),
+                                  const SizedBox(width: 6),
+                                  IconButton(
+                                    onPressed: actionDisabled
+                                        ? null
+                                        : () => unawaited(widget.onLogout()),
+                                    icon: const Icon(Icons.logout),
+                                    style: IconButton.styleFrom(
+                                      foregroundColor: kFairyRoseDeep,
+                                      backgroundColor: const Color(0xFFF9F4FF),
+                                    ),
+                                    tooltip: '退出登录',
                                   ),
                                 ],
                               ),
                             ),
-                            FilledButton.tonalIcon(
-                              onPressed:
-                                  actionDisabled ? null : _pickPhotoAndGenerate,
-                              style: FilledButton.styleFrom(
-                                visualDensity: VisualDensity.compact,
-                                foregroundColor: kFairyRoseDeep,
-                                backgroundColor: const Color(0xFFF9F4FF),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 8,
-                                ),
-                              ),
-                              icon: const Icon(Icons.file_upload, size: 18),
-                              label: const Text(
-                                '上传',
-                                style: TextStyle(fontSize: 12),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            IconButton(
-                              onPressed: actionDisabled
-                                  ? null
-                                  : () => unawaited(widget.onOpenApiSettings()),
-                              icon: const Icon(Icons.settings_ethernet),
-                              style: IconButton.styleFrom(
-                                foregroundColor: kFairyRoseDeep,
-                                backgroundColor: const Color(0xFFF9F4FF),
-                              ),
-                              tooltip: '后端地址',
-                            ),
-                            const SizedBox(width: 6),
-                            IconButton(
-                              onPressed: actionDisabled
-                                  ? null
-                                  : () => unawaited(widget.onLogout()),
-                              icon: const Icon(Icons.logout),
-                              style: IconButton.styleFrom(
-                                foregroundColor: kFairyRoseDeep,
-                                backgroundColor: const Color(0xFFF9F4FF),
-                              ),
-                              tooltip: '退出登录',
-                            ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      _buildDetectionBadge(),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 8),
-                _buildDetectionBadge(),
-              ],
-            ),
           ),
         if (_scanResult != null && !storyModeActive)
           Positioned(
@@ -4227,10 +4281,10 @@ class _AchievementBadgesPageState extends State<AchievementBadgesPage> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 0.95,
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                  childAspectRatio: 0.72,
                 ),
                 itemCount: _badges.length,
                 itemBuilder: (context, i) {
@@ -4254,24 +4308,25 @@ class _AchievementBadgesPageState extends State<AchievementBadgesPage> {
                       borderRadius: BorderRadius.circular(12),
                       onTap: () => _showBadgeDetailSheet(context, badge),
                       child: Padding(
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(8),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
                               child: Center(
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
+                                child: _buildBadgeMedallion(
                                   child: _buildBadgeImage(badge),
+                                  unlocked: badge.unlocked,
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 4),
                             Text(
                               '${badge.categoryId}. ${badge.name}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
+                                fontSize: 13,
                                 fontWeight: FontWeight.w800,
                                 color: badge.unlocked
                                     ? const Color(0xFF6F4D0B)
@@ -4282,7 +4337,7 @@ class _AchievementBadgesPageState extends State<AchievementBadgesPage> {
                             Text(
                               '进度 ${badge.progress}/${badge.target}',
                               style: const TextStyle(
-                                fontSize: 12,
+                                fontSize: 11,
                                 color: Color(0xFF6E6581),
                               ),
                             ),
@@ -4294,6 +4349,41 @@ class _AchievementBadgesPageState extends State<AchievementBadgesPage> {
                 },
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBadgeMedallion({
+    required Widget child,
+    required bool unlocked,
+  }) {
+    return FractionallySizedBox(
+      widthFactor: 0.9,
+      child: AspectRatio(
+        aspectRatio: 1,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withValues(alpha: unlocked ? 0.92 : 0.76),
+            border: Border.all(
+              color: unlocked
+                  ? const Color(0xFFE9CB8A)
+                  : Colors.white.withValues(alpha: 0.72),
+              width: 1.6,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0x222D2A38).withValues(alpha: 0.18),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: ClipOval(child: child),
+          ),
         ),
       ),
     );
@@ -4331,12 +4421,12 @@ class _AchievementBadgesPageState extends State<AchievementBadgesPage> {
         : const [Color(0xFFE2DFE8), Color(0xFFBEB8C8)];
     return Container(
       decoration: BoxDecoration(
+        shape: BoxShape.circle,
         gradient: LinearGradient(
           colors: gradient,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: frame, width: 1.2),
       ),
       child: Stack(
@@ -4725,10 +4815,10 @@ class _PokedexPageState extends State<PokedexPage> {
                               physics: const NeverScrollableScrollPhysics(),
                               gridDelegate:
                                   const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                crossAxisSpacing: 10,
-                                mainAxisSpacing: 10,
-                                childAspectRatio: 0.95,
+                                crossAxisCount: 3,
+                                crossAxisSpacing: 8,
+                                mainAxisSpacing: 8,
+                                childAspectRatio: 0.72,
                               ),
                               itemCount: _badges.length,
                               itemBuilder: (context, i) {
@@ -4755,29 +4845,30 @@ class _PokedexPageState extends State<PokedexPage> {
                                     onTap: () =>
                                         _showBadgeDetailSheet(context, badge),
                                     child: Padding(
-                                      padding: const EdgeInsets.all(10),
+                                      padding: const EdgeInsets.all(8),
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
                                           Expanded(
                                             child: Center(
-                                              child: ClipRRect(
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
+                                              child: _buildBadgeMedallion(
+                                                unlocked: badge.unlocked,
                                                 child: image.isNotEmpty
                                                     ? _buildBadgeImage(badge)
                                                     : _buildBadgeFallbackIcon(
-                                                        badge),
+                                                        badge,
+                                                      ),
                                               ),
                                             ),
                                           ),
-                                          const SizedBox(height: 6),
+                                          const SizedBox(height: 4),
                                           Text(
                                             '${badge.categoryId}. ${badge.name}',
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
+                                              fontSize: 13,
                                               fontWeight: FontWeight.w800,
                                               color: badge.unlocked
                                                   ? const Color(0xFF6F4D0B)
@@ -4788,7 +4879,7 @@ class _PokedexPageState extends State<PokedexPage> {
                                           Text(
                                             '进度 ${badge.progress}/${badge.target}',
                                             style: const TextStyle(
-                                              fontSize: 12,
+                                              fontSize: 11,
                                               color: Color(0xFF6E6581),
                                             ),
                                           ),
@@ -4862,6 +4953,41 @@ class _PokedexPageState extends State<PokedexPage> {
     }
   }
 
+  Widget _buildBadgeMedallion({
+    required Widget child,
+    required bool unlocked,
+  }) {
+    return FractionallySizedBox(
+      widthFactor: 0.9,
+      child: AspectRatio(
+        aspectRatio: 1,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withValues(alpha: unlocked ? 0.92 : 0.76),
+            border: Border.all(
+              color: unlocked
+                  ? const Color(0xFFE9CB8A)
+                  : Colors.white.withValues(alpha: 0.72),
+              width: 1.6,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0x222D2A38).withValues(alpha: 0.18),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: ClipOval(child: child),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildBadgeFallbackIcon(PokedexBadge badge) {
     final bool unlocked = badge.unlocked;
     final Color frame =
@@ -4874,12 +5000,12 @@ class _PokedexPageState extends State<PokedexPage> {
         : const [Color(0xFFE2DFE8), Color(0xFFBEB8C8)];
     return Container(
       decoration: BoxDecoration(
+        shape: BoxShape.circle,
         gradient: LinearGradient(
           colors: gradient,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: frame, width: 1.2),
       ),
       child: Stack(
