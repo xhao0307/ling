@@ -2174,3 +2174,24 @@
 - 下一步建议:
   - 在你当前问题场景下再回归一遍，确认高度、边框、阴影的整体感符合预期。
 - 对应提交: （本次提交）
+
+### [2026-02-27 09:30] F019 缩小剧情操作区并隐藏底部导航常显文字
+- 会话目标: 按反馈缩小右侧剧情三按钮（仅图标），并去掉底部四按钮常显文字，仅保留 hover 提示。
+- 选择功能: `F019`
+- 实际改动:
+  - `flutter_client/lib/main.dart`：
+    - `NavigationBar` 增加 `labelBehavior: NavigationDestinationLabelBehavior.alwaysHide`，底部导航不再常显“探索/图鉴/报告/我的”；
+    - 底部导航选中/未选中图标均加 `Tooltip`，保留 hover 文案提示；
+    - `_buildStoryActionButton` 新增 `iconOnly` 模式，并内置 `Tooltip`；
+    - 右侧剧情三按钮改为 `iconOnly: true`，仅显示图标；
+    - 右侧按钮列宽由 `102` 下调到 `60`，整体占位更小。
+- 验证结果:
+  - `/Users/xuxinghao/develop/flutter/bin/dart format flutter_client/lib/main.dart` 通过；
+  - `cd flutter_client && /Users/xuxinghao/develop/flutter/bin/flutter analyze` 通过；
+  - `./init.sh` 通过（`smoke 通过: http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 触屏设备无 hover 场景，底部文字隐藏后主要依赖图标识别；若你希望移动端也保留提示，可后续加长按 tooltip 或首开引导。
+  - `feature_list.json` 中 `F019.passes` 维持 `false`（未补完整 e2e 验收证据）。
+- 下一步建议:
+  - 在你当前页面回归一遍，确认按钮尺寸和底部导航可识别性符合预期。
+- 对应提交: （本次提交）

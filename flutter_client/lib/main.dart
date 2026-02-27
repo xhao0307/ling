@@ -1141,25 +1141,50 @@ class _CityLingHomePageState extends State<CityLingHomePage> {
               backgroundColor: Colors.transparent,
               selectedIndex: _tabIndex,
               onDestinationSelected: (idx) => setState(() => _tabIndex = idx),
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
               destinations: [
                 NavigationDestination(
-                  icon: _buildUnselectedNavIcon(Icons.travel_explore_outlined),
-                  selectedIcon: _buildSelectedNavIcon(Icons.travel_explore),
+                  icon: _buildUnselectedNavIcon(
+                    Icons.travel_explore_outlined,
+                    tooltip: '探索',
+                  ),
+                  selectedIcon: _buildSelectedNavIcon(
+                    Icons.travel_explore,
+                    tooltip: '探索',
+                  ),
                   label: '探索',
                 ),
                 NavigationDestination(
-                  icon: _buildUnselectedNavIcon(Icons.auto_awesome_outlined),
-                  selectedIcon: _buildSelectedNavIcon(Icons.auto_awesome),
+                  icon: _buildUnselectedNavIcon(
+                    Icons.auto_awesome_outlined,
+                    tooltip: '图鉴',
+                  ),
+                  selectedIcon: _buildSelectedNavIcon(
+                    Icons.auto_awesome,
+                    tooltip: '图鉴',
+                  ),
                   label: '图鉴',
                 ),
                 NavigationDestination(
-                  icon: _buildUnselectedNavIcon(Icons.summarize_outlined),
-                  selectedIcon: _buildSelectedNavIcon(Icons.summarize),
+                  icon: _buildUnselectedNavIcon(
+                    Icons.summarize_outlined,
+                    tooltip: '报告',
+                  ),
+                  selectedIcon: _buildSelectedNavIcon(
+                    Icons.summarize,
+                    tooltip: '报告',
+                  ),
                   label: '报告',
                 ),
                 NavigationDestination(
-                  icon: _buildUnselectedNavIcon(Icons.person_outline),
-                  selectedIcon: _buildSelectedNavIcon(Icons.person),
+                  icon: _buildUnselectedNavIcon(
+                    Icons.person_outline,
+                    tooltip: '我的',
+                  ),
+                  selectedIcon: _buildSelectedNavIcon(
+                    Icons.person,
+                    tooltip: '我的',
+                  ),
                   label: '我的',
                 ),
               ],
@@ -1170,31 +1195,37 @@ class _CityLingHomePageState extends State<CityLingHomePage> {
     );
   }
 
-  Widget _buildUnselectedNavIcon(IconData icon) {
-    return Opacity(
-      opacity: 0.6,
-      child: Icon(icon, color: kFairyInkSubtle),
+  Widget _buildUnselectedNavIcon(IconData icon, {required String tooltip}) {
+    return Tooltip(
+      message: tooltip,
+      child: Opacity(
+        opacity: 0.6,
+        child: Icon(icon, color: kFairyInkSubtle),
+      ),
     );
   }
 
-  Widget _buildSelectedNavIcon(IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF2EAF8).withValues(alpha: 0.96),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.58)),
-      ),
-      child: ShaderMask(
-        blendMode: BlendMode.srcIn,
-        shaderCallback: (bounds) {
-          return const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [kFairyRose, kFairyRoseDeep],
-          ).createShader(bounds);
-        },
-        child: Icon(icon, color: Colors.white, size: 22),
+  Widget _buildSelectedNavIcon(IconData icon, {required String tooltip}) {
+    return Tooltip(
+      message: tooltip,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF2EAF8).withValues(alpha: 0.96),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.58)),
+        ),
+        child: ShaderMask(
+          blendMode: BlendMode.srcIn,
+          shaderCallback: (bounds) {
+            return const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [kFairyRose, kFairyRoseDeep],
+            ).createShader(bounds);
+          },
+          child: Icon(icon, color: Colors.white, size: 22),
+        ),
       ),
     );
   }
@@ -2031,6 +2062,7 @@ class _ExplorePageState extends State<ExplorePage> {
     required String label,
     required VoidCallback? onTap,
     bool primary = false,
+    bool iconOnly = false,
   }) {
     final enabled = onTap != null;
     return AnimatedOpacity(
@@ -2041,8 +2073,11 @@ class _ExplorePageState extends State<ExplorePage> {
         child: InkWell(
           borderRadius: BorderRadius.circular(999),
           onTap: onTap,
+          hoverColor: Colors.white.withValues(alpha: 0.08),
           child: Ink(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            padding: iconOnly
+                ? const EdgeInsets.symmetric(horizontal: 10, vertical: 10)
+                : const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(999),
               gradient: primary
@@ -2059,23 +2094,28 @@ class _ExplorePageState extends State<ExplorePage> {
                     : Colors.white.withValues(alpha: 0.35),
               ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  icon,
-                  size: 18,
-                  color: Colors.white,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: const TextStyle(
+            child: Tooltip(
+              message: label,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    icon,
+                    size: iconOnly ? 20 : 18,
                     color: Colors.white,
-                    fontWeight: FontWeight.w700,
                   ),
-                ),
-              ],
+                  if (!iconOnly) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         ),
@@ -2114,7 +2154,7 @@ class _ExplorePageState extends State<ExplorePage> {
         (baseDialogPanelHeight * 0.5).clamp(130.0, 260.0).toDouble();
     final dialogTextMaxHeight =
         (dialogPanelHeight * 0.42).clamp(78.0, 130.0).toDouble();
-    const storyActionRailWidth = 102.0;
+    const storyActionRailWidth = 60.0;
 
     if (!hasSceneImage) {
       return DecoratedBox(
@@ -2399,6 +2439,7 @@ class _ExplorePageState extends State<ExplorePage> {
                           child: _buildStoryActionButton(
                             icon: Icons.chevron_left,
                             label: '上一句',
+                            iconOnly: true,
                             onTap: canRetreatStory
                                 ? () {
                                     unawaited(_retreatStoryLine());
@@ -2412,6 +2453,7 @@ class _ExplorePageState extends State<ExplorePage> {
                           child: _buildStoryActionButton(
                             icon: Icons.volume_up,
                             label: '播放',
+                            iconOnly: true,
                             onTap: _busy
                                 ? null
                                 : () {
@@ -2426,6 +2468,7 @@ class _ExplorePageState extends State<ExplorePage> {
                             icon: Icons.chevron_right,
                             label: '下一句',
                             primary: true,
+                            iconOnly: true,
                             onTap: canTapDialogToAdvance
                                 ? () {
                                     unawaited(_advanceStoryLine());
