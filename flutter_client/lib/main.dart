@@ -1771,12 +1771,12 @@ class _ExplorePageState extends State<ExplorePage> {
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final rawWidth = math.min(constraints.maxWidth - 28, 430.0);
-        final mirrorWidth = math.max(220.0, rawWidth);
-        final rawHeight = mirrorWidth * 1.18;
+        final rawWidth = math.min(constraints.maxWidth - 20, 500.0);
+        final mirrorWidth = math.max(240.0, rawWidth);
+        final rawHeight = mirrorWidth * 1.2;
         final mirrorHeight = math.min(
           math.max(280.0, rawHeight),
-          constraints.maxHeight * 0.72,
+          constraints.maxHeight * 0.78,
         );
 
         return Stack(

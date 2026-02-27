@@ -2195,3 +2195,24 @@
 - 下一步建议:
   - 在你当前页面回归一遍，确认按钮尺寸和底部导航可识别性符合预期。
 - 对应提交: （本次提交）
+
+### [2026-02-27 09:45] F019 放大魔镜识别区域尺寸
+- 会话目标: 按反馈放大识别页魔镜面积，提升主体画面占比。
+- 选择功能: `F019`
+- 实际改动:
+  - `flutter_client/lib/main.dart`（`_buildMagicMirrorStage`）：
+    - 镜框最大宽度上限从 `430` 提升到 `500`；
+    - 水平边距从 `28` 收紧到 `20`；
+    - 最小镜宽从 `220` 提升到 `240`；
+    - 镜高比例从 `1.18` 提升到 `1.2`；
+    - 最大可用高度占比从 `0.72` 提升到 `0.78`。
+- 验证结果:
+  - `/Users/xuxinghao/develop/flutter/bin/dart format flutter_client/lib/main.dart` 通过；
+  - `cd flutter_client && /Users/xuxinghao/develop/flutter/bin/flutter analyze` 通过；
+  - `./init.sh` 通过（`smoke 通过: http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 在极小屏设备上，镜框放大后顶部信息条和底部操作区的可见间距会更紧，后续可按断点再细调。
+  - `feature_list.json` 中 `F019.passes` 维持 `false`（未补完整 e2e 验收证据）。
+- 下一步建议:
+  - 在你当前机型实测一轮，若还想更大可继续提高 `maxWidth` 或高度占比。
+- 对应提交: （本次提交）
