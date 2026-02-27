@@ -2216,3 +2216,24 @@
 - 下一步建议:
   - 在你当前机型实测一轮，若还想更大可继续提高 `maxWidth` 或高度占比。
 - 对应提交: （本次提交）
+
+### [2026-02-27 10:16] F019 App 展示概念从“精灵”改为“万象灵”
+- 会话目标: 统一 App 端展示概念，将用户可见的“精灵”替换为“万象灵”，同时保持后端 `spirit` 字段兼容。
+- 选择功能: `F019`
+- 实际改动:
+  - `flutter_client/lib/main.dart`：新增 `_asWanxiangling` 展示映射函数（`城市小精灵/城市精灵/小精灵/精灵 -> 万象灵`）；
+  - 剧情展示层应用映射：角色名、台词文本、回退角色名与回答正确提示文案；
+  - 识别覆盖层应用映射：角色卡片名称显示为“万象灵”概念；
+  - 个人页与图鉴页应用映射：统计文案“图鉴万象灵”、空状态“还没有收集到万象灵”、图鉴条目名称展示映射；
+  - 日报页应用映射：`generatedText` 与知识点 `Chip` 展示统一走“万象灵”概念。
+- 验证结果:
+  - `/Users/xuxinghao/develop/flutter/bin/dart format flutter_client/lib/main.dart` 通过；
+  - `cd flutter_client && /Users/xuxinghao/develop/flutter/bin/flutter analyze` 通过；
+  - `./init.sh` 通过（`smoke 通过: http://127.0.0.1:39028`）。
+- 风险与遗留:
+  - 本轮只改 App 展示层；后端数据模型与接口字段仍为 `spirit/spirit_name`，以保证兼容。
+  - 语音内容由后端生成，若后端文案仍使用旧概念，语音和文字可能出现轻微术语差异。
+  - `feature_list.json` 中 `F019.passes` 维持 `false`（未补完整 e2e 验收证据）。
+- 下一步建议:
+  - 若需全链路统一术语，可在后端 `service` 与 LLM prompt 一并改为“万象灵”并做接口回归。
+- 对应提交: （本次提交）

@@ -53,6 +53,17 @@ const List<double> _kGrayScaleMatrix = <double>[
   0,
 ];
 
+String _asWanxiangling(String text) {
+  if (text.isEmpty) {
+    return text;
+  }
+  return text
+      .replaceAll('城市小精灵', '万象灵')
+      .replaceAll('城市精灵', '万象灵')
+      .replaceAll('小精灵', '万象灵')
+      .replaceAll('精灵', '万象灵');
+}
+
 void main() {
   runApp(const CityLingApp());
 }
@@ -2127,12 +2138,14 @@ class _ExplorePageState extends State<ExplorePage> {
     final viewInsetsBottom = MediaQuery.viewInsetsOf(context).bottom;
     final safeBottom = MediaQuery.paddingOf(context).bottom;
     final screenHeight = MediaQuery.sizeOf(context).height;
-    final companionName = _companionScene?.characterName ?? scan.spirit.name;
+    final companionName =
+        _asWanxiangling(_companionScene?.characterName ?? scan.spirit.name);
     final currentLine = _currentStoryLine;
     final hasStoryLine = currentLine != null;
-    final displaySpeaker = hasStoryLine ? currentLine.speaker : companionName;
+    final displaySpeaker =
+        hasStoryLine ? _asWanxiangling(currentLine.speaker) : companionName;
     final displayText = hasStoryLine
-        ? currentLine.text
+        ? _asWanxiangling(currentLine.text)
         : (_companionScene == null ? '剧情生成中，请稍候...' : '剧情准备中...');
     final scene = _companionScene;
     final canTapDialogToAdvance = _canTapDialogToAdvance;
@@ -2757,17 +2770,17 @@ class _ExplorePageState extends State<ExplorePage> {
         _quizSolved = false;
         _resetStoryLines(<_StoryLine>[
           _StoryLine(
-            speaker: result.characterName,
+            speaker: _asWanxiangling(result.characterName),
             text: result.dialogText,
             voiceAudioBase64: result.voiceAudioBase64,
             voiceMimeType: result.voiceMimeType,
           ),
           _StoryLine(
-            speaker: result.characterName,
+            speaker: _asWanxiangling(result.characterName),
             text: '小知识：${scan.fact}',
           ),
           _StoryLine(
-            speaker: result.characterName,
+            speaker: _asWanxiangling(result.characterName),
             text: '挑战问题：${scan.quiz}',
             requiresAnswerAfter: true,
           ),
@@ -2785,15 +2798,15 @@ class _ExplorePageState extends State<ExplorePage> {
         _quizSolved = false;
         _resetStoryLines(<_StoryLine>[
           _StoryLine(
-            speaker: scan.spirit.name,
+            speaker: _asWanxiangling(scan.spirit.name),
             text: '我们来认识一下${_labelToChinese(scan.objectType)}吧。',
           ),
           _StoryLine(
-            speaker: scan.spirit.name,
+            speaker: _asWanxiangling(scan.spirit.name),
             text: '小知识：${scan.fact}',
           ),
           _StoryLine(
-            speaker: scan.spirit.name,
+            speaker: _asWanxiangling(scan.spirit.name),
             text: '挑战问题：${scan.quiz}',
             requiresAnswerAfter: true,
           ),
@@ -2914,7 +2927,7 @@ class _ExplorePageState extends State<ExplorePage> {
       if (answerCorrectNow) {
         if (mounted) {
           _showSnack(
-            answerCapturedNow ? '回答正确，已成功收集精灵。' : '回答正确，已完成本轮问答。',
+            answerCapturedNow ? '回答正确，已成功收集万象灵。' : '回答正确，已完成本轮问答。',
           );
           _dismissScanCard();
         }
@@ -2947,7 +2960,8 @@ class _ExplorePageState extends State<ExplorePage> {
       if (!mounted) {
         return;
       }
-      final roleName = scene?.characterName ?? scan.spirit.name;
+      final roleName =
+          _asWanxiangling(scene?.characterName ?? scan.spirit.name);
       final replySegments = _splitStoryText(result.replyText);
       final lines = replySegments.isNotEmpty
           ? replySegments
@@ -3446,7 +3460,7 @@ class _SpiritOverlay extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                spirit.name,
+                _asWanxiangling(spirit.name),
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
@@ -3609,7 +3623,7 @@ class _ProfilePageState extends State<ProfilePage> {
               padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
               child: Row(
                 children: [
-                  _buildStatItem('图鉴精灵', _totalSpirits.toString()),
+                  _buildStatItem('图鉴万象灵', _totalSpirits.toString()),
                   _buildStatItem('累计收集', _totalCaptures.toString()),
                   _buildStatItem('今日收集', _todayCaptures.toString()),
                   _buildStatItem('今日知识点', _todayKnowledgePoints.toString()),
@@ -4794,7 +4808,7 @@ class _PokedexPageState extends State<PokedexPage> {
               ),
             ],
             const SizedBox(height: 12),
-            if (_entries.isEmpty && !_loading) const Text('还没有收集到精灵。'),
+            if (_entries.isEmpty && !_loading) const Text('还没有收集到万象灵。'),
             ..._entries.map(
               (entry) => _GlassPanel(
                 radius: 999,
@@ -4810,7 +4824,7 @@ class _PokedexPageState extends State<PokedexPage> {
                 ],
                 padding: EdgeInsets.zero,
                 child: ListTile(
-                  title: Text(entry.spiritName),
+                  title: Text(_asWanxiangling(entry.spiritName)),
                   subtitle: Text(
                     '${_labelToChinese(entry.objectType)} · 收集 ${entry.captures} 次',
                   ),
@@ -5072,7 +5086,7 @@ class _DailyReportPageState extends State<DailyReportPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            report.generatedText,
+            _asWanxiangling(report.generatedText),
             style: const TextStyle(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
@@ -5091,7 +5105,7 @@ class _DailyReportPageState extends State<DailyReportPage> {
                     side: BorderSide(
                       color: Colors.white.withValues(alpha: 0.62),
                     ),
-                    label: Text(point),
+                    label: Text(_asWanxiangling(point)),
                   ),
                 )
                 .toList(),
