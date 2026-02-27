@@ -2115,9 +2115,6 @@ class _ExplorePageState extends State<ExplorePage> {
     final dialogTextMaxHeight =
         (dialogPanelHeight * 0.42).clamp(78.0, 130.0).toDouble();
     const storyActionRailWidth = 102.0;
-    const storyActionRailGap = 10.0;
-    final dialogContentRightPadding =
-        14.0 + storyActionRailWidth + storyActionRailGap;
 
     if (!hasSceneImage) {
       return DecoratedBox(
@@ -2257,183 +2254,196 @@ class _ExplorePageState extends State<ExplorePage> {
                   offset: Offset(0, 10),
                 ),
               ],
-              padding: EdgeInsets.fromLTRB(
-                14,
-                14,
-                dialogContentRightPadding,
-                12,
-              ),
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 150),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeOutCubic,
-                child: Column(
-                  key: ValueKey<String>(
-                    '$displaySpeaker::$displayText::$_currentStoryIndex::$_waitingForAnswerInput::$_quizSolved',
-                  ),
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: canTapDialogToAdvance
-                          ? () {
-                              unawaited(_advanceStoryLine());
-                            }
-                          : null,
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 150),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeOutCubic,
                       child: Column(
+                        key: ValueKey<String>(
+                          '$displaySpeaker::$displayText::$_currentStoryIndex::$_waitingForAnswerInput::$_quizSolved',
+                        ),
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [Color(0xFFF2EBFA), Color(0xFFE7DAF8)],
-                              ),
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.6),
-                              ),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 5,
-                              ),
-                              child: Text(
-                                displaySpeaker,
-                                style: const TextStyle(
-                                  color: kFairyInk,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 13,
-                                  letterSpacing: 0.2,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxHeight: dialogTextMaxHeight,
-                            ),
-                            child: Scrollbar(
-                              child: SingleChildScrollView(
-                                padding: const EdgeInsets.only(right: 6),
-                                child: Text(
-                                  displayText,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    height: 1.46,
-                                    fontSize: 19,
-                                    fontWeight: FontWeight.w700,
+                          GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: canTapDialogToAdvance
+                                ? () {
+                                    unawaited(_advanceStoryLine());
+                                  }
+                                : null,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        Color(0xFFF2EBFA),
+                                        Color(0xFFE7DAF8)
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(999),
+                                    border: Border.all(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.6),
+                                    ),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 5,
+                                    ),
+                                    child: Text(
+                                      displaySpeaker,
+                                      style: const TextStyle(
+                                        color: kFairyInk,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 13,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
+                                const SizedBox(height: 10),
+                                ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxHeight: dialogTextMaxHeight,
+                                  ),
+                                  child: Scrollbar(
+                                    child: SingleChildScrollView(
+                                      padding: const EdgeInsets.only(right: 6),
+                                      child: Text(
+                                        displayText,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          height: 1.46,
+                                          fontSize: 19,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                if (_waitingForAnswerInput && !_quizSolved)
+                                  TextField(
+                                    controller: _companionReplyCtrl,
+                                    minLines: 1,
+                                    maxLines: 3,
+                                    textInputAction: TextInputAction.send,
+                                    onSubmitted: (_) async {
+                                      await _sendCompanionMessage(scan);
+                                    },
+                                    decoration: InputDecoration(
+                                      filled: true,
+                                      fillColor:
+                                          Colors.white.withValues(alpha: 0.94),
+                                      labelText: '输入你的回答',
+                                      suffixIcon: IconButton(
+                                        onPressed: _busy
+                                            ? null
+                                            : () async {
+                                                await _sendCompanionMessage(
+                                                    scan);
+                                              },
+                                        icon: const Icon(Icons.send),
+                                        tooltip: '发送',
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  Text(
+                                    _quizSolved
+                                        ? '你已经完成本轮问答，可以退出剧情继续探索。'
+                                        : (canTapDialogToAdvance
+                                            ? '点击聊天框或右侧按钮推进剧情，左侧可回看。'
+                                            : (canRetreatStory
+                                                ? '已到当前末句，可用左箭头回看。'
+                                                : '等待剧情加载或角色回应。')),
+                                    style: const TextStyle(
+                                      color: Color(0xDDE3E7FB),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          if (_waitingForAnswerInput && !_quizSolved)
-                            TextField(
-                              controller: _companionReplyCtrl,
-                              minLines: 1,
-                              maxLines: 3,
-                              textInputAction: TextInputAction.send,
-                              onSubmitted: (_) async {
-                                await _sendCompanionMessage(scan);
-                              },
-                              decoration: InputDecoration(
-                                filled: true,
-                                fillColor: Colors.white.withValues(alpha: 0.94),
-                                labelText: '输入你的回答',
-                                suffixIcon: IconButton(
-                                  onPressed: _busy
-                                      ? null
-                                      : () async {
-                                          await _sendCompanionMessage(scan);
-                                        },
-                                  icon: const Icon(Icons.send),
-                                  tooltip: '发送',
-                                ),
-                              ),
-                            )
-                          else
-                            Text(
-                              _quizSolved
-                                  ? '你已经完成本轮问答，可以退出剧情继续探索。'
-                                  : (canTapDialogToAdvance
-                                      ? '点击聊天框或右侧竖排按钮推进剧情，左侧可回看。'
-                                      : (canRetreatStory
-                                          ? '已到当前末句，可用左箭头回看。'
-                                          : '等待剧情加载或角色回应。')),
-                              style: const TextStyle(
-                                color: Color(0xDDE3E7FB),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          right: 14,
-          bottom: viewInsetsBottom + safeBottom + 20,
-          child: _GlassPanel(
-            radius: 18,
-            backgroundColor: const Color(0x3A303649),
-            borderColor: const Color(0x59FFFFFF),
-            blurSigma: 14,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-            child: SizedBox(
-              width: storyActionRailWidth,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildStoryActionButton(
-                    icon: Icons.chevron_left,
-                    label: '上一句',
-                    onTap: canRetreatStory
-                        ? () {
-                            unawaited(_retreatStoryLine());
-                          }
-                        : null,
                   ),
-                  const SizedBox(height: 8),
-                  _buildStoryActionButton(
-                    icon: Icons.volume_up,
-                    label: '播放',
-                    onTap: _busy
-                        ? null
-                        : () {
-                            unawaited(_playCurrentStoryVoice());
-                          },
+                  const SizedBox(width: 10),
+                  Container(
+                    width: 1,
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    color: Colors.white.withValues(alpha: 0.2),
                   ),
-                  const SizedBox(height: 8),
-                  _buildStoryActionButton(
-                    icon: Icons.chevron_right,
-                    label: '下一句',
-                    primary: true,
-                    onTap: canTapDialogToAdvance
-                        ? () {
-                            unawaited(_advanceStoryLine());
-                          }
-                        : null,
-                  ),
-                  if (_busy) ...[
-                    const SizedBox(height: 8),
-                    const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    width: storyActionRailWidth,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: _buildStoryActionButton(
+                            icon: Icons.chevron_left,
+                            label: '上一句',
+                            onTap: canRetreatStory
+                                ? () {
+                                    unawaited(_retreatStoryLine());
+                                  }
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: _buildStoryActionButton(
+                            icon: Icons.volume_up,
+                            label: '播放',
+                            onTap: _busy
+                                ? null
+                                : () {
+                                    unawaited(_playCurrentStoryVoice());
+                                  },
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: _buildStoryActionButton(
+                            icon: Icons.chevron_right,
+                            label: '下一句',
+                            primary: true,
+                            onTap: canTapDialogToAdvance
+                                ? () {
+                                    unawaited(_advanceStoryLine());
+                                  }
+                                : null,
+                          ),
+                        ),
+                        if (_busy) ...[
+                          const SizedBox(height: 8),
+                          const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ],
+                      ],
                     ),
-                  ],
+                  ),
                 ],
               ),
             ),
